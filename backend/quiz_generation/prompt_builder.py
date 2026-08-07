@@ -1,65 +1,89 @@
-def build_quiz_prompt(text: str):
-
+def build_quiz_prompt(text: str) -> str:
     return f"""
 You are an experienced university professor creating an educational quiz.
 
-TASK
+Using ONLY the provided study material, generate exactly 5 questions.
 
-Generate exactly 5 multiple-choice questions from the supplied study material.
+The questions can be of the following types:
 
-IMPORTANT RULES
+1. "mcq"
+   - Multiple-choice question.
+   - Must have exactly four options: A, B, C, and D.
+   - Must have a correct_option containing only A, B, C, or D.
+   - Must have a reference_answer explaining the correct answer.
 
-1. Use ONLY the supplied study material.
-2. Do NOT use outside knowledge.
-3. Each question must test an important concept from the material.
-4. Questions should be clear and unambiguous.
-5. Questions should have medium difficulty.
-6. Each question must have exactly 4 options.
-7. Each question must have exactly ONE correct answer.
-8. Do not create duplicate or very similar questions.
-9. The correct answer must be supported directly by the supplied material.
-10. The reference answer must explain the correct concept using only information from the supplied material.
-11. Do not invent facts that are not present in the material.
+2. "short"
+   - Subjective question requiring a short written answer.
+   - Must NOT have options.
+   - Must NOT have correct_option.
+   - Must have a reference_answer containing the expected answer.
 
-REFERENCE ANSWER RULES
+3. "detailed"
+   - Subjective question requiring a detailed explanation.
+   - Must NOT have options.
+   - Must NOT have correct_option.
+   - Must have a reference_answer containing the key points an ideal answer should include.
 
-For each question:
+4. "application"
+   - Application-based subjective question requiring the student to apply the concept
+     to a situation, scenario, or problem.
+   - Must NOT have options.
+   - Must NOT have correct_option.
+   - Must have a reference_answer describing the expected reasoning or answer.
 
-- Write a concise but complete reference answer.
-- The answer should explain the concept rather than simply saying "Option A", "Option B", etc.
-- The reference answer must be based ONLY on the supplied text.
-- The reference answer should be suitable for comparing with a student's written answer.
+For every question:
 
-OUTPUT FORMAT
+- Give it a unique question_id such as q1, q2, q3, q4, q5.
+- Include question_type.
+- Include the topic being tested.
+- Include the question.
+- Include a plain-text reference_answer.
+
+For MCQs:
+- Include options A, B, C, and D.
+- Include correct_option.
+- Do NOT omit any of these fields.
+
+For subjective questions:
+- Do NOT include options.
+- Do NOT include correct_option.
 
 Return ONLY valid JSON.
 
-Do NOT include:
-- Markdown
-- ```json
-- Explanations outside the JSON
-- Introductory text
-
-Use exactly this structure:
+Use this structure:
 
 {{
     "questions": [
         {{
-            "id": 1,
+            "question_id": "q1",
+            "question_type": "mcq",
+            "topic": "Topic name",
             "question": "Question text",
-            "options": [
-                "Option 1",
-                "Option 2",
-                "Option 3",
-                "Option 4"
-            ],
-            "correct_answer": "The complete correct option",
-            "reference_answer": "A concise explanation of the correct answer based only on the supplied text."
+            "options": {{
+                "A": "Option A",
+                "B": "Option B",
+                "C": "Option C",
+                "D": "Option D"
+            }},
+            "correct_option": "A",
+            "reference_answer": "Plain-text explanation of the correct answer."
+        }},
+        {{
+            "question_id": "q2",
+            "question_type": "short",
+            "topic": "Topic name",
+            "question": "Explain the concept briefly.",
+            "reference_answer": "Expected answer in plain text."
         }}
     ]
 }}
 
-STUDY MATERIAL
+Generate exactly 5 questions.
 
+Mix the question types when appropriate to the provided material.
+
+Do not invent information that is not supported by the study material.
+
+STUDY MATERIAL:
 {text}
 """
