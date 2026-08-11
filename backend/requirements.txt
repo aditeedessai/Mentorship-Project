@@ -1,0 +1,7 @@
+chromadb
+google-genai
+python-dotenv
+PyMuPDF
+sentence-transformers
+torch
+numpy
