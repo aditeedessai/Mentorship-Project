@@ -1,7 +1,7 @@
 from pathlib import Path
 import uuid
 
-from backend.document_processing.extractor import extract_text
+from backend.document_processing.extracter import extract_text
 from backend.document_processing.cleaner import clean_text
 from backend.document_processing.chunker import chunk_text
 
