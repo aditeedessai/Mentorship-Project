@@ -31,3 +31,5 @@ backend/uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+backend/.env
