@@ -3,14 +3,22 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT.parent
 
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+for p in (str(PROJECT_ROOT), str(ROOT)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-from backend.database.database import init_db
-from backend.services.document_service import process_pdf
-from backend.services.quiz_service import run_quiz
-from backend.services.evaluation_service import run_evaluation
+try:
+    from backend.database.database import init_db
+    from backend.services.document_service import process_pdf
+    from backend.services.quiz_service import run_quiz
+    from backend.services.evaluation_service import run_evaluation
+except ModuleNotFoundError:
+    from database.database import init_db
+    from services.document_service import process_pdf
+    from services.quiz_service import run_quiz
+    from services.evaluation_service import run_evaluation
 
 
 def prompt_for_document_path() -> str:
