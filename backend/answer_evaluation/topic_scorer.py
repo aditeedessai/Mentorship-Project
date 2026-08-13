@@ -3,6 +3,10 @@ backend.answer_evaluation.topic_scorer
 
 Aggregates per-question hybrid evaluation results into a topic-level score,
 and flags each topic as "weak" or "strong" based on threshold.
+
+Unchanged from the original implementation - this file's logic was
+already identical to the "test" version, so nothing here affects
+accuracy; it's included only so the whole package is drop-in complete.
 """
 
 from collections import defaultdict
