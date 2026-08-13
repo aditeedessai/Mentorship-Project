@@ -1,5 +1,5 @@
 import os
-import pymupdf
+import pymupdf as fitz
 from docx import Document
 from pptx import Presentation
 
@@ -43,7 +43,8 @@ def extract_text(file_path: str) -> str:
 
     # 4. Legacy Formats
     elif ext in [".doc", ".ppt"]:
-        raise ValueError(f"Legacy format {ext} is not supported directly. Please convert to {ext}x or PDF.")
+        target_ext = ".docx" if ext == ".doc" else ".pptx"
+        raise ValueError(f"Legacy format '{ext}' is not supported directly. Please convert to {target_ext} or PDF.")
 
     if not text.strip():
         raise ValueError("No text could be extracted from the uploaded file.")
