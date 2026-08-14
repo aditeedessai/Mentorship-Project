@@ -11,36 +11,72 @@ for p in (str(PROJECT_ROOT), str(ROOT)):
 
 try:
     from backend.database.database import init_db
-    from backend.services.document_service import process_pdf
+    from backend.services.document_service import process_multiple_files
     from backend.services.quiz_service import run_quiz
     from backend.services.evaluation_service import run_evaluation
 except ModuleNotFoundError:
     from database.database import init_db
-    from services.document_service import process_pdf
+    from services.document_service import process_multiple_files
     from services.quiz_service import run_quiz
     from services.evaluation_service import run_evaluation
 
 
-def prompt_for_document_path() -> str:
-    return input(
-        "\nEnter path to document (PDF, DOCX, PPTX): "
-    ).strip().strip('"')
+def prompt_for_document_paths() -> list[str]:
+    """
+    Ask the user to enter multiple study-material file paths.
+
+    Multiple paths should be separated by commas.
+    """
+
+    print("\nEnter paths to study materials.")
+    print("Separate multiple file paths with commas.")
+
+    input_paths = input(
+        "\nEnter file paths: "
+    ).strip()
+
+    if not input_paths:
+        raise ValueError(
+            "At least one document path is required."
+        )
+
+    file_paths = [
+        path.strip().strip('"')
+        for path in input_paths.split(",")
+        if path.strip()
+    ]
+
+    return file_paths
 
 
-def validate_document_path(file_path: str) -> str:
-    if not file_path:
-        raise ValueError("Document path cannot be empty.")
+def validate_document_paths(
+    file_paths: list[str]
+) -> list[str]:
+    """
+    Validate the list of uploaded document paths.
+    """
 
-    return file_path
+    if not file_paths:
+        raise ValueError(
+            "At least one document path is required."
+        )
+
+    return file_paths
 
 
 def select_question_type() -> str:
+    """
+    Ask the user to select the question type.
+    """
+
     print("\nSelect Question Type:")
     print("1. MCQ")
     print("2. Application")
-    print("3. General Answer(long/short)")
+    print("3. General Answer (Long/Short)")
 
-    choice = input("\nEnter your choice (1-3): ").strip()
+    choice = input(
+        "\nEnter your choice (1-3): "
+    ).strip()
 
     if choice == "1":
         return "mcq"
@@ -49,6 +85,7 @@ def select_question_type() -> str:
         return "application"
 
     elif choice == "3":
+
         print("\nSelect General Answer Type:")
         print("1. Long Answer")
         print("2. Short Answer")
@@ -74,13 +111,39 @@ def select_question_type() -> str:
         )
 
 
-def run_study_flow(file_path: str) -> None:
-    document_id = process_pdf(file_path)
+def run_study_flow(
+    file_paths: list[str]
+) -> None:
+    """
+    Process multiple study materials and generate
+    a quiz using the selected question type.
+    """
+
+    # ---------------------------------------------------------
+    # Process all uploaded documents
+    # ---------------------------------------------------------
+
+    document_ids = process_multiple_files(
+        file_paths
+    )
+
+    if not document_ids:
+        raise RuntimeError(
+            "No documents were processed successfully."
+        )
+
+    # ---------------------------------------------------------
+    # Select question type
+    # ---------------------------------------------------------
 
     question_type = select_question_type()
 
+    # ---------------------------------------------------------
+    # Generate quiz using all uploaded documents
+    # ---------------------------------------------------------
+
     questions = run_quiz(
-        document_id=document_id,
+        document_ids=document_ids,
         question_type=question_type
     )
 
@@ -89,9 +152,15 @@ def run_study_flow(file_path: str) -> None:
             "Gemini returned no questions."
         )
 
+    # ---------------------------------------------------------
+    # Run evaluation
+    # ---------------------------------------------------------
+
+    # The current evaluation system expects one document ID.
+    # For now, use the first uploaded document.
     run_evaluation(
         questions,
-        document_id
+        document_ids[0]
     )
 
 
@@ -100,15 +169,33 @@ def main() -> None:
     print("                 STUDY ENGINE - POC")
     print("=" * 70)
 
+    # ---------------------------------------------------------
+    # Initialize database
+    # ---------------------------------------------------------
+
     init_db()
 
-    file_path = prompt_for_document_path()
+    # ---------------------------------------------------------
+    # Get multiple document paths
+    # ---------------------------------------------------------
 
-    validated_path = validate_document_path(
-        file_path
+    file_paths = prompt_for_document_paths()
+
+    # ---------------------------------------------------------
+    # Validate document paths
+    # ---------------------------------------------------------
+
+    validated_paths = validate_document_paths(
+        file_paths
     )
 
-    run_study_flow(validated_path)
+    # ---------------------------------------------------------
+    # Run complete study flow
+    # ---------------------------------------------------------
+
+    run_study_flow(
+        validated_paths
+    )
 
 
 if __name__ == "__main__":
