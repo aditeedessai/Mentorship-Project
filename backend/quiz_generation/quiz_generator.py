@@ -6,13 +6,24 @@ from backend.embeddings.retriever import retrieve_chunks
 import uuid
 import json
 
-def generate_quiz(document_id: str):
+
+def generate_quiz(document_id: str, question_type: str):
 
     print("===== generate_quiz() called =====")
+    print("Selected question type:", question_type)
+
+    # Check that the selected type is valid
+    valid_types = ["mcq", "application", "long", "short"]
+
+    if question_type not in valid_types:
+        raise ValueError(
+            f"Invalid question type: {question_type}. "
+            f"Expected one of: {valid_types}"
+        )
 
     chunks = retrieve_chunks(
-    "Generate an exam quiz from the uploaded study material.",
-    document_id=document_id
+        "Generate an exam quiz from the uploaded study material.",
+        document_id=document_id
     )
 
     print("Retrieved chunks:", len(chunks))
@@ -21,7 +32,11 @@ def generate_quiz(document_id: str):
 
     print("Text length:", len(text))
 
-    prompt = build_quiz_prompt(text)
+    # Pass the selected question type to the prompt builder
+    prompt = build_quiz_prompt(
+        text,
+        question_type=question_type
+    )
 
     print("Calling Gemini...")
 
@@ -46,7 +61,7 @@ def generate_quiz(document_id: str):
 
     quiz_data = json.loads(response_text)
 
-# Generate unique IDs for every question
+    # Generate unique IDs for every question
     for question in quiz_data["questions"]:
         question["question_id"] = str(uuid.uuid4())
 
