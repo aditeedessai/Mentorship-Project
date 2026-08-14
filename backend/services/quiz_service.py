@@ -1,18 +1,31 @@
 from backend.quiz_generation.quiz_generator import generate_quiz
 
 
-def run_quiz(document_id: str, question_type: str):
+def run_quiz(
+    document_ids: list[str] | str,
+    question_type: str
+):
     """
-    Generate a quiz from the uploaded study material
+    Generate a quiz from uploaded study material(s)
     based on the selected question type.
     """
+
+    if not document_ids:
+        raise ValueError(
+            "No documents were provided for quiz generation."
+        )
 
     print(
         f"\n[3/4] Generating {question_type} quiz with Gemini..."
     )
 
+    num_docs = len(document_ids) if isinstance(document_ids, list) else 1
+    print(
+        f"      Using {num_docs} uploaded document(s)."
+    )
+
     quiz = generate_quiz(
-        document_id=document_id,
+        document_ids=document_ids,
         question_type=question_type
     )
 

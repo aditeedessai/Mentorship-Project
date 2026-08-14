@@ -106,3 +106,34 @@ def process_pdf(pdf_path: str) -> str:
     )
 
     return document_id
+
+
+
+def process_multiple_files(file_paths: list[str]) -> list[str]:
+    """
+    Process multiple study-material files.
+
+    Each file is processed independently using the existing
+    process_pdf() pipeline.
+
+    Returns:
+        A list of document IDs for the successfully processed files.
+    """
+
+    if not file_paths:
+        raise ValueError("No files were provided.")
+
+    document_ids = []
+
+    for file_path in file_paths:
+        print(f"\nProcessing file: {file_path}")
+
+        document_id = process_pdf(file_path)
+
+        document_ids.append(document_id)
+
+    print(
+        f"\nSuccessfully processed {len(document_ids)} files."
+    )
+
+    return document_ids

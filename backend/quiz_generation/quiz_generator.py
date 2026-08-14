@@ -7,10 +7,18 @@ import uuid
 import json
 
 
-def generate_quiz(document_id: str, question_type: str):
+def generate_quiz(
+    document_ids: list[str] | str,
+    question_type: str
+):
 
     print("===== generate_quiz() called =====")
     print("Selected question type:", question_type)
+
+    if isinstance(document_ids, str):
+        document_ids = [document_ids]
+
+    print("Documents:", len(document_ids))
 
     # Check that the selected type is valid
     valid_types = ["mcq", "application", "long", "short"]
@@ -21,12 +29,22 @@ def generate_quiz(document_id: str, question_type: str):
             f"Expected one of: {valid_types}"
         )
 
+    if not document_ids:
+        raise ValueError(
+            "No document IDs were provided."
+        )
+
     chunks = retrieve_chunks(
         "Generate an exam quiz from the uploaded study material.",
-        document_id=document_id
+        document_ids=document_ids
     )
 
     print("Retrieved chunks:", len(chunks))
+
+    if not chunks:
+        raise ValueError(
+            "No study material was found for the uploaded documents."
+        )
 
     text = "\n\n".join(chunks)
 
@@ -66,7 +84,7 @@ def generate_quiz(document_id: str, question_type: str):
         question["question_id"] = str(uuid.uuid4())
 
     save_questions(
-        document_id=document_id,
+        document_id=document_ids[0],
         questions=quiz_data["questions"]
     )
 
