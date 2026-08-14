@@ -46,7 +46,37 @@ Concretely:
 ------------------------------------------------------------------------
 """
 
+import os
+import warnings
 import logging
+
+# --- Quiet third-party console noise -------------------------------------
+# huggingface_hub/transformers print their own progress bars ("Loading
+# weights: 100%|...|") and advisory warnings (e.g. the HHEMv2Config/HHEMv2
+# architecture notice) straight to the console during model loading. These
+# are set as early as possible - before any transformers/sentence-
+# transformers import triggers a model load - so they're suppressed for
+# the whole process lifetime. A single friendly "Loading..." print (added
+# in each _get_*() function below) replaces them so there's still visible
+# feedback while a model loads for the first time.
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+try:
+    from huggingface_hub.utils import disable_progress_bars as _hf_disable_progress_bars
+    _hf_disable_progress_bars()
+except Exception:  # pragma: no cover - best-effort, never block startup on this
+    pass
+
+try:
+    from transformers.utils import logging as _hf_logging
+    _hf_logging.set_verbosity_error()
+    _hf_logging.disable_progress_bar()
+except Exception:  # pragma: no cover
+    pass
+
+warnings.filterwarnings("ignore", module="transformers")
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +95,24 @@ _nli_model = None
 _hallucination_model = None
 _HAS_HALLUCINATION_MODEL = None  # tri-state: None=not attempted yet, True/False after
 
+# When True (set only inside preload_models()), the individual _get_*()
+# functions skip their own "Loading..." print, since preload_models()
+# already printed a single message for the whole batch. Lazy, one-at-a-
+# time loading (the normal path, if preload_models() is never called)
+# is completely unaffected - each _get_*() still prints its own
+# "Loading..." the first time it's called on its own.
+_SUPPRESS_INDIVIDUAL_LOADING_PRINT = False
+
+
+def _announce_loading():
+    if not _SUPPRESS_INDIVIDUAL_LOADING_PRINT:
+        print("Loading...")
+
 
 def _get_bi_encoder():
     global _bi_encoder
     if _bi_encoder is None:
+        _announce_loading()
         from sentence_transformers import SentenceTransformer
         logger.info("sbert_model.py: loading bi-encoder 'BAAI/bge-large-en-v1.5' (first use)...")
         _bi_encoder = SentenceTransformer("BAAI/bge-large-en-v1.5")
@@ -78,6 +122,7 @@ def _get_bi_encoder():
 def _get_cross_encoder():
     global _cross_encoder
     if _cross_encoder is None:
+        _announce_loading()
         from sentence_transformers import CrossEncoder
         logger.info("sbert_model.py: loading cross-encoder 'cross-encoder/stsb-roberta-base' (first use)...")
         _cross_encoder = CrossEncoder("cross-encoder/stsb-roberta-base")
@@ -87,6 +132,7 @@ def _get_cross_encoder():
 def _get_nli_model():
     global _nli_model
     if _nli_model is None:
+        _announce_loading()
         from sentence_transformers import CrossEncoder
         logger.info("sbert_model.py: loading NLI model '%s' (first use)...", _NLI_MODEL_NAME)
         _nli_model = CrossEncoder(_NLI_MODEL_NAME)
@@ -110,6 +156,7 @@ def _get_hallucination_model():
     if _HAS_HALLUCINATION_MODEL is not None:
         return _hallucination_model if _HAS_HALLUCINATION_MODEL else None
 
+    _announce_loading()
     try:
         from transformers import AutoModelForSequenceClassification
         logger.info("sbert_model.py: loading hallucination model '%s' (first use)...", _HALLUCINATION_MODEL_NAME)
@@ -126,6 +173,36 @@ def _get_hallucination_model():
         _HAS_HALLUCINATION_MODEL = False
         _hallucination_model = None
     return _hallucination_model
+
+
+def preload_models():
+    """
+    Eagerly loads all four models (bi-encoder, cross-encoder, NLI model,
+    hallucination model) up front, in one call, printing a single
+    "Loading..." line for the whole batch instead of one per model.
+
+    Call this ONCE at process/service startup (e.g. at the top of
+    run_main.py's main(), before the study flow begins) if you want all
+    model-loading cost paid up front rather than scattered across the
+    first few answers evaluated. This is entirely optional - nothing
+    else in this module requires it. If it's never called, every model
+    still lazy-loads on its own first use exactly as before, each with
+    its own "Loading..." line.
+
+    Safe to call more than once: every _get_*() function below is
+    already guarded to load only once (see the module-level singleton
+    caches), so a second preload_models() call is a fast no-op.
+    """
+    global _SUPPRESS_INDIVIDUAL_LOADING_PRINT
+    print("Loading...")
+    _SUPPRESS_INDIVIDUAL_LOADING_PRINT = True
+    try:
+        _get_bi_encoder()
+        _get_cross_encoder()
+        _get_nli_model()
+        _get_hallucination_model()
+    finally:
+        _SUPPRESS_INDIVIDUAL_LOADING_PRINT = False
 
 
 def get_embedding(text: str):
