@@ -1,10 +1,41 @@
+import uuid
+import json
+
 from .gemini_client import client
 from .prompt_builder import build_quiz_prompt
 from backend.database.quiz_repository import save_questions
 from backend.embeddings.retriever import retrieve_chunks
 
-import uuid
-import json
+
+def find_best_matching_chunks(question_text: str, reference_answer: str, chunks: list[dict]) -> list[dict]:
+    """
+    Deterministic source mapping engine: computes token overlap between
+    a question + reference answer and retrieved chunks to link the question
+    to its actual source chunk(s) and document(s).
+    """
+    combined_query = f"{question_text} {reference_answer}".lower()
+    query_words = set(w for w in combined_query.split() if len(w) > 3)
+
+    if not query_words or not chunks:
+        return [chunks[0]] if chunks else []
+
+    scored = []
+    for chunk in chunks:
+        chunk_text = chunk["text"] if isinstance(chunk, dict) else str(chunk)
+        chunk_words = set(chunk_text.lower().split())
+        overlap = len(query_words.intersection(chunk_words))
+        scored.append((overlap, chunk))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    if scored and scored[0][0] > 0:
+        top_score = scored[0][0]
+        # Return chunks within 70% of the highest overlap score
+        return [chunk for score, chunk in scored if score >= max(1, top_score * 0.70)]
+    elif chunks:
+        return [chunks[0]]
+
+    return []
 
 
 def generate_quiz(
@@ -33,6 +64,7 @@ def generate_quiz(
             f"Expected one of: {valid_types}"
         )
 
+    # Retrieve structured chunk objects from vector store
     chunks = retrieve_chunks(
         "Generate an exam quiz from the uploaded study material.",
         study_set_id=study_set_id,
@@ -46,11 +78,17 @@ def generate_quiz(
             "No study material was found for the uploaded study set / documents."
         )
 
-    text = "\n\n".join(chunks)
+    # Extract raw text string for prompt builder
+    text_pieces = []
+    for chunk in chunks:
+        if isinstance(chunk, dict):
+            text_pieces.append(chunk.get("text", ""))
+        else:
+            text_pieces.append(str(chunk))
+    text = "\n\n".join(text_pieces)
 
     print("Text length:", len(text))
 
-    # Pass the selected question type to the prompt builder
     prompt = build_quiz_prompt(
         text,
         question_type=question_type
@@ -67,11 +105,8 @@ def generate_quiz(
 
     response_text = response.text.strip()
 
-    print(response_text)
-
     if response_text.startswith("```json"):
         response_text = response_text[7:]
-
     if response_text.endswith("```"):
         response_text = response_text[:-3]
 
@@ -79,18 +114,49 @@ def generate_quiz(
 
     quiz_data = json.loads(response_text)
 
-    # Generate unique IDs for every question
+    # Process and link source metadata for each generated question
     for question in quiz_data["questions"]:
         question["question_id"] = str(uuid.uuid4())
         if study_set_id:
             question["study_set_id"] = study_set_id
 
-    doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
+        # Determine marks based on question type
+        question["marks"] = 2.0 if question.get("question_type") == "mcq" else 10.0
 
+        # Deterministically match question text + reference answer to source chunk(s)
+        matched_chunks = find_best_matching_chunks(
+            question.get("question", ""),
+            question.get("reference_answer", ""),
+            chunks
+        )
+
+        resolved_chunk_ids = []
+        resolved_doc_ids = []
+        sources_tuples = []
+
+        for chk in matched_chunks:
+            c_id = chk.get("id") if isinstance(chk, dict) else None
+            d_id = chk.get("document_id") if isinstance(chk, dict) else None
+
+            if c_id and c_id not in resolved_chunk_ids:
+                resolved_chunk_ids.append(c_id)
+            if d_id and d_id not in resolved_doc_ids:
+                resolved_doc_ids.append(d_id)
+            if d_id:
+                sources_tuples.append((d_id, c_id))
+
+        question["source_chunk_ids"] = resolved_chunk_ids
+        question["source_document_ids"] = resolved_doc_ids
+        question["sources_tuples"] = sources_tuples
+
+        # Assign document_id to primary source document (NO defaulting to document_ids[0]!)
+        if resolved_doc_ids:
+            question["document_id"] = resolved_doc_ids[0]
+
+    # Save to SQLite (populating questions table and question_sources canonical table)
     save_questions(
         study_set_id=study_set_id,
-        questions=quiz_data["questions"],
-        document_id=doc_id
+        questions=quiz_data["questions"]
     )
 
     return quiz_data
