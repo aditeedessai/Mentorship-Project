@@ -1,6 +1,43 @@
 from backend.quiz_generation.quiz_generator import generate_quiz
 
 
+def display_generated_questions(questions: list[dict]) -> None:
+    """
+    Display all generated questions with question metadata before student answer collection.
+    Note: Source document IDs and chunk IDs are retained internally on question objects
+    for traceability, but excluded from student display.
+    """
+    print("\n" + "=" * 60, flush=True)
+    print("GENERATED QUESTIONS", flush=True)
+    print("===================", flush=True)
+
+    for index, q in enumerate(questions, start=1):
+        q_id = q.get("question_id", "N/A")
+        q_type = q.get("question_type", "N/A")
+        topic = q.get("topic", "N/A")
+        q_text = q.get("question", "")
+        ref_ans = q.get("reference_answer", "N/A")
+
+        print(f"\nQuestion {index}", flush=True)
+        print(f"Question ID : {q_id}", flush=True)
+        print(f"Type        : {q_type}", flush=True)
+        print(f"Topic       : {topic}", flush=True)
+        print(f"\nQuestion: {q_text}", flush=True)
+
+        options = q.get("options")
+        if options and isinstance(options, dict):
+            print("\nOptions:", flush=True)
+            for opt_key, opt_val in options.items():
+                print(f"{opt_key}. {opt_val}", flush=True)
+
+        correct_opt = q.get("correct_option")
+        if correct_opt:
+            print(f"\nCorrect Option: {correct_opt}", flush=True)
+
+        print(f"\nReference Answer: {ref_ans}", flush=True)
+        print("\n---", flush=True)
+
+
 def run_quiz(
     study_set_id: str = None,
     question_type: str = "mcq",
@@ -40,5 +77,7 @@ def run_quiz(
     print(
         f"      Generated {len(questions)} questions."
     )
+
+    display_generated_questions(questions)
 
     return questions

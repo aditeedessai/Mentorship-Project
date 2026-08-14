@@ -57,8 +57,9 @@ def run_evaluation(
         start=1
     ):
 
+        q_id = question.get("question_id", "N/A")
         print(
-            f"\nQuestion {index} "
+            f"\nQuestion {index} (ID: {q_id}) "
             f"[{question['question_type']}]"
         )
 
