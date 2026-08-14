@@ -3,27 +3,32 @@ import json
 from backend.database.database import get_connection
 
 
-def save_questions(document_id: str, questions: list):
+def save_questions(study_set_id: str = None, questions: list = None, document_id: str = None):
     """
     Save generated quiz questions and their reference answers
-    for a specific uploaded document.
+    for a specific study set or document.
     """
+    if questions is None:
+        questions = []
 
     connection = get_connection()
 
     try:
         for question in questions:
-
             options = question.get("options")
 
-            if options is not None:
+            if options is not None and not isinstance(options, str):
                 options = json.dumps(options)
+
+            doc_id = document_id or question.get("document_id") or ""
+            set_id = study_set_id or question.get("study_set_id") or ""
 
             connection.execute(
                 """
                 INSERT INTO questions (
                     question_id,
                     document_id,
+                    study_set_id,
                     question_type,
                     topic,
                     question,
@@ -31,11 +36,12 @@ def save_questions(document_id: str, questions: list):
                     options,
                     correct_option
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     question["question_id"],
-                    document_id,
+                    doc_id,
+                    set_id,
                     question["question_type"],
                     question.get("topic"),
                     question["question"],
@@ -51,14 +57,10 @@ def save_questions(document_id: str, questions: list):
         connection.close()
 
 
-def get_questions_by_document(document_id: str):
+def get_questions_by_study_set(study_set_id: str):
     """
-    Retrieve questions for a specific uploaded document.
-
-    Reference answers and correct options are intentionally
-    not returned because they must remain hidden from the student.
+    Retrieve questions for a specific study set.
     """
-
     connection = get_connection()
 
     try:
@@ -66,6 +68,50 @@ def get_questions_by_document(document_id: str):
             """
             SELECT
                 question_id,
+                study_set_id,
+                document_id,
+                question_type,
+                topic,
+                question,
+                options
+            FROM questions
+            WHERE study_set_id = ?
+            ORDER BY id
+            """,
+            (study_set_id,)
+        ).fetchall()
+
+        questions = []
+
+        for row in rows:
+            question = dict(row)
+
+            if question["options"]:
+                question["options"] = json.loads(
+                    question["options"]
+                )
+
+            questions.append(question)
+
+        return questions
+
+    finally:
+        connection.close()
+
+
+def get_questions_by_document(document_id: str):
+    """
+    Retrieve questions for a specific uploaded document.
+    """
+    connection = get_connection()
+
+    try:
+        rows = connection.execute(
+            """
+            SELECT
+                question_id,
+                study_set_id,
+                document_id,
                 question_type,
                 topic,
                 question,
@@ -80,7 +126,6 @@ def get_questions_by_document(document_id: str):
         questions = []
 
         for row in rows:
-
             question = dict(row)
 
             if question["options"]:
@@ -99,11 +144,7 @@ def get_questions_by_document(document_id: str):
 def get_question_by_id(question_id: str):
     """
     Retrieve one question including its reference answer.
-
-    This function is for backend evaluation only.
-    The reference answer must never be exposed to the student.
     """
-
     connection = get_connection()
 
     try:
@@ -111,6 +152,7 @@ def get_question_by_id(question_id: str):
             """
             SELECT
                 question_id,
+                study_set_id,
                 document_id,
                 question_type,
                 topic,

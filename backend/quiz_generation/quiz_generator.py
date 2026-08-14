@@ -8,8 +8,9 @@ import json
 
 
 def generate_quiz(
-    document_ids: list[str] | str,
-    question_type: str
+    study_set_id: str = None,
+    question_type: str = "mcq",
+    document_ids: list[str] | str = None
 ):
 
     print("===== generate_quiz() called =====")
@@ -18,7 +19,10 @@ def generate_quiz(
     if isinstance(document_ids, str):
         document_ids = [document_ids]
 
-    print("Documents:", len(document_ids))
+    if not study_set_id and not document_ids:
+        raise ValueError(
+            "Either study_set_id or document_ids must be provided for quiz generation."
+        )
 
     # Check that the selected type is valid
     valid_types = ["mcq", "application", "long", "short"]
@@ -29,13 +33,9 @@ def generate_quiz(
             f"Expected one of: {valid_types}"
         )
 
-    if not document_ids:
-        raise ValueError(
-            "No document IDs were provided."
-        )
-
     chunks = retrieve_chunks(
         "Generate an exam quiz from the uploaded study material.",
+        study_set_id=study_set_id,
         document_ids=document_ids
     )
 
@@ -43,7 +43,7 @@ def generate_quiz(
 
     if not chunks:
         raise ValueError(
-            "No study material was found for the uploaded documents."
+            "No study material was found for the uploaded study set / documents."
         )
 
     text = "\n\n".join(chunks)
@@ -82,10 +82,15 @@ def generate_quiz(
     # Generate unique IDs for every question
     for question in quiz_data["questions"]:
         question["question_id"] = str(uuid.uuid4())
+        if study_set_id:
+            question["study_set_id"] = study_set_id
+
+    doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
 
     save_questions(
-        document_id=document_ids[0],
-        questions=quiz_data["questions"]
+        study_set_id=study_set_id,
+        questions=quiz_data["questions"],
+        document_id=doc_id
     )
 
     return quiz_data

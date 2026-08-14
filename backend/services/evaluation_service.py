@@ -17,7 +17,8 @@ from backend.database.evaluation_repository import (
 
 def run_evaluation(
     questions,
-    document_id: str
+    study_set_id: str = None,
+    document_id: str = None
 ):
     """
     Run the complete quiz evaluation workflow.
@@ -208,6 +209,7 @@ def run_evaluation(
 
     save_attempt(
         attempt_id=attempt_id,
+        study_set_id=study_set_id,
         document_id=document_id,
         total_marks=total_marks,
         marks_awarded=earned_marks
