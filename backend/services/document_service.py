@@ -7,19 +7,22 @@ from backend.document_processing.chunker import chunk_text
 
 from backend.embeddings.embedding_model import generate_embeddings
 from backend.embeddings.vector_store import store_embeddings
+from backend.database.study_set_repository import create_study_set, create_document, get_study_set
 
 
-def process_pdf(pdf_path: str) -> str:
+def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
     """
-    Process a study-material PDF.
+    Process a study-material PDF/DOCX/PPTX file under a study set.
 
     Workflow:
-    1. Validate PDF
-    2. Extract text
-    3. Clean text
-    4. Create chunks
-    5. Generate SBERT embeddings
-    6. Store embeddings in ChromaDB
+    1. Validate file
+    2. Ensure study_set exists (create if not provided)
+    3. Extract text
+    4. Clean text
+    5. Create chunks
+    6. Register document record in SQLite
+    7. Generate SBERT embeddings
+    8. Store embeddings in ChromaDB with document_id and study_set_id
 
     Returns:
         document_id: Unique ID for the uploaded document.
@@ -41,6 +44,21 @@ def process_pdf(pdf_path: str) -> str:
         raise ValueError(
             f"Unsupported file type '{path.suffix}'. Allowed formats: PDF, DOCX, PPTX."
         )
+
+    # Ensure study set exists
+    if not study_set_id:
+        study_set_id = str(uuid.uuid4())
+        create_study_set(
+            study_set_id=study_set_id,
+            name=path.stem
+        )
+    else:
+        # Check if study set exists in DB; if not, create it
+        if get_study_set(study_set_id) is None:
+            create_study_set(
+                study_set_id=study_set_id,
+                name=path.stem
+            )
 
     # ---------------------------------------------------------
     # Extract text
@@ -80,7 +98,7 @@ def process_pdf(pdf_path: str) -> str:
     )
 
     # ---------------------------------------------------------
-    # Generate embeddings
+    # Generate embeddings & Register document
     # ---------------------------------------------------------
 
     print(
@@ -88,6 +106,14 @@ def process_pdf(pdf_path: str) -> str:
     )
 
     document_id = str(uuid.uuid4())
+
+    # Register document in database
+    create_document(
+        document_id=document_id,
+        study_set_id=study_set_id,
+        file_path=str(path),
+        file_name=path.name
+    )
 
     embeddings = generate_embeddings(chunks)
 
@@ -98,42 +124,61 @@ def process_pdf(pdf_path: str) -> str:
     store_embeddings(
         document_id=document_id,
         chunks=chunks,
-        embeddings=embeddings
+        embeddings=embeddings,
+        study_set_id=study_set_id
     )
 
     print(
-        f"      Document ID: {document_id}"
+        f"      Study Set ID: {study_set_id}"
+    )
+    print(
+        f"      Document ID : {document_id}"
     )
 
     return document_id
 
 
-
-def process_multiple_files(file_paths: list[str]) -> list[str]:
+def create_study_set_from_files(file_paths: list[str], name: str = None) -> tuple[str, list[str]]:
     """
-    Process multiple study-material files.
-
-    Each file is processed independently using the existing
-    process_pdf() pipeline.
+    Create a new study set and process multiple study-material files under it.
 
     Returns:
-        A list of document IDs for the successfully processed files.
+        tuple (study_set_id, list of document_ids)
     """
-
     if not file_paths:
         raise ValueError("No files were provided.")
 
-    document_ids = []
+    first_path = Path(file_paths[0]).expanduser().resolve()
+    if not name:
+        if len(file_paths) == 1:
+            name = first_path.stem
+        else:
+            name = f"{first_path.stem} and {len(file_paths) - 1} other file(s)"
 
-    for file_path in file_paths:
-        print(f"\nProcessing file: {file_path}")
-
-        document_id = process_pdf(file_path)
-
-        document_ids.append(document_id)
-
-    print(
-        f"\nSuccessfully processed {len(document_ids)} files."
+    study_set_id = str(uuid.uuid4())
+    create_study_set(
+        study_set_id=study_set_id,
+        name=name
     )
 
-    return document_ids
+    document_ids = []
+    for file_path in file_paths:
+        print(f"\nProcessing file under Study Set '{name}': {file_path}")
+        doc_id = process_pdf(file_path, study_set_id=study_set_id)
+        document_ids.append(doc_id)
+
+    print(
+        f"\nSuccessfully processed {len(document_ids)} file(s) under Study Set '{study_set_id}'."
+    )
+
+    return study_set_id, document_ids
+
+
+def process_multiple_files(file_paths: list[str]) -> tuple[str, list[str]]:
+    """
+    Process multiple study-material files as a single Study Set.
+
+    Returns:
+        tuple (study_set_id, document_ids)
+    """
+    return create_study_set_from_files(file_paths)

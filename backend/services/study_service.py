@@ -1,9 +1,9 @@
 try:
-    from backend.services.document_service import process_pdf, process_multiple_files
+    from backend.services.document_service import process_pdf, process_multiple_files, create_study_set_from_files
     from backend.services.quiz_service import run_quiz
     from backend.services.evaluation_service import run_evaluation
 except ModuleNotFoundError:
-    from services.document_service import process_pdf, process_multiple_files
+    from services.document_service import process_pdf, process_multiple_files, create_study_set_from_files
     from services.quiz_service import run_quiz
     from services.evaluation_service import run_evaluation
 
@@ -87,15 +87,12 @@ def run_study_flow(file_paths: list[str] | str) -> None:
     if isinstance(file_paths, str):
         file_paths = [file_paths]
 
-    if len(file_paths) == 1:
-        document_ids = [process_pdf(file_paths[0])]
-    else:
-        document_ids = process_multiple_files(file_paths)
+    study_set_id, document_ids = create_study_set_from_files(file_paths)
 
     question_type = select_question_type()
 
     questions = run_quiz(
-        document_ids=document_ids,
+        study_set_id=study_set_id,
         question_type=question_type
     )
 
@@ -104,7 +101,10 @@ def run_study_flow(file_paths: list[str] | str) -> None:
             "Gemini returned no questions."
         )
 
+    doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
+
     run_evaluation(
-        questions,
-        document_ids[0]
+        questions=questions,
+        study_set_id=study_set_id,
+        document_id=doc_id
     )
