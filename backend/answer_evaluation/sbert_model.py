@@ -95,17 +95,17 @@ _nli_model = None
 _hallucination_model = None
 _HAS_HALLUCINATION_MODEL = None  # tri-state: None=not attempted yet, True/False after
 
-# When True (set only inside preload_models()), the individual _get_*()
-# functions skip their own "Loading..." print, since preload_models()
-# already printed a single message for the whole batch. Lazy, one-at-a-
-# time loading (the normal path, if preload_models() is never called)
-# is completely unaffected - each _get_*() still prints its own
-# "Loading..." the first time it's called on its own.
-_SUPPRESS_INDIVIDUAL_LOADING_PRINT = False
+# Set to True to fully silence the console during model loading - no
+# per-model prints and no single batch print from preload_models()
+# either. The huggingface_hub/transformers progress bars and warnings
+# are already suppressed separately, above, so with this on, model
+# loading (lazy or via preload_models()) produces no console output at
+# all. Flip back to False if you ever want the "Loading..." line back.
+_SHOW_LOADING_MESSAGE = False
 
 
 def _announce_loading():
-    if not _SUPPRESS_INDIVIDUAL_LOADING_PRINT:
+    if _SHOW_LOADING_MESSAGE:
         print("Loading...")
 
 
@@ -178,31 +178,28 @@ def _get_hallucination_model():
 def preload_models():
     """
     Eagerly loads all four models (bi-encoder, cross-encoder, NLI model,
-    hallucination model) up front, in one call, printing a single
-    "Loading..." line for the whole batch instead of one per model.
+    hallucination model) up front, in one call, instead of each
+    lazy-loading separately on first use.
 
     Call this ONCE at process/service startup (e.g. at the top of
     run_main.py's main(), before the study flow begins) if you want all
     model-loading cost paid up front rather than scattered across the
     first few answers evaluated. This is entirely optional - nothing
-    else in this module requires it. If it's never called, every model
-    still lazy-loads on its own first use exactly as before, each with
-    its own "Loading..." line.
+    else in this module requires it.
+
+    Console output is controlled by _SHOW_LOADING_MESSAGE above (off by
+    default, so this - like lazy loading - now prints nothing).
 
     Safe to call more than once: every _get_*() function below is
     already guarded to load only once (see the module-level singleton
     caches), so a second preload_models() call is a fast no-op.
     """
-    global _SUPPRESS_INDIVIDUAL_LOADING_PRINT
-    print("Loading...")
-    _SUPPRESS_INDIVIDUAL_LOADING_PRINT = True
-    try:
-        _get_bi_encoder()
-        _get_cross_encoder()
-        _get_nli_model()
-        _get_hallucination_model()
-    finally:
-        _SUPPRESS_INDIVIDUAL_LOADING_PRINT = False
+    if _SHOW_LOADING_MESSAGE:
+        print("Loading...")
+    _get_bi_encoder()
+    _get_cross_encoder()
+    _get_nli_model()
+    _get_hallucination_model()
 
 
 def get_embedding(text: str):
