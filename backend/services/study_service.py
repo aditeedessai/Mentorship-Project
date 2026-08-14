@@ -1,0 +1,82 @@
+try:
+    from backend.services.document_service import process_pdf
+    from backend.services.quiz_service import run_quiz
+    from backend.services.evaluation_service import run_evaluation
+except ModuleNotFoundError:
+    from services.document_service import process_pdf
+    from services.quiz_service import run_quiz
+    from services.evaluation_service import run_evaluation
+
+
+def prompt_for_document_path() -> str:
+    return input(
+        "\nEnter path to document (PDF, DOCX, PPTX): "
+    ).strip().strip('"')
+
+
+def validate_document_path(file_path: str) -> str:
+    if not file_path:
+        raise ValueError("Document path cannot be empty.")
+
+    return file_path
+
+
+def select_question_type() -> str:
+    print("\nSelect Question Type:")
+    print("1. MCQ")
+    print("2. Application")
+    print("3. General Answer(long/short)")
+
+    choice = input("\nEnter your choice (1-3): ").strip()
+
+    if choice == "1":
+        return "mcq"
+
+    elif choice == "2":
+        return "application"
+
+    elif choice == "3":
+        print("\nSelect General Answer Type:")
+        print("1. Long Answer")
+        print("2. Short Answer")
+
+        answer_choice = input(
+            "\nEnter your choice (1-2): "
+        ).strip()
+
+        if answer_choice == "1":
+            return "long"
+
+        elif answer_choice == "2":
+            return "short"
+
+        else:
+            raise ValueError(
+                "Invalid choice. Please select 1 or 2."
+            )
+
+    else:
+        raise ValueError(
+            "Invalid choice. Please select 1, 2, or 3."
+        )
+
+
+def run_study_flow(file_path: str) -> None:
+    document_id = process_pdf(file_path)
+
+    question_type = select_question_type()
+
+    questions = run_quiz(
+        document_id=document_id,
+        question_type=question_type
+    )
+
+    if not questions:
+        raise RuntimeError(
+            "Gemini returned no questions."
+        )
+
+    run_evaluation(
+        questions,
+        document_id
+    )
