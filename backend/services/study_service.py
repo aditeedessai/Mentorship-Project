@@ -48,8 +48,9 @@ def select_question_type() -> str:
     print("1. MCQ")
     print("2. Application")
     print("3. General Answer(long/short)")
+    print("4. Exit/Finish")
 
-    choice = input("\nEnter your choice (1-3): ").strip()
+    choice = input("\nEnter your choice (1-4): ").strip()
 
     if choice == "1":
         return "mcq"
@@ -77,9 +78,12 @@ def select_question_type() -> str:
                 "Invalid choice. Please select 1 or 2."
             )
 
+    elif choice == "4":
+        return "exit"
+
     else:
         raise ValueError(
-            "Invalid choice. Please select 1, 2, or 3."
+            "Invalid choice. Please select 1, 2, 3, or 4."
         )
 
 
@@ -88,23 +92,46 @@ def run_study_flow(file_paths: list[str] | str) -> None:
         file_paths = [file_paths]
 
     study_set_id, document_ids = create_study_set_from_files(file_paths)
-
-    question_type = select_question_type()
-
-    questions = run_quiz(
-        study_set_id=study_set_id,
-        question_type=question_type
-    )
-
-    if not questions:
-        raise RuntimeError(
-            "Gemini returned no questions."
-        )
-
     doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
 
-    run_evaluation(
-        questions=questions,
-        study_set_id=study_set_id,
-        document_id=doc_id
-    )
+    completed_types = set()
+
+    while True:
+        if len(completed_types) == 4:
+            print("\nAll question types have been completed.")
+            break
+
+        try:
+            question_type = select_question_type()
+        except ValueError as e:
+            print(f"\n{e}")
+            continue
+
+        if question_type == "exit":
+            break
+
+        if question_type in completed_types:
+            print("\nThis question type has already been completed.")
+            continue
+
+        try:
+            questions = run_quiz(
+                study_set_id=study_set_id,
+                question_type=question_type
+            )
+
+            if not questions:
+                print("\nGemini returned no questions.")
+                continue
+
+            run_evaluation(
+                questions=questions,
+                study_set_id=study_set_id,
+                document_id=doc_id
+            )
+
+            completed_types.add(question_type)
+        except Exception as e:
+            print(f"\nAn error occurred during quiz execution or evaluation: {e}")
+            continue
+

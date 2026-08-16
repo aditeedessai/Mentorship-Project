@@ -29,14 +29,29 @@ def retrieve_chunks(
                 "study_set_id": study_set_id
             },
         )
+
         documents = results.get("documents", [[]])[0]
+        ids = results.get("ids", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+
         print(
             f"Study Set {study_set_id}: "
             f"retrieved {len(documents)} chunks"
         )
-        all_chunks.extend(documents)
 
-    # Fallback to document_ids if study_set_id yielded no chunks or wasn't provided
+        for chunk_id, document, metadata in zip(
+            ids, documents, metadatas
+        ):
+            all_chunks.append({
+                "id": chunk_id,
+                "text": document,
+                "document_id": metadata.get("document_id"),
+                "study_set_id": metadata.get("study_set_id"),
+                "chunk_number": metadata.get("chunk_number")
+            })
+
+    # Fallback to document_ids if study_set_id
+    # yielded no chunks or wasn't provided
     if not all_chunks and document_ids:
         if isinstance(document_ids, str):
             document_ids = [document_ids]
@@ -49,12 +64,26 @@ def retrieve_chunks(
                     "document_id": doc_id
                 },
             )
+
             documents = results.get("documents", [[]])[0]
+            ids = results.get("ids", [[]])[0]
+            metadatas = results.get("metadatas", [[]])[0]
+
             print(
                 f"Document {doc_id}: "
                 f"retrieved {len(documents)} chunks"
             )
-            all_chunks.extend(documents)
+
+            for chunk_id, document, metadata in zip(
+                ids, documents, metadatas
+            ):
+                all_chunks.append({
+                    "id": chunk_id,
+                    "text": document,
+                    "document_id": metadata.get("document_id"),
+                    "study_set_id": metadata.get("study_set_id"),
+                    "chunk_number": metadata.get("chunk_number")
+                })
 
     print(
         f"Total retrieved chunks: {len(all_chunks)}"
