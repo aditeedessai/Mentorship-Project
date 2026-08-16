@@ -92,14 +92,24 @@ def run_study_flow(file_paths: list[str] | str) -> None:
         file_paths = [file_paths]
 
     study_set_id, document_ids = create_study_set_from_files(file_paths)
+<<<<<<< HEAD
     doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
+=======
+>>>>>>> origin/main
 
     completed_types = set()
 
+<<<<<<< HEAD
     while True:
         if len(completed_types) == 4:
             print("\nAll question types have been completed.")
             break
+=======
+    questions = run_quiz(
+        study_set_id=study_set_id,
+        question_type=question_type
+    )
+>>>>>>> origin/main
 
         try:
             question_type = select_question_type()
@@ -135,3 +145,13 @@ def run_study_flow(file_paths: list[str] | str) -> None:
             print(f"\nAn error occurred during quiz execution or evaluation: {e}")
             continue
 
+<<<<<<< HEAD
+=======
+    doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
+
+    run_evaluation(
+        questions=questions,
+        study_set_id=study_set_id,
+        document_id=doc_id
+    )
+>>>>>>> origin/main

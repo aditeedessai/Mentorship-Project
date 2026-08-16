@@ -29,15 +29,18 @@ def retrieve_chunks(
                 "study_set_id": study_set_id
             },
         )
-
         documents = results.get("documents", [[]])[0]
+<<<<<<< HEAD
         ids = results.get("ids", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
 
+=======
+>>>>>>> origin/main
         print(
             f"Study Set {study_set_id}: "
             f"retrieved {len(documents)} chunks"
         )
+<<<<<<< HEAD
 
         for chunk_id, document, metadata in zip(
             ids, documents, metadatas
@@ -84,6 +87,29 @@ def retrieve_chunks(
                     "study_set_id": metadata.get("study_set_id"),
                     "chunk_number": metadata.get("chunk_number")
                 })
+=======
+        all_chunks.extend(documents)
+>>>>>>> origin/main
+
+    # Fallback to document_ids if study_set_id yielded no chunks or wasn't provided
+    if not all_chunks and document_ids:
+        if isinstance(document_ids, str):
+            document_ids = [document_ids]
+
+        for doc_id in document_ids:
+            results = collection.query(
+                query_embeddings=[query_embedding.tolist()],
+                n_results=top_k,
+                where={
+                    "document_id": doc_id
+                },
+            )
+            documents = results.get("documents", [[]])[0]
+            print(
+                f"Document {doc_id}: "
+                f"retrieved {len(documents)} chunks"
+            )
+            all_chunks.extend(documents)
 
     print(
         f"Total retrieved chunks: {len(all_chunks)}"
