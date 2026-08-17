@@ -39,10 +39,10 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
             set_id = study_set_id or question.get("study_set_id") or ""
             marks = float(question.get("marks", 2.0 if question.get("question_type") == "mcq" else 10.0))
 
-            # Insert question
+            # Insert or replace question
             connection.execute(
                 """
-                INSERT INTO questions (
+                INSERT OR REPLACE INTO questions (
                     question_id,
                     document_id,
                     study_set_id,
@@ -59,13 +59,13 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    question["question_id"],
+                    question.get("question_id"),
                     doc_id,
                     set_id,
-                    question["question_type"],
+                    question.get("question_type", "short"),
                     question.get("topic"),
-                    question["question"],
-                    question["reference_answer"],
+                    question.get("question", ""),
+                    question.get("reference_answer", ""),
                     options,
                     question.get("correct_option"),
                     json.dumps(source_doc_ids),

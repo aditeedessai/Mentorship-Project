@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 
 try:
@@ -115,14 +116,15 @@ def validate_document_paths(
 
 
 def select_question_type() -> str:
-    print("\nSelect Question Type:")
+    print("\nSelect Action / Question Type:")
     print("1. MCQ")
     print("2. Application")
     print("3. General Answer(long/short)")
-    print("4. Exit/Finish")
+    print("4. View Current Performance")
+    print("5. Exit/Finish")
 
     choice = input(
-        "\nEnter your choice (1-4): "
+        "\nEnter your choice (1-5): "
     ).strip()
 
     if choice == "1":
@@ -152,11 +154,14 @@ def select_question_type() -> str:
             )
 
     elif choice == "4":
+        return "view_performance"
+
+    elif choice == "5":
         return "exit"
 
     else:
         raise ValueError(
-            "Invalid choice. Please select 1, 2, 3, or 4."
+            "Invalid choice. Please select 1, 2, 3, 4, or 5."
         )
 
 
@@ -198,6 +203,9 @@ def run_study_flow(
         else None
     )
 
+    attempt_id = str(uuid.uuid4())
+    print(f"\n[Assessment Session] Attempt ID: {attempt_id}")
+
     completed_types = set()
 
     while True:
@@ -205,6 +213,13 @@ def run_study_flow(
         if len(completed_types) == 4:
             print(
                 "\nAll question types have been completed."
+            )
+            print("\nDisplaying final cumulative performance:")
+            run_evaluation(
+                questions=[],
+                study_set_id=study_set_id,
+                document_id=doc_id,
+                attempt_id=attempt_id
             )
             break
 
@@ -217,6 +232,15 @@ def run_study_flow(
 
         if question_type == "exit":
             break
+
+        if question_type == "view_performance":
+            run_evaluation(
+                questions=[],
+                study_set_id=study_set_id,
+                document_id=doc_id,
+                attempt_id=attempt_id
+            )
+            continue
 
         if question_type in completed_types:
             print(
@@ -239,7 +263,8 @@ def run_study_flow(
             run_evaluation(
                 questions=questions,
                 study_set_id=study_set_id,
-                document_id=doc_id
+                document_id=doc_id,
+                attempt_id=attempt_id
             )
 
             completed_types.add(question_type)
@@ -249,4 +274,4 @@ def run_study_flow(
                 "\nAn error occurred during quiz execution "
                 f"or evaluation: {e}"
             )
-            continue
+            continue

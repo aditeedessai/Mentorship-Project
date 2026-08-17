@@ -20,7 +20,7 @@ def save_attempt(
     try:
         connection.execute(
             """
-            INSERT INTO quiz_attempts (
+            INSERT OR REPLACE INTO quiz_attempts (
                 attempt_id,
                 study_set_id,
                 document_id,

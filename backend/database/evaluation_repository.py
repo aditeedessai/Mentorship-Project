@@ -74,3 +74,37 @@ def get_evaluations_by_attempt(attempt_id: str):
         return [dict(row) for row in rows]
     finally:
         connection.close()
+
+
+def get_evaluations_with_question_details(attempt_id: str):
+    """
+    Return saved evaluations joined with question metadata (question_type, topic, max_marks).
+    """
+    connection = get_connection()
+    try:
+        rows = connection.execute(
+            """
+            SELECT 
+                e.attempt_id,
+                e.question_id,
+                e.student_answer,
+                e.semantic_score,
+                e.concept_score,
+                e.final_score,
+                e.marks_awarded,
+                e.matched_concepts,
+                e.missed_concepts,
+                q.question_type,
+                q.topic,
+                COALESCE(q.marks, CASE WHEN q.question_type = 'mcq' THEN 2.0 ELSE 10.0 END) AS max_marks
+            FROM evaluations e
+            LEFT JOIN questions q ON e.question_id = q.question_id
+            WHERE e.attempt_id = ?
+            ORDER BY e.id ASC
+            """,
+            (attempt_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
