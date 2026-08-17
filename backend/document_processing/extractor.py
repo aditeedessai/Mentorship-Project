@@ -1,52 +1,118 @@
 import os
+from abc import ABC, abstractmethod
+
 import pymupdf as fitz
 from docx import Document
 from pptx import Presentation
 
-SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".pptx", ".ppt"}
-REJECTED_EXTENSIONS = {
-    ".mp3", ".mp4", ".wav", ".avi", ".mov", ".m4a", ".mkv", ".flac", ".ogg", ".webm"
-}
+
+SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 
 
-def extract_text(file_path: str) -> str:
-    ext = os.path.splitext(file_path)[1].lower()
+class DocumentExtractor(ABC):
+    """
+    Abstract base class for document text extraction.
 
-    if ext in REJECTED_EXTENSIONS:
-        raise ValueError(f"Unsupported file type '{ext}'. Audio/video files are not allowed.")
+    All document-specific extractors must implement
+    extract_text().
+    """
 
-    if ext not in SUPPORTED_EXTENSIONS:
-        raise ValueError(f"Unsupported file type '{ext}'. Allowed formats: PDF, PPT/PPTX, DOC/DOCX.")
+    @abstractmethod
+    def extract_text(self, file_path: str) -> str:
+        pass
 
-    text = ""
 
-    # 1. PDF
-    if ext == ".pdf":
+class PDFExtractor(DocumentExtractor):
+    """
+    Extracts text from PDF files.
+    """
+
+    def extract_text(self, file_path: str) -> str:
+        text = ""
+
         doc = fitz.open(file_path)
-        for page in doc:
-            text += page.get_text() + "\n"
 
-    # 2. Word (.docx)
-    elif ext == ".docx":
+        try:
+            for page in doc:
+                text += page.get_text() + "\n"
+        finally:
+            doc.close()
+
+        return text
+
+
+class DOCXExtractor(DocumentExtractor):
+    """
+    Extracts text from DOCX files.
+    """
+
+    def extract_text(self, file_path: str) -> str:
+        text = ""
+
         doc = Document(file_path)
+
         for paragraph in doc.paragraphs:
             if paragraph.text:
                 text += paragraph.text + "\n"
 
-    # 3. PowerPoint (.pptx)
-    elif ext == ".pptx":
+        return text
+
+
+class PPTXExtractor(DocumentExtractor):
+    """
+    Extracts text from PPTX files.
+    """
+
+    def extract_text(self, file_path: str) -> str:
+        text = ""
+
         prs = Presentation(file_path)
+
         for slide in prs.slides:
             for shape in slide.shapes:
                 if hasattr(shape, "text") and shape.text:
                     text += shape.text + "\n"
 
-    # 4. Legacy Formats
-    elif ext in [".doc", ".ppt"]:
-        target_ext = ".docx" if ext == ".doc" else ".pptx"
-        raise ValueError(f"Legacy format '{ext}' is not supported directly. Please convert to {target_ext} or PDF.")
+        return text
+
+
+def get_extractor(file_path: str) -> DocumentExtractor:
+    """
+    Return the appropriate document extractor based
+    on the file extension.
+    """
+
+    ext = os.path.splitext(file_path)[1].lower()
+
+    if ext == ".pdf":
+        return PDFExtractor()
+
+    elif ext == ".docx":
+        return DOCXExtractor()
+
+    elif ext == ".pptx":
+        return PPTXExtractor()
+
+    raise ValueError(
+        f"Unsupported file type '{ext}'. "
+        "Allowed formats: PDF, DOCX, PPTX."
+    )
+
+
+def extract_text(file_path: str) -> str:
+    """
+    Extract text from a supported document.
+
+    The appropriate extractor is selected automatically.
+    """
+
+    extractor = get_extractor(file_path)
+
+    text = extractor.extract_text(file_path)
 
     if not text.strip():
-        raise ValueError("No text could be extracted from the uploaded file.")
+        raise ValueError(
+            "No text could be extracted from the uploaded file."
+        )
 
     return text

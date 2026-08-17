@@ -1,7 +1,10 @@
 from pathlib import Path
 import uuid
 
-from backend.document_processing.extractor import extract_text
+from backend.document_processing.extractor import (
+    extract_text,
+    SUPPORTED_EXTENSIONS
+)
 from backend.document_processing.cleaner import clean_text
 from backend.document_processing.chunker import chunk_text
 
@@ -39,7 +42,7 @@ def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
             f"PDF not found: {path}"
         )
 
-    allowed_extensions = {".pdf", ".docx", ".pptx", ".doc", ".ppt"}
+    allowed_extensions = SUPPORTED_EXTENSIONS
     if path.suffix.lower() not in allowed_extensions:
         raise ValueError(
             f"Unsupported file type '{path.suffix}'. Allowed formats: PDF, DOCX, PPTX."

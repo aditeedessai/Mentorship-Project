@@ -1,11 +1,25 @@
+from pathlib import Path
+
 try:
-    from backend.services.document_service import process_pdf, process_multiple_files, create_study_set_from_files
+    from backend.services.document_service import (
+        process_pdf,
+        process_multiple_files,
+        create_study_set_from_files
+    )
     from backend.services.quiz_service import run_quiz
     from backend.services.evaluation_service import run_evaluation
 except ModuleNotFoundError:
-    from services.document_service import process_pdf, process_multiple_files, create_study_set_from_files
+    from services.document_service import (
+        process_pdf,
+        process_multiple_files,
+        create_study_set_from_files
+    )
     from services.quiz_service import run_quiz
     from services.evaluation_service import run_evaluation
+
+
+# Only these file formats are allowed
+SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 
 
 def prompt_for_document_path() -> str:
@@ -15,32 +29,89 @@ def prompt_for_document_path() -> str:
 
 
 def prompt_for_document_paths() -> list[str]:
-    raw_input = input(
-        "\nEnter path(s) to document(s) (comma-separated for multiple files): "
-    ).strip()
-    
-    paths = [p.strip().strip('"') for p in raw_input.split(",") if p.strip()]
-    return paths
+    while True:
+        raw_input = input(
+            "\nEnter path(s) to document(s) "
+            "(comma-separated for multiple files): "
+        ).strip()
+
+        paths = [
+            p.strip().strip('"')
+            for p in raw_input.split(",")
+            if p.strip()
+        ]
+
+        try:
+            return validate_document_paths(paths)
+
+        except (ValueError, FileNotFoundError) as e:
+            print(f"\nError: {e}")
+            print("Please enter only valid PDF, DOCX, or PPTX files.")
+            print("Please try again.")
 
 
 def validate_document_path(file_path: str) -> str:
+    """
+    Validate a single document path.
+
+    Allowed formats:
+    - PDF
+    - DOCX
+    - PPTX
+    """
+
     if not file_path:
-        raise ValueError("Document path cannot be empty.")
+        raise ValueError(
+            "Document path cannot be empty."
+        )
 
-    return file_path
+    path = Path(file_path).expanduser()
+
+    # Check file extension
+    if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        raise ValueError(
+            f"Unsupported file type '{path.suffix}'. "
+            "Only PDF, DOCX, and PPTX files are allowed."
+        )
+
+    # Check whether the file exists
+    if not path.exists():
+        raise FileNotFoundError(
+            f"File not found: {file_path}"
+        )
+
+    # Check that the path is actually a file
+    if not path.is_file():
+        raise ValueError(
+            f"The provided path is not a file: {file_path}"
+        )
+
+    return str(path)
 
 
-def validate_document_paths(file_paths: list[str] | str) -> list[str]:
+def validate_document_paths(
+    file_paths: list[str] | str
+) -> list[str]:
+    """
+    Validate one or multiple document paths.
+    """
+
     if isinstance(file_paths, str):
         file_paths = [file_paths]
 
     if not file_paths:
-        raise ValueError("Document path cannot be empty.")
+        raise ValueError(
+            "Document path cannot be empty."
+        )
+
+    validated_paths = []
 
     for path in file_paths:
-        validate_document_path(path)
+        validated_paths.append(
+            validate_document_path(path)
+        )
 
-    return file_paths
+    return validated_paths
 
 
 def select_question_type() -> str:
@@ -50,7 +121,9 @@ def select_question_type() -> str:
     print("3. General Answer(long/short)")
     print("4. Exit/Finish")
 
-    choice = input("\nEnter your choice (1-4): ").strip()
+    choice = input(
+        "\nEnter your choice (1-4): "
+    ).strip()
 
     if choice == "1":
         return "mcq"
@@ -87,22 +160,57 @@ def select_question_type() -> str:
         )
 
 
-def run_study_flow(file_paths: list[str] | str) -> None:
+def run_study_flow(
+    file_paths: list[str] | str
+) -> None:
+
     if isinstance(file_paths, str):
         file_paths = [file_paths]
 
-    study_set_id, document_ids = create_study_set_from_files(file_paths)
-    doc_id = document_ids[0] if (document_ids and len(document_ids) == 1) else None
+    # Validate files again before processing.
+    # This protects the flow even if this function
+    # is called from somewhere other than the prompt.
+    try:
+        file_paths = validate_document_paths(file_paths)
+
+    except (ValueError, FileNotFoundError) as e:
+        print(f"\nError: {e}")
+        print(
+            "Only PDF, DOCX, and PPTX files are allowed."
+        )
+        return
+
+    try:
+        study_set_id, document_ids = (
+            create_study_set_from_files(file_paths)
+        )
+
+    except Exception as e:
+        print(
+            f"\nAn error occurred while processing "
+            f"the document(s): {e}"
+        )
+        return
+
+    doc_id = (
+        document_ids[0]
+        if document_ids and len(document_ids) == 1
+        else None
+    )
 
     completed_types = set()
 
     while True:
+
         if len(completed_types) == 4:
-            print("\nAll question types have been completed.")
+            print(
+                "\nAll question types have been completed."
+            )
             break
 
         try:
             question_type = select_question_type()
+
         except ValueError as e:
             print(f"\n{e}")
             continue
@@ -111,7 +219,9 @@ def run_study_flow(file_paths: list[str] | str) -> None:
             break
 
         if question_type in completed_types:
-            print("\nThis question type has already been completed.")
+            print(
+                "\nThis question type has already been completed."
+            )
             continue
 
         try:
@@ -121,7 +231,9 @@ def run_study_flow(file_paths: list[str] | str) -> None:
             )
 
             if not questions:
-                print("\nGemini returned no questions.")
+                print(
+                    "\nGemini returned no questions."
+                )
                 continue
 
             run_evaluation(
@@ -131,7 +243,10 @@ def run_study_flow(file_paths: list[str] | str) -> None:
             )
 
             completed_types.add(question_type)
-        except Exception as e:
-            print(f"\nAn error occurred during quiz execution or evaluation: {e}")
-            continue
 
+        except Exception as e:
+            print(
+                "\nAn error occurred during quiz execution "
+                f"or evaluation: {e}"
+            )
+            continue
