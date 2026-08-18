@@ -1,142 +1,81 @@
-import sqlite3
 import os
+import psycopg2
+import psycopg2.extras
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Loads DATABASE_URL from backend/.env, resolved relative to this file
+# (not wherever the process happens to be launched from).
+BACKEND_DIR = Path(__file__).resolve().parents[1]  # backend/database/database.py -> backend/
+load_dotenv(BACKEND_DIR / ".env")
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL not found. Add it to backend/.env "
+        "(Supabase → Connect → Session pooler connection string)."
+    )
 
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+class ConnectionWrapper:
+    """
+    Makes a psycopg2 connection behave like the sqlite3.Connection object
+    every repository file was written against — specifically, letting
+    connection.execute(query, params) work directly, since psycopg2 only
+    exposes .execute() on cursor objects, not the connection itself.
 
-DB_PATH = os.path.join(
-    BASE_DIR,
-    "poc.db"
-)
+    Also rewrites SQLite's '?' placeholders to Postgres's '%s' on the fly,
+    so attempt_repository.py / evaluation_repository.py / quiz_repository.py /
+    study_set_repository.py need zero changes to their query strings.
+    """
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, query, params=None):
+        query = query.replace("?", "%s")
+        cursor = self._conn.cursor()
+        cursor.execute(query, params or ())
+        return cursor
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
+
+    def cursor(self):
+        return self._conn.cursor()
 
 
 def get_connection():
-    connection = sqlite3.connect(DB_PATH)
-
-    connection.row_factory = sqlite3.Row
-
-    return connection
+    """
+    Returns a Postgres connection (via Supabase) wrapped so existing
+    repository code keeps working unchanged. Rows come back dict-like
+    (RealDictCursor), matching the old sqlite3.Row + dict(row) pattern
+    used throughout the repository files.
+    """
+    conn = psycopg2.connect(
+        DATABASE_URL,
+        cursor_factory=psycopg2.extras.RealDictCursor,
+    )
+    return ConnectionWrapper(conn)
 
 
 def init_db():
+    """
+    No-op now that schema lives in supabase/migrations/ and is applied
+    via `supabase db push`, not created here at runtime.
 
+    Kept as a callable (rather than deleted) because test_scoring_integration.py
+    still calls it in a pytest fixture — this just verifies the DB is
+    reachable instead of trying to run SQLite-style DDL against Postgres,
+    which would either error or silently do nothing useful now that the
+    tables already exist.
+    """
     connection = get_connection()
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS study_sets (
-            study_set_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS documents (
-            document_id TEXT PRIMARY KEY,
-            study_set_id TEXT NOT NULL,
-            file_path TEXT NOT NULL,
-            file_name TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (study_set_id) REFERENCES study_sets (study_set_id)
-        )
-    """)
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_id TEXT NOT NULL,
-            document_id TEXT,
-            study_set_id TEXT,
-            question_type TEXT NOT NULL,
-            topic TEXT,
-            question TEXT NOT NULL,
-            reference_answer TEXT NOT NULL,
-            options TEXT,
-            correct_option TEXT
-        )
-    """)
-
     try:
-        connection.execute("""
-            ALTER TABLE questions
-            ADD COLUMN study_set_id TEXT
-        """)
-    except Exception:
-        pass
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS evaluations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_id TEXT NOT NULL,
-            student_answer TEXT NOT NULL,
-            semantic_score REAL,
-            concept_score REAL,
-            final_score REAL NOT NULL,
-            marks_awarded REAL NOT NULL,
-            matched_concepts TEXT,
-            missed_concepts TEXT
-        )
-    """)
-
-    try:
-        connection.execute("""
-            ALTER TABLE evaluations
-            ADD COLUMN attempt_id TEXT
-        """)
-    except Exception:
-        pass
-
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS quiz_attempts (
-            attempt_id TEXT PRIMARY KEY,
-            document_id TEXT,
-            study_set_id TEXT,
-            total_marks REAL NOT NULL,
-            marks_awarded REAL NOT NULL
-        )
-    """)
-
-    try:
-        connection.execute("""
-            ALTER TABLE quiz_attempts
-            ADD COLUMN study_set_id TEXT
-        """)
-    except Exception:
-        pass
-
-    # Table for normalized canonical question-to-source relationships
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS question_sources (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            question_id TEXT NOT NULL,
-            document_id TEXT NOT NULL,
-            chunk_id TEXT,
-            FOREIGN KEY (question_id) REFERENCES questions (question_id),
-            FOREIGN KEY (document_id) REFERENCES documents (document_id)
-        )
-    """)
-
-    for col_name, col_type in [
-        ("source_document_ids", "TEXT"),
-        ("source_chunk_ids", "TEXT"),
-        ("marks", "REAL")
-    ]:
-        try:
-            connection.execute(f"ALTER TABLE questions ADD COLUMN {col_name} {col_type}")
-        except Exception:
-            pass
-
-    # Helpful indexes for result-history/evaluation lookups.
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_evaluations_attempt_id ON evaluations(attempt_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_evaluations_question_id ON evaluations(question_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_questions_document_id ON questions(document_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_questions_study_set_id ON questions(study_set_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_documents_study_set_id ON documents(study_set_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_quiz_attempts_study_set_id ON quiz_attempts(study_set_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_question_sources_question_id ON question_sources(question_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_question_sources_document_id ON question_sources(document_id)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_question_sources_chunk_id ON question_sources(chunk_id)")
-
-    connection.commit()
-    connection.close()
+        connection.execute("select 1;").fetchone()
+    finally:
+        connection.close()
