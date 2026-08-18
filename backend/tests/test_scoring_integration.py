@@ -13,6 +13,7 @@ for p in (str(PROJECT_ROOT), str(BACKEND_DIR)):
         sys.path.insert(0, p)
 
 try:
+    # pyrefly: ignore [missing-import]
     import pytest
 except ImportError:
     pytest = None
