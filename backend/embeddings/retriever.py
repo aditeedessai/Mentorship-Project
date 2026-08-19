@@ -1,15 +1,23 @@
-import os
-import chromadb
+"""
+backend.embeddings.retriever
+
+Retrieves the most relevant document chunks for a query via pgvector
+cosine-distance search against document_chunks, replacing the previous
+ChromaDB-backed implementation.
+"""
+
+from backend.database.database import get_connection
 from backend.embeddings.embedding_model import generate_query_embedding
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CHROMA_DIR = os.path.join(BASE_DIR, "chroma_db")
 
-client = chromadb.PersistentClient(path=CHROMA_DIR)
-
-collection = client.get_or_create_collection(
-    name="course_material"
-)
+def _row_to_chunk(row: dict) -> dict:
+    return {
+        "id": str(row["chunk_id"]),
+        "text": row["content"],
+        "document_id": str(row["document_id"]) if row.get("document_id") else None,
+        "study_set_id": str(row["study_set_id"]) if row.get("study_set_id") else None,
+        "chunk_number": row.get("chunk_number"),
+    }
 
 
 def retrieve_chunks(
@@ -18,94 +26,60 @@ def retrieve_chunks(
     document_ids: list[str] | str = None,
     top_k: int = 5
 ):
+    """
+    Returns the top_k most semantically similar chunks to `query`.
+
+    Tries study_set_id first (if given); falls back to per-document_id
+    lookups if that yields nothing or wasn't provided at all - same
+    fallback behavior as the previous ChromaDB version, just against
+    document_chunks with a pgvector `<=>` (cosine distance) ORDER BY
+    instead of a Chroma collection.query() call.
+    """
     query_embedding = generate_query_embedding(query)
+    connection = get_connection()
     all_chunks = []
 
-    if study_set_id:
-        results = collection.query(
-            query_embeddings=[query_embedding.tolist()],
-            n_results=top_k,
-            where={
-                "study_set_id": study_set_id
-            },
-        )
-        documents = results.get("documents", [[]])[0]
-        ids = results.get("ids", [[]])[0]
-        metadatas = results.get("metadatas", [[]])[0]
+    try:
+        if study_set_id:
+            rows = connection.execute(
+                """
+                SELECT chunk_id, content, document_id, study_set_id, chunk_number
+                FROM document_chunks
+                WHERE study_set_id = ?
+                ORDER BY embedding <=> ?
+                LIMIT ?
+                """,
+                (study_set_id, query_embedding, top_k)
+            ).fetchall()
 
-        print(
-            f"Study Set {study_set_id}: "
-            f"retrieved {len(documents)} chunks"
-        )
+            all_chunks = [_row_to_chunk(row) for row in rows]
 
-        for chunk_id, document, metadata in zip(
-            ids, documents, metadatas
-        ):
-            all_chunks.append({
-                "id": chunk_id,
-                "text": document,
-                "document_id": metadata.get("document_id"),
-                "study_set_id": metadata.get("study_set_id"),
-                "chunk_number": metadata.get("chunk_number")
-            })
+            print(f"Study Set {study_set_id}: retrieved {len(all_chunks)} chunks")
 
-    # Fallback to document_ids if study_set_id
-    # yielded no chunks or wasn't provided
-    if not all_chunks and document_ids:
-        if isinstance(document_ids, str):
-            document_ids = [document_ids]
+        # Fallback to document_ids if study_set_id yielded no chunks or wasn't provided
+        if not all_chunks and document_ids:
+            if isinstance(document_ids, str):
+                document_ids = [document_ids]
 
-        for doc_id in document_ids:
-            results = collection.query(
-                query_embeddings=[query_embedding.tolist()],
-                n_results=top_k,
-                where={
-                    "document_id": doc_id
-                },
-            )
+            for doc_id in document_ids:
+                rows = connection.execute(
+                    """
+                    SELECT chunk_id, content, document_id, study_set_id, chunk_number
+                    FROM document_chunks
+                    WHERE document_id = ?
+                    ORDER BY embedding <=> ?
+                    LIMIT ?
+                    """,
+                    (doc_id, query_embedding, top_k)
+                ).fetchall()
 
-            documents = results.get("documents", [[]])[0]
-            ids = results.get("ids", [[]])[0]
-            metadatas = results.get("metadatas", [[]])[0]
+                print(f"Document {doc_id}: retrieved {len(rows)} chunks")
 
-            print(
-                f"Document {doc_id}: "
-                f"retrieved {len(documents)} chunks"
-            )
+                all_chunks.extend(_row_to_chunk(row) for row in rows)
 
-            for chunk_id, document, metadata in zip(
-                ids, documents, metadatas
-            ):
-                all_chunks.append({
-                    "id": chunk_id,
-                    "text": document,
-                    "document_id": metadata.get("document_id"),
-                    "study_set_id": metadata.get("study_set_id"),
-                    "chunk_number": metadata.get("chunk_number")
-                })
+        print(f"Total retrieved chunks: {len(all_chunks)}")
 
-    # Fallback to document_ids if study_set_id yielded no chunks or wasn't provided
-    if not all_chunks and document_ids:
-        if isinstance(document_ids, str):
-            document_ids = [document_ids]
+        return all_chunks
 
-        for doc_id in document_ids:
-            results = collection.query(
-                query_embeddings=[query_embedding.tolist()],
-                n_results=top_k,
-                where={
-                    "document_id": doc_id
-                },
-            )
-            documents = results.get("documents", [[]])[0]
-            print(
-                f"Document {doc_id}: "
-                f"retrieved {len(documents)} chunks"
-            )
-            all_chunks.extend(documents)
-
-    print(
-        f"Total retrieved chunks: {len(all_chunks)}"
-    )
-
-    return all_chunks
+    finally:
+        connection.close()

@@ -13,7 +13,8 @@ from backend.answer_evaluation.performance_scorer import (
 
 from backend.database.attempt_repository import (
     save_attempt,
-    get_attempt
+    get_attempt,
+    ensure_attempt_exists
 )
 
 from backend.database.evaluation_repository import (
@@ -111,17 +112,33 @@ def run_evaluation(
     study_set_id: str = None,
     document_id: str = None,
     attempt_id: str = None,
-    display_performance: bool = False
+    display_performance: bool = False,
+    status: str = "in_progress"
 ):
     """
     Run or update the quiz evaluation workflow for an attempt.
 
     - When questions are provided: evaluates student answers and records them under attempt_id.
     - Performance summary is displayed ONLY if display_performance=True or when viewing performance.
+    - `status` is forwarded to save_attempt() ('in_progress' by default). Callers
+      should pass status="completed" once the student has finished every section -
+      see study_service.run_study_flow, which does this the moment all 4
+      question types are done.
     """
 
     if not attempt_id:
         attempt_id = str(uuid.uuid4())
+
+    # Guarantees a quiz_attempts row exists before any evaluations are
+    # saved below - evaluations.attempt_id is a real foreign key in
+    # Postgres, and save_attempt() (with real totals) only runs once,
+    # at the end of this function. Safe to call every time: it's a
+    # no-op if the attempt already exists (see its docstring).
+    ensure_attempt_exists(
+        attempt_id=attempt_id,
+        study_set_id=study_set_id,
+        document_id=document_id
+    )
 
     questions = questions or []
     if questions:
@@ -355,7 +372,8 @@ def run_evaluation(
         study_set_id=study_set_id,
         document_id=document_id,
         total_marks=total_marks,
-        marks_awarded=earned_marks
+        marks_awarded=earned_marks,
+        status=status
     )
 
     # Display performance summary if requested or if viewing performance
@@ -378,5 +396,3 @@ def get_current_performance(attempt_id: str):
     Retrieve and display current cumulative performance snapshot for an attempt.
     """
     return run_evaluation(questions=[], attempt_id=attempt_id, display_performance=True)
-
-

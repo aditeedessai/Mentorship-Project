@@ -219,7 +219,8 @@ def run_study_flow(
                 questions=[],
                 study_set_id=study_set_id,
                 document_id=doc_id,
-                attempt_id=attempt_id
+                attempt_id=attempt_id,
+                status="completed"
             )
             break
 
@@ -274,4 +275,4 @@ def run_study_flow(
                 "\nAn error occurred during quiz execution "
                 f"or evaluation: {e}"
             )
-            continue
+            continue

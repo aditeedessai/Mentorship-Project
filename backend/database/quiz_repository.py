@@ -35,14 +35,14 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
             if not primary_doc_id and source_doc_ids:
                 primary_doc_id = source_doc_ids[0]
 
-            doc_id = primary_doc_id or ""
-            set_id = study_set_id or question.get("study_set_id") or ""
+            doc_id = primary_doc_id or None
+            set_id = study_set_id or question.get("study_set_id") or None
             marks = float(question.get("marks", 2.0 if question.get("question_type") == "mcq" else 10.0))
 
-            # Insert or replace question
+            # Insert question, or update it in place if question_id already exists
             connection.execute(
                 """
-                INSERT OR REPLACE INTO questions (
+                INSERT INTO questions (
                     question_id,
                     document_id,
                     study_set_id,
@@ -57,6 +57,18 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                     marks
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (question_id) DO UPDATE SET
+                    document_id = EXCLUDED.document_id,
+                    study_set_id = EXCLUDED.study_set_id,
+                    question_type = EXCLUDED.question_type,
+                    topic = EXCLUDED.topic,
+                    question = EXCLUDED.question,
+                    reference_answer = EXCLUDED.reference_answer,
+                    options = EXCLUDED.options,
+                    correct_option = EXCLUDED.correct_option,
+                    source_document_ids = EXCLUDED.source_document_ids,
+                    source_chunk_ids = EXCLUDED.source_chunk_ids,
+                    marks = EXCLUDED.marks
                 """,
                 (
                     question.get("question_id"),
