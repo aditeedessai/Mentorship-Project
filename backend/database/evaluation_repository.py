@@ -19,6 +19,12 @@ def save_evaluation(
     connection = get_connection()
 
     try:
+        if attempt_id:
+            connection.execute(
+                "DELETE FROM evaluations WHERE attempt_id = ? AND question_id = ?",
+                (attempt_id, question_id)
+            )
+
         connection.execute(
             """
             INSERT INTO evaluations (
@@ -61,6 +67,12 @@ def _format_eval_dict(row: dict) -> dict:
     for field in ("semantic_score", "concept_score", "final_score", "marks_awarded", "max_marks"):
         if d.get(field) is not None:
             d[field] = float(d[field])
+    for field in ("matched_concepts", "missed_concepts"):
+        if isinstance(d.get(field), str):
+            try:
+                d[field] = json.loads(d[field])
+            except Exception:
+                pass
     return d
 
 
@@ -70,7 +82,7 @@ def get_evaluations_by_attempt(attempt_id: str):
     try:
         rows = connection.execute(
             """
-            SELECT attempt_id, question_id, student_answer, semantic_score,
+            SELECT id, attempt_id, question_id, student_answer, semantic_score,
                    concept_score, final_score, marks_awarded,
                    matched_concepts, missed_concepts
             FROM evaluations
@@ -93,6 +105,7 @@ def get_evaluations_with_question_details(attempt_id: str):
         rows = connection.execute(
             """
             SELECT 
+                e.id,
                 e.attempt_id,
                 e.question_id,
                 e.student_answer,

@@ -83,11 +83,12 @@ def save_attempt(
             )
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (attempt_id) DO UPDATE SET
-                study_set_id = EXCLUDED.study_set_id,
-                document_id = EXCLUDED.document_id,
+                study_set_id = COALESCE(EXCLUDED.study_set_id, quiz_attempts.study_set_id),
+                document_id = COALESCE(EXCLUDED.document_id, quiz_attempts.document_id),
                 total_marks = EXCLUDED.total_marks,
                 marks_awarded = EXCLUDED.marks_awarded,
-                status = EXCLUDED.status
+                status = EXCLUDED.status,
+                updated_at = NOW()
             """,
             (
                 attempt_id,
@@ -130,7 +131,9 @@ def get_attempt(attempt_id: str):
                 document_id,
                 total_marks,
                 marks_awarded,
-                status
+                status,
+                created_at,
+                updated_at
             FROM quiz_attempts
             WHERE attempt_id = ?
             """,

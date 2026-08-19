@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 import uuid
-from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from backend.api.schemas.answer import (
@@ -13,15 +12,19 @@ from backend.api.schemas.attempt import (
     AttemptStatus,
     StartAttemptRequest,
 )
-from backend.mock_data.attempts import MOCK_ATTEMPTS, MOCK_EVALUATIONS
+from backend.database.attempt_repository import (
+    get_attempt as get_attempt_from_db,
+    save_attempt,
+)
+from backend.database.evaluation_repository import (
+    get_evaluations_with_question_details,
+)
+from backend.database import study_set_repository
+from backend.services.evaluation_service import (
+    evaluate_and_save_attempt_answers,
+)
 
 router = APIRouter(prefix="/attempts", tags=["Attempts"])
-
-# Temporary in-memory state for active FastAPI process
-ATTEMPTS_STORE: dict[str, AttemptResponse] = {
-    att.attempt_id: att for att in MOCK_ATTEMPTS
-}
-EVALUATIONS_STORE: dict[str, EvaluationListResponse] = dict(MOCK_EVALUATIONS)
 
 
 @router.post(
@@ -32,27 +35,42 @@ EVALUATIONS_STORE: dict[str, EvaluationListResponse] = dict(MOCK_EVALUATIONS)
     description="Initializes a new quiz attempt for a study set with status 'in_progress'."
 )
 def start_attempt(payload: StartAttemptRequest) -> AttemptResponse:
-    now = datetime.now(timezone.utc)
+    study_set_id_str = str(payload.study_set_id)
+    doc_id_str = str(payload.document_id) if payload.document_id else None
+
+    study_set = study_set_repository.get_study_set(study_set_id_str)
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Study set with ID '{payload.study_set_id}' not found"
+        )
+
+    if doc_id_str:
+        doc = study_set_repository.get_document_by_id(doc_id_str)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID '{payload.document_id}' not found"
+            )
+
     attempt_id = str(uuid.uuid4())
-    new_attempt = AttemptResponse(
+
+    save_attempt(
         attempt_id=attempt_id,
-        study_set_id=payload.study_set_id,
-        document_id=payload.document_id,
-        status=AttemptStatus.IN_PROGRESS,
         total_marks=0.0,
         marks_awarded=0.0,
-        created_at=now,
-        updated_at=now
+        study_set_id=study_set_id_str,
+        document_id=doc_id_str,
+        status=AttemptStatus.IN_PROGRESS.value
     )
-    ATTEMPTS_STORE[attempt_id] = new_attempt
-    EVALUATIONS_STORE[attempt_id] = EvaluationListResponse(
-        attempt_id=attempt_id,
-        total_marks=0.0,
-        earned_marks=0.0,
-        percentage=0.0,
-        results=[]
-    )
-    return new_attempt
+
+    att = get_attempt_from_db(attempt_id)
+    if not att:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create quiz attempt in database"
+        )
+    return AttemptResponse(**att)
 
 
 @router.get(
@@ -63,12 +81,13 @@ def start_attempt(payload: StartAttemptRequest) -> AttemptResponse:
     description="Retrieves current metadata and status for a specific test attempt."
 )
 def get_attempt(attempt_id: str) -> AttemptResponse:
-    if attempt_id not in ATTEMPTS_STORE:
+    att = get_attempt_from_db(attempt_id)
+    if not att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Attempt with ID '{attempt_id}' not found"
         )
-    return ATTEMPTS_STORE[attempt_id]
+    return AttemptResponse(**att)
 
 
 @router.post(
@@ -82,62 +101,30 @@ def submit_section_answers(
     attempt_id: str,
     payload: SubmitAnswersRequest
 ) -> EvaluationListResponse:
-    if attempt_id not in ATTEMPTS_STORE:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Attempt with ID '{attempt_id}' not found"
-        )
-
-    attempt = ATTEMPTS_STORE[attempt_id]
-    if attempt.status == AttemptStatus.COMPLETED:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot submit answers for a completed attempt"
-        )
-
-    eval_list = EVALUATIONS_STORE.setdefault(
-        attempt_id,
-        EvaluationListResponse(
-            attempt_id=attempt_id,
-            total_marks=0.0,
-            earned_marks=0.0,
-            percentage=0.0,
-            results=[]
-        )
-    )
-
-    new_results = []
-    for item in payload.answers:
-        marks = 2.0 if payload.question_type.value == "mcq" else 10.0
-        eval_resp = EvaluationResponse(
-            question_id=item.question_id,
-            student_answer=item.student_answer,
-            marks_awarded=marks,
-            final_score=1.0,
-            is_correct=True,
-            semantic_score=1.0 if payload.question_type.value != "mcq" else None,
-            concept_score=1.0 if payload.question_type.value != "mcq" else None,
-            matched_concepts=["core_concept"],
-            missed_concepts=[],
-            keyword_stuffing_detected=False,
-            logic_inversion_detected=False,
-        )
-        new_results.append(eval_resp)
-
-    eval_list.results.extend(new_results)
-    earned = sum(e.marks_awarded for e in eval_list.results)
-    total = earned
-    pct = 100.0 if total > 0 else 0.0
-
-    eval_list.total_marks = total
-    eval_list.earned_marks = earned
-    eval_list.percentage = pct
-
-    attempt.total_marks = total
-    attempt.marks_awarded = earned
-    attempt.updated_at = datetime.now(timezone.utc)
-
-    return eval_list
+    try:
+        answers_data = [
+            {"question_id": item.question_id, "student_answer": item.student_answer}
+            for item in payload.answers
+        ]
+        result = evaluate_and_save_attempt_answers(attempt_id, answers_data)
+        return EvaluationListResponse(**result)
+    except ValueError as e:
+        err_msg = str(e)
+        if "not found" in err_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=err_msg
+            )
+        elif "completed" in err_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=err_msg
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=err_msg
+            )
 
 
 @router.post(
@@ -148,22 +135,30 @@ def submit_section_answers(
     description="Finalizes an active quiz attempt, updating its status from 'in_progress' to 'completed'."
 )
 def finish_attempt(attempt_id: str) -> AttemptResponse:
-    if attempt_id not in ATTEMPTS_STORE:
+    att = get_attempt_from_db(attempt_id)
+    if not att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Attempt with ID '{attempt_id}' not found"
         )
 
-    attempt = ATTEMPTS_STORE[attempt_id]
-    if attempt.status == AttemptStatus.COMPLETED:
+    if att.get("status") == AttemptStatus.COMPLETED.value:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Attempt is already completed"
         )
 
-    attempt.status = AttemptStatus.COMPLETED
-    attempt.updated_at = datetime.now(timezone.utc)
-    return attempt
+    save_attempt(
+        attempt_id=attempt_id,
+        total_marks=float(att.get("total_marks", 0.0)),
+        marks_awarded=float(att.get("marks_awarded", 0.0)),
+        study_set_id=att.get("study_set_id"),
+        document_id=att.get("document_id"),
+        status=AttemptStatus.COMPLETED.value
+    )
+
+    updated_att = get_attempt_from_db(attempt_id)
+    return AttemptResponse(**updated_att)
 
 
 @router.get(
@@ -174,19 +169,47 @@ def finish_attempt(attempt_id: str) -> AttemptResponse:
     description="Retrieves question-level evaluation records for a specific test attempt."
 )
 def get_attempt_evaluations(attempt_id: str) -> EvaluationListResponse:
-    if attempt_id not in ATTEMPTS_STORE:
+    att = get_attempt_from_db(attempt_id)
+    if not att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Attempt with ID '{attempt_id}' not found"
         )
-    return EVALUATIONS_STORE.get(
-        attempt_id,
-        EvaluationListResponse(
-            attempt_id=attempt_id,
-            total_marks=0.0,
-            earned_marks=0.0,
-            percentage=0.0,
-            results=[]
+
+    eval_records = get_evaluations_with_question_details(attempt_id)
+
+    eval_responses = []
+    for rec in eval_records:
+        is_corr = rec.get("is_correct")
+        if is_corr is None:
+            final_s = rec.get("final_score")
+            is_corr = (final_s >= 0.55) if final_s is not None else None
+
+        eval_responses.append(
+            EvaluationResponse(
+                question_id=rec["question_id"],
+                student_answer=rec.get("student_answer"),
+                marks_awarded=float(rec["marks_awarded"]),
+                final_score=float(rec["final_score"]),
+                is_correct=is_corr,
+                semantic_score=float(rec["semantic_score"]) if rec.get("semantic_score") is not None else None,
+                concept_score=float(rec["concept_score"]) if rec.get("concept_score") is not None else None,
+                matched_concepts=rec.get("matched_concepts"),
+                missed_concepts=rec.get("missed_concepts"),
+                keyword_stuffing_detected=False,
+                logic_inversion_detected=False,
+            )
         )
+
+    total_marks = sum(float(rec.get("max_marks", 0.0)) for rec in eval_records)
+    earned_marks = sum(float(rec.get("marks_awarded", 0.0)) for rec in eval_records)
+    percentage = round((earned_marks / total_marks * 100.0), 2) if total_marks > 0 else 0.0
+
+    return EvaluationListResponse(
+        attempt_id=attempt_id,
+        total_marks=total_marks,
+        earned_marks=earned_marks,
+        percentage=percentage,
+        results=eval_responses
     )
 
