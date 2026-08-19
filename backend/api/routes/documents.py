@@ -9,11 +9,13 @@ try:
         DocumentListResponse,
         DocumentResponse,
     )
+    from mock_data.documents import MOCK_DOCUMENTS
 except ModuleNotFoundError:
     from backend.api.schemas.document import (
         DocumentListResponse,
         DocumentResponse,
     )
+    from backend.mock_data.documents import MOCK_DOCUMENTS
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 
@@ -56,6 +58,7 @@ def upload_documents(
             created_at=now
         )
         uploaded_docs.append(placeholder_doc)
+        MOCK_DOCUMENTS.append(placeholder_doc)
 
     return DocumentListResponse(documents=uploaded_docs)
 
@@ -68,15 +71,11 @@ def upload_documents(
     description="Retrieves all documents associated with the specified study set UUID."
 )
 def list_study_set_documents(study_set_id: UUID) -> DocumentListResponse:
-    now = datetime.now(timezone.utc)
-    placeholder_doc = DocumentResponse(
-        document_id=uuid.UUID("00000000-0000-4000-8000-000000000002"),
-        study_set_id=study_set_id,
-        file_name="sample_lecture.pdf",
-        file_path="/uploads/sample_lecture.pdf",
-        created_at=now
-    )
-    return DocumentListResponse(documents=[placeholder_doc])
+    matching_docs = [
+        doc for doc in MOCK_DOCUMENTS
+        if doc.study_set_id == study_set_id
+    ]
+    return DocumentListResponse(documents=matching_docs)
 
 
 @router.get(
@@ -87,11 +86,11 @@ def list_study_set_documents(study_set_id: UUID) -> DocumentListResponse:
     description="Retrieves information for a specific document by its UUID."
 )
 def get_document(document_id: UUID) -> DocumentResponse:
-    now = datetime.now(timezone.utc)
-    return DocumentResponse(
-        document_id=document_id,
-        study_set_id=uuid.UUID("00000000-0000-4000-8000-000000000001"),
-        file_name="sample_lecture.pdf",
-        file_path="/uploads/sample_lecture.pdf",
-        created_at=now
+    for doc in MOCK_DOCUMENTS:
+        if doc.document_id == document_id:
+            return doc
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Document with ID '{document_id}' not found"
     )
+

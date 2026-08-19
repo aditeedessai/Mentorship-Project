@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import uuid
 from uuid import UUID
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 
 try:
     from api.schemas.study_set import (
@@ -9,12 +9,14 @@ try:
         StudySetListResponse,
         StudySetResponse,
     )
+    from mock_data.study_sets import MOCK_STUDY_SETS
 except ModuleNotFoundError:
     from backend.api.schemas.study_set import (
         CreateStudySetRequest,
         StudySetListResponse,
         StudySetResponse,
     )
+    from backend.mock_data.study_sets import MOCK_STUDY_SETS
 
 router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
 
@@ -28,12 +30,14 @@ router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
 )
 def create_study_set(payload: CreateStudySetRequest) -> StudySetResponse:
     now = datetime.now(timezone.utc)
-    return StudySetResponse(
+    new_set = StudySetResponse(
         study_set_id=uuid.uuid4(),
         name=payload.name,
         created_at=now,
         updated_at=now
     )
+    MOCK_STUDY_SETS.append(new_set)
+    return new_set
 
 
 @router.get(
@@ -44,14 +48,7 @@ def create_study_set(payload: CreateStudySetRequest) -> StudySetResponse:
     description="Retrieves a list of available study sets."
 )
 def list_study_sets() -> StudySetListResponse:
-    now = datetime.now(timezone.utc)
-    placeholder_set = StudySetResponse(
-        study_set_id=uuid.UUID("00000000-0000-4000-8000-000000000001"),
-        name="Sample Study Set",
-        created_at=now,
-        updated_at=now
-    )
-    return StudySetListResponse(study_sets=[placeholder_set])
+    return StudySetListResponse(study_sets=MOCK_STUDY_SETS)
 
 
 @router.get(
@@ -62,10 +59,11 @@ def list_study_sets() -> StudySetListResponse:
     description="Retrieves details for a specific study set by its UUID."
 )
 def get_study_set(study_set_id: UUID) -> StudySetResponse:
-    now = datetime.now(timezone.utc)
-    return StudySetResponse(
-        study_set_id=study_set_id,
-        name="Sample Study Set",
-        created_at=now,
-        updated_at=now
+    for study_set in MOCK_STUDY_SETS:
+        if study_set.study_set_id == study_set_id:
+            return study_set
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Study set with ID '{study_set_id}' not found"
     )
+

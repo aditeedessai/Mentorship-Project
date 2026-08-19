@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import uuid
 from uuid import UUID
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 try:
     from api.schemas.question import (
@@ -10,6 +10,7 @@ try:
         QuestionResponse,
         QuestionType,
     )
+    from mock_data.questions import MOCK_QUESTIONS
 except ModuleNotFoundError:
     from backend.api.schemas.question import (
         GenerateQuestionsRequest,
@@ -17,6 +18,7 @@ except ModuleNotFoundError:
         QuestionResponse,
         QuestionType,
     )
+    from backend.mock_data.questions import MOCK_QUESTIONS
 
 router = APIRouter(tags=["Questions"])
 
@@ -32,39 +34,16 @@ def generate_questions(
     study_set_id: UUID,
     payload: GenerateQuestionsRequest
 ) -> QuestionListResponse:
-    now = datetime.now(timezone.utc)
-
-    if payload.question_type == QuestionType.MCQ:
-        placeholder_question = QuestionResponse(
-            question_id=str(uuid.uuid4()),
-            study_set_id=study_set_id,
-            document_id=None,
-            question_type=QuestionType.MCQ,
-            topic="general",
-            question="What is the primary function of a neural network activation function?",
-            options={
-                "A": "Introduce non-linearity into the model",
-                "B": "Reduce dataset dimensionality",
-                "C": "Increase learning rate",
-                "D": "Normalize input features"
-            },
-            marks=2.0,
-            created_at=now
-        )
-    else:
-        placeholder_question = QuestionResponse(
-            question_id=str(uuid.uuid4()),
-            study_set_id=study_set_id,
-            document_id=None,
-            question_type=payload.question_type,
-            topic="general",
-            question=f"Sample {payload.question_type.value} question about the study material.",
-            options=None,
-            marks=10.0,
-            created_at=now
-        )
-
-    return QuestionListResponse(questions=[placeholder_question])
+    matching_questions = [
+        q for q in MOCK_QUESTIONS
+        if q.question_type == payload.question_type and (q.study_set_id == study_set_id or q.study_set_id is None)
+    ]
+    if not matching_questions:
+        matching_questions = [
+            q for q in MOCK_QUESTIONS
+            if q.question_type == payload.question_type
+        ]
+    return QuestionListResponse(questions=matching_questions)
 
 
 @router.get(
@@ -81,22 +60,21 @@ def list_questions(
         description="Optional filter by question type (mcq, application, long, short)"
     )
 ) -> QuestionListResponse:
-    now = datetime.now(timezone.utc)
-    target_type = question_type or QuestionType.MCQ
-
-    placeholder_question = QuestionResponse(
-        question_id=str(uuid.UUID("00000000-0000-4000-8000-000000000003")),
-        study_set_id=study_set_id,
-        document_id=None,
-        question_type=target_type,
-        topic="general",
-        question="Sample study question?",
-        options={"A": "Option A", "B": "Option B"} if target_type == QuestionType.MCQ else None,
-        marks=2.0 if target_type == QuestionType.MCQ else 10.0,
-        created_at=now
-    )
-
-    return QuestionListResponse(questions=[placeholder_question])
+    matching_questions = [
+        q for q in MOCK_QUESTIONS
+        if q.study_set_id == study_set_id or q.study_set_id is None
+    ]
+    if question_type:
+        matching_questions = [
+            q for q in matching_questions
+            if q.question_type == question_type
+        ]
+    if not matching_questions:
+        matching_questions = [
+            q for q in MOCK_QUESTIONS
+            if (question_type is None or q.question_type == question_type)
+        ]
+    return QuestionListResponse(questions=matching_questions)
 
 
 @router.get(
@@ -107,20 +85,11 @@ def list_questions(
     description="Retrieves student-facing details for a specific question by its ID."
 )
 def get_question(question_id: str) -> QuestionResponse:
-    now = datetime.now(timezone.utc)
-    return QuestionResponse(
-        question_id=question_id,
-        study_set_id=uuid.UUID("00000000-0000-4000-8000-000000000001"),
-        document_id=None,
-        question_type=QuestionType.MCQ,
-        topic="general",
-        question="What is supervised learning?",
-        options={
-            "A": "Learning with labeled data",
-            "B": "Learning without labeled data",
-            "C": "Reinforcement learning",
-            "D": "Unsupervised clustering"
-        },
-        marks=2.0,
-        created_at=now
+    for question in MOCK_QUESTIONS:
+        if question.question_id == question_id:
+            return question
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Question with ID '{question_id}' not found"
     )
+
