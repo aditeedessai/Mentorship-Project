@@ -1,12 +1,8 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-try:
-    from api.schemas.document import DocumentListResponse, DocumentResponse
-    from mock_data.study_sets import STUDY_SET_1_ID, STUDY_SET_2_ID
-except ModuleNotFoundError:
-    from backend.api.schemas.document import DocumentListResponse, DocumentResponse
-    from backend.mock_data.study_sets import STUDY_SET_1_ID, STUDY_SET_2_ID
+from backend.api.schemas.document import DocumentListResponse, DocumentResponse
+from backend.mock_data.study_sets import STUDY_SET_1_ID, STUDY_SET_2_ID
 
 DOC_1_ID = UUID("10000000-0000-4000-8000-000000000001")
 DOC_2_ID = UUID("10000000-0000-4000-8000-000000000002")

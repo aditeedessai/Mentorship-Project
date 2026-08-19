@@ -3,30 +3,17 @@ import uuid
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
-try:
-    from api.schemas.answer import (
-        EvaluationListResponse,
-        EvaluationResponse,
-        SubmitAnswersRequest,
-    )
-    from api.schemas.attempt import (
-        AttemptResponse,
-        AttemptStatus,
-        StartAttemptRequest,
-    )
-    from mock_data.attempts import MOCK_ATTEMPTS, MOCK_EVALUATIONS
-except ModuleNotFoundError:
-    from backend.api.schemas.answer import (
-        EvaluationListResponse,
-        EvaluationResponse,
-        SubmitAnswersRequest,
-    )
-    from backend.api.schemas.attempt import (
-        AttemptResponse,
-        AttemptStatus,
-        StartAttemptRequest,
-    )
-    from backend.mock_data.attempts import MOCK_ATTEMPTS, MOCK_EVALUATIONS
+from backend.api.schemas.answer import (
+    EvaluationListResponse,
+    EvaluationResponse,
+    SubmitAnswersRequest,
+)
+from backend.api.schemas.attempt import (
+    AttemptResponse,
+    AttemptStatus,
+    StartAttemptRequest,
+)
+from backend.mock_data.attempts import MOCK_ATTEMPTS, MOCK_EVALUATIONS
 
 router = APIRouter(prefix="/attempts", tags=["Attempts"])
 

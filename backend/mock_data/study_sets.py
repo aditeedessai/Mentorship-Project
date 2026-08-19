@@ -1,10 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-try:
-    from api.schemas.study_set import StudySetListResponse, StudySetResponse
-except ModuleNotFoundError:
-    from backend.api.schemas.study_set import StudySetListResponse, StudySetResponse
+from backend.api.schemas.study_set import StudySetListResponse, StudySetResponse
 
 STUDY_SET_1_ID = UUID("00000000-0000-4000-8000-000000000001")
 STUDY_SET_2_ID = UUID("00000000-0000-4000-8000-000000000002")

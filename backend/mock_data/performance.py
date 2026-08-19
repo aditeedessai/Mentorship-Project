@@ -1,21 +1,11 @@
-try:
-    from api.schemas.attempt import AttemptStatus
-    from api.schemas.performance import (
-        CumulativePerformance,
-        PerformanceResponse,
-        ResultResponse,
-        SectionPerformance,
-        TopicPerformance,
-    )
-except ModuleNotFoundError:
-    from backend.api.schemas.attempt import AttemptStatus
-    from backend.api.schemas.performance import (
-        CumulativePerformance,
-        PerformanceResponse,
-        ResultResponse,
-        SectionPerformance,
-        TopicPerformance,
-    )
+from backend.api.schemas.attempt import AttemptStatus
+from backend.api.schemas.performance import (
+    CumulativePerformance,
+    PerformanceResponse,
+    ResultResponse,
+    SectionPerformance,
+    TopicPerformance,
+)
 
 MOCK_PERFORMANCE: dict[str, PerformanceResponse] = {
     "attempt-001": PerformanceResponse(

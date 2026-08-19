@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from api.schemas.attempt import AttemptStatus
+from backend.api.schemas.attempt import AttemptStatus
 
 
 class SectionPerformance(BaseModel):

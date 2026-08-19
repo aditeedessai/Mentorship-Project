@@ -3,6 +3,17 @@ import json
 from backend.database.database import get_connection
 
 
+def _parse_json_field(val, default=None):
+    if val is None:
+        return default
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except (json.JSONDecodeError, TypeError):
+            return default
+    return val
+
+
 def save_questions(study_set_id: str = None, questions: list = None, document_id: str = None):
     """
     Save generated quiz questions and their reference answers.
@@ -84,6 +95,12 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                     json.dumps(source_chk_ids),
                     marks
                 )
+            )
+
+            # Clear any pre-existing source records for this question before inserting new ones
+            connection.execute(
+                "DELETE FROM question_sources WHERE question_id = ?",
+                (question["question_id"],)
             )
 
             # Populate question_sources canonical relationship table
@@ -171,7 +188,8 @@ def get_questions_by_study_set(study_set_id: str):
                 options,
                 source_document_ids,
                 source_chunk_ids,
-                marks
+                marks,
+                created_at
             FROM questions
             WHERE study_set_id = ?
             ORDER BY id
@@ -183,17 +201,11 @@ def get_questions_by_study_set(study_set_id: str):
 
         for row in rows:
             question = dict(row)
-
-            if question.get("options"):
-                question["options"] = json.loads(question["options"])
-            if question.get("source_document_ids"):
-                question["source_document_ids"] = json.loads(question["source_document_ids"])
-            else:
-                question["source_document_ids"] = []
-            if question.get("source_chunk_ids"):
-                question["source_chunk_ids"] = json.loads(question["source_chunk_ids"])
-            else:
-                question["source_chunk_ids"] = []
+            question["options"] = _parse_json_field(question.get("options"))
+            question["source_document_ids"] = _parse_json_field(question.get("source_document_ids"), [])
+            question["source_chunk_ids"] = _parse_json_field(question.get("source_chunk_ids"), [])
+            if question.get("marks") is not None:
+                question["marks"] = float(question["marks"])
 
             # Attach canonical sources from question_sources table
             sources = connection.execute(
@@ -220,6 +232,7 @@ def get_questions_by_document(document_id: str):
         rows = connection.execute(
             """
             SELECT DISTINCT
+                q.id,
                 q.question_id,
                 q.study_set_id,
                 q.document_id,
@@ -229,7 +242,8 @@ def get_questions_by_document(document_id: str):
                 q.options,
                 q.source_document_ids,
                 q.source_chunk_ids,
-                q.marks
+                q.marks,
+                q.created_at
             FROM questions q
             LEFT JOIN question_sources qs ON q.question_id = qs.question_id
             WHERE qs.document_id = ? OR q.document_id = ?
@@ -242,17 +256,11 @@ def get_questions_by_document(document_id: str):
 
         for row in rows:
             question = dict(row)
-
-            if question.get("options"):
-                question["options"] = json.loads(question["options"])
-            if question.get("source_document_ids"):
-                question["source_document_ids"] = json.loads(question["source_document_ids"])
-            else:
-                question["source_document_ids"] = []
-            if question.get("source_chunk_ids"):
-                question["source_chunk_ids"] = json.loads(question["source_chunk_ids"])
-            else:
-                question["source_chunk_ids"] = []
+            question["options"] = _parse_json_field(question.get("options"))
+            question["source_document_ids"] = _parse_json_field(question.get("source_document_ids"), [])
+            question["source_chunk_ids"] = _parse_json_field(question.get("source_chunk_ids"), [])
+            if question.get("marks") is not None:
+                question["marks"] = float(question["marks"])
 
             sources = connection.execute(
                 "SELECT document_id, chunk_id FROM question_sources WHERE question_id = ?",
@@ -289,7 +297,8 @@ def get_question_by_id(question_id: str):
                 correct_option,
                 source_document_ids,
                 source_chunk_ids,
-                marks
+                marks,
+                created_at
             FROM questions
             WHERE question_id = ?
             LIMIT 1
@@ -301,17 +310,11 @@ def get_question_by_id(question_id: str):
             return None
 
         question = dict(row)
-
-        if question.get("options"):
-            question["options"] = json.loads(question["options"])
-        if question.get("source_document_ids"):
-            question["source_document_ids"] = json.loads(question["source_document_ids"])
-        else:
-            question["source_document_ids"] = []
-        if question.get("source_chunk_ids"):
-            question["source_chunk_ids"] = json.loads(question["source_chunk_ids"])
-        else:
-            question["source_chunk_ids"] = []
+        question["options"] = _parse_json_field(question.get("options"))
+        question["source_document_ids"] = _parse_json_field(question.get("source_document_ids"), [])
+        question["source_chunk_ids"] = _parse_json_field(question.get("source_chunk_ids"), [])
+        if question.get("marks") is not None:
+            question["marks"] = float(question["marks"])
 
         sources = connection.execute(
             "SELECT document_id, chunk_id FROM question_sources WHERE question_id = ?",

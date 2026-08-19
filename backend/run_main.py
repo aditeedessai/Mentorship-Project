@@ -9,12 +9,8 @@ for p in (str(PROJECT_ROOT), str(ROOT)):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-try:
-    from backend.database.database import init_db
-    from backend.services import study_service
-except ModuleNotFoundError:
-    from database.database import init_db
-    import services.study_service as study_service
+from backend.database.database import init_db
+from backend.services import study_service
 
 
 def prompt_for_document_path() -> str:

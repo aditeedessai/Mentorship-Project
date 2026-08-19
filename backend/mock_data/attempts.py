@@ -1,15 +1,9 @@
 from datetime import datetime, timezone
 
-try:
-    from api.schemas.answer import EvaluationListResponse, EvaluationResponse
-    from api.schemas.attempt import AttemptListResponse, AttemptResponse, AttemptStatus
-    from mock_data.documents import DOC_1_ID
-    from mock_data.study_sets import STUDY_SET_1_ID
-except ModuleNotFoundError:
-    from backend.api.schemas.answer import EvaluationListResponse, EvaluationResponse
-    from backend.api.schemas.attempt import AttemptListResponse, AttemptResponse, AttemptStatus
-    from backend.mock_data.documents import DOC_1_ID
-    from backend.mock_data.study_sets import STUDY_SET_1_ID
+from backend.api.schemas.answer import EvaluationListResponse, EvaluationResponse
+from backend.api.schemas.attempt import AttemptListResponse, AttemptResponse, AttemptStatus
+from backend.mock_data.documents import DOC_1_ID
+from backend.mock_data.study_sets import STUDY_SET_1_ID
 
 MOCK_ATTEMPTS: list[AttemptResponse] = [
     AttemptResponse(

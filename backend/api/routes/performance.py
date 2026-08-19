@@ -1,27 +1,15 @@
 from fastapi import APIRouter, HTTPException, status
 
-try:
-    from api.routes.attempts import ATTEMPTS_STORE
-    from api.schemas.attempt import AttemptStatus
-    from api.schemas.performance import (
-        CumulativePerformance,
-        PerformanceResponse,
-        ResultResponse,
-        SectionPerformance,
-        TopicPerformance,
-    )
-    from mock_data.performance import MOCK_PERFORMANCE, MOCK_RESULTS
-except ModuleNotFoundError:
-    from backend.api.routes.attempts import ATTEMPTS_STORE
-    from backend.api.schemas.attempt import AttemptStatus
-    from backend.api.schemas.performance import (
-        CumulativePerformance,
-        PerformanceResponse,
-        ResultResponse,
-        SectionPerformance,
-        TopicPerformance,
-    )
-    from backend.mock_data.performance import MOCK_PERFORMANCE, MOCK_RESULTS
+from backend.api.routes.attempts import ATTEMPTS_STORE
+from backend.api.schemas.attempt import AttemptStatus
+from backend.api.schemas.performance import (
+    CumulativePerformance,
+    PerformanceResponse,
+    ResultResponse,
+    SectionPerformance,
+    TopicPerformance,
+)
+from backend.mock_data.performance import MOCK_PERFORMANCE, MOCK_RESULTS
 
 router = APIRouter(tags=["Performance"])
 

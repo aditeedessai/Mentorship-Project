@@ -56,6 +56,14 @@ def save_evaluation(
     finally:
         connection.close()
 
+def _format_eval_dict(row: dict) -> dict:
+    d = dict(row)
+    for field in ("semantic_score", "concept_score", "final_score", "marks_awarded", "max_marks"):
+        if d.get(field) is not None:
+            d[field] = float(d[field])
+    return d
+
+
 def get_evaluations_by_attempt(attempt_id: str):
     """Return all saved question evaluations for one quiz attempt."""
     connection = get_connection()
@@ -71,7 +79,7 @@ def get_evaluations_by_attempt(attempt_id: str):
             """,
             (attempt_id,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [_format_eval_dict(row) for row in rows]
     finally:
         connection.close()
 
@@ -104,7 +112,7 @@ def get_evaluations_with_question_details(attempt_id: str):
             """,
             (attempt_id,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [_format_eval_dict(row) for row in rows]
     finally:
         connection.close()
 

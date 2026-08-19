@@ -105,6 +105,15 @@ def save_attempt(
         connection.close()
 
 
+def _format_attempt_dict(row: dict) -> dict:
+    d = dict(row)
+    if d.get("total_marks") is not None:
+        d["total_marks"] = float(d["total_marks"])
+    if d.get("marks_awarded") is not None:
+        d["marks_awarded"] = float(d["marks_awarded"])
+    return d
+
+
 def get_attempt(attempt_id: str):
     """
     Retrieve a previously saved quiz attempt.
@@ -131,7 +140,7 @@ def get_attempt(attempt_id: str):
         if row is None:
             return None
 
-        return dict(row)
+        return _format_attempt_dict(row)
 
     finally:
         connection.close()
@@ -144,31 +153,31 @@ def list_attempts(study_set_id=None, document_id=None):
         if study_set_id:
             rows = connection.execute(
                 """
-                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded
+                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded, status, created_at, updated_at
                 FROM quiz_attempts
                 WHERE study_set_id = ?
-                ORDER BY rowid DESC
+                ORDER BY created_at DESC
                 """,
                 (study_set_id,),
             ).fetchall()
         elif document_id:
             rows = connection.execute(
                 """
-                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded
+                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded, status, created_at, updated_at
                 FROM quiz_attempts
                 WHERE document_id = ?
-                ORDER BY rowid DESC
+                ORDER BY created_at DESC
                 """,
                 (document_id,),
             ).fetchall()
         else:
             rows = connection.execute(
                 """
-                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded
+                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded, status, created_at, updated_at
                 FROM quiz_attempts
-                ORDER BY rowid DESC
+                ORDER BY created_at DESC
                 """
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [_format_attempt_dict(row) for row in rows]
     finally:
         connection.close()

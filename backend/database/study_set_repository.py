@@ -1,4 +1,3 @@
-import sqlite3
 from datetime import datetime
 from backend.database.database import get_connection
 

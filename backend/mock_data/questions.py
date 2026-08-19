@@ -1,13 +1,8 @@
 from datetime import datetime, timezone
 
-try:
-    from api.schemas.question import QuestionListResponse, QuestionResponse, QuestionType
-    from mock_data.documents import DOC_1_ID, DOC_2_ID, DOC_3_ID
-    from mock_data.study_sets import STUDY_SET_1_ID, STUDY_SET_2_ID
-except ModuleNotFoundError:
-    from backend.api.schemas.question import QuestionListResponse, QuestionResponse, QuestionType
-    from backend.mock_data.documents import DOC_1_ID, DOC_2_ID, DOC_3_ID
-    from backend.mock_data.study_sets import STUDY_SET_1_ID, STUDY_SET_2_ID
+from backend.api.schemas.question import QuestionListResponse, QuestionResponse, QuestionType
+from backend.mock_data.documents import DOC_1_ID, DOC_2_ID, DOC_3_ID
+from backend.mock_data.study_sets import STUDY_SET_1_ID, STUDY_SET_2_ID
 
 MOCK_QUESTIONS: list[QuestionResponse] = [
     # MCQ

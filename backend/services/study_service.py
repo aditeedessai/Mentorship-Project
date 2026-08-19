@@ -1,22 +1,27 @@
 import uuid
 from pathlib import Path
 
-try:
-    from backend.services.document_service import (
-        process_pdf,
-        process_multiple_files,
-        create_study_set_from_files
-    )
-    from backend.services.quiz_service import run_quiz
-    from backend.services.evaluation_service import run_evaluation
-except ModuleNotFoundError:
-    from services.document_service import (
-        process_pdf,
-        process_multiple_files,
-        create_study_set_from_files
-    )
-    from services.quiz_service import run_quiz
-    from services.evaluation_service import run_evaluation
+from backend.services.document_service import (
+    process_pdf,
+    process_multiple_files,
+    create_study_set_from_files
+)
+from backend.services.quiz_service import run_quiz
+from backend.services.evaluation_service import run_evaluation
+from backend.database import study_set_repository
+
+
+def create_study_set(name: str) -> dict:
+    study_set_id = str(uuid.uuid4())
+    return study_set_repository.create_study_set(study_set_id, name)
+
+
+def list_study_sets() -> list[dict]:
+    return study_set_repository.list_study_sets()
+
+
+def get_study_set(study_set_id: str) -> dict | None:
+    return study_set_repository.get_study_set(study_set_id)
 
 
 # Only these file formats are allowed
