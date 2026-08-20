@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -19,6 +20,8 @@ import {
 } from "lucide-react";
 
 function App() {
+  const location = useLocation();
+
   // ================= AUTH STATE =================
   const [authPage, setAuthPage] = useState("login");
 
@@ -70,74 +73,49 @@ function App() {
       setStudySetsLoading(true);
       setStudySetsError("");
 
-      const response = await createStudySet(studySetName.trim());
+      const newSet = await createStudySet(studySetName.trim());
 
-      console.log("Study set created:", response);
-
-      setStudySets((prev) => [...prev, response]);
-
+      setStudySets((prev) => [newSet, ...prev]);
+      setSelectedStudySetId(newSet.study_set_id);
       setStudySetName("");
       setShowCreateStudySet(false);
     } catch (error) {
-      console.error("Error creating study set:", error);
-
-      setStudySetsError(
-        error.message || "Failed to create study set."
-      );
+      console.error("Failed to create study set:", error);
+      setStudySetsError("Failed to create study set.");
     } finally {
       setStudySetsLoading(false);
     }
   };
 
-  // ================= SIGN UP =================
-  const handleSignUp = (userData) => {
-    setUser(userData);
-    setAuthPage("dashboard");
-  };
+  // ================= AUTH CHECK =================
+  if (!user) {
+    if (authPage === "login") {
+      return (
+        <LoginPage
+          onLogin={setUser}
+          onSignUp={() => setAuthPage("signup")}
+        />
+      );
+    }
 
-  // ================= LOGIN =================
-  const handleLogin = () => {
-    setUser({
-      name: "Alex",
-      email: "student@example.com",
-    });
-
-    setAuthPage("dashboard");
-  };
-
-  // ================= AUTH =================
-  if (authPage === "login") {
-    return (
-      <LoginPage
-        onLogin={handleLogin}
-        onSignUp={() => setAuthPage("signup")}
-      />
-    );
-  }
-
-  if (authPage === "signup") {
-    return (
-      <SignUpPage
-        onSignUp={handleSignUp}
-        onLogin={() => setAuthPage("login")}
-      />
-    );
+    if (authPage === "signup") {
+      return (
+        <SignUpPage
+          onSignUp={setUser}
+          onLogin={() => setAuthPage("login")}
+        />
+      );
+    }
   }
 
   // ================= QUIZ PAGES =================
-  if (currentPage === "quiz-configure") {
-    return (
-      <ConfigureSession studySetId={selectedStudySetId} />
-    );
-  }
-
-  if (currentPage === "quiz-mcq") {
+  if (location.pathname === "/quiz/mcq" || currentPage === "quiz-mcq") {
     return (
       <MCQPage />
     );
   }
 
-  if (currentPage === "quiz-qna") {
+  if (location.pathname === "/quiz/qna" || currentPage === "quiz-qna") {
     return (
       <QnAPage />
     );

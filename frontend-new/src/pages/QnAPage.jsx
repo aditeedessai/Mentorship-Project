@@ -144,7 +144,12 @@ export default function QnAPage() {
   const isFirstQuestion = currentQuestion === 1
   const isLastQuestion = currentQuestion === questionCount
 
-  const typeLabel = questionType === 'application' ? 'Application Based' : 'Short Answer'
+  const typeLabel =
+    questionType === 'application'
+      ? 'Application Based'
+      : questionType === 'long'
+      ? 'Long Answer'
+      : 'Short Answer'
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden font-sans">

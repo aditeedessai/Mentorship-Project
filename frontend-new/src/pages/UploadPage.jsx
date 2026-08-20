@@ -1,15 +1,22 @@
 import { useState } from "react";
-import { Sparkles, X, FileCheck, Presentation, FileText, Upload } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Sparkles, X, FileCheck, Presentation, FileText, Upload, ListChecks, Lightbulb, BookOpen } from "lucide-react";
 import { uploadDocument, generateQuestions } from "../services/api";
 
 function UploadPage({ studySetId }) {
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadedDocId, setUploadedDocId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
+  const [genSuccess, setGenSuccess] = useState("");
+
+  const [selectedGenType, setSelectedGenType] = useState("short-answer");
 
   // ================= SELECT FILE =================
   const handleFileChange = (event) => {
@@ -19,6 +26,7 @@ function UploadPage({ studySetId }) {
       setSelectedFile(file);
       setUploadError("");
       setUploadSuccess("");
+      setGenSuccess("");
     }
   };
 
@@ -33,6 +41,7 @@ function UploadPage({ studySetId }) {
       setSelectedFile(file);
       setUploadError("");
       setUploadSuccess("");
+      setGenSuccess("");
     }
   };
 
@@ -41,9 +50,10 @@ function UploadPage({ studySetId }) {
     setSelectedFile(null);
     setUploadError("");
     setUploadSuccess("");
+    setGenSuccess("");
   };
 
-  // ================= UPLOAD DOCUMENT & GENERATE QUESTIONS =================
+  // ================= UPLOAD DOCUMENT ONLY =================
   const handleUpload = async () => {
     if (!selectedFile) {
       setUploadError("Please select a file first.");
@@ -59,40 +69,67 @@ function UploadPage({ studySetId }) {
 
     try {
       setUploading(true);
-      setStatusMessage("Uploading document...");
+      setStatusMessage("Uploading and processing document...");
       setUploadError("");
       setUploadSuccess("");
+      setGenSuccess("");
 
-      // 1. Upload document to study set
       const uploadResponse = await uploadDocument(studySetId, selectedFile);
       console.log("Document uploaded successfully:", uploadResponse);
 
-      // Extract document_id from upload response
-      const uploadedDocId =
+      const docId =
         uploadResponse?.documents && uploadResponse.documents.length > 0
           ? uploadResponse.documents[0].document_id
           : null;
 
-      // 2. Generate AI questions for the uploaded document
-      setStatusMessage("Generating AI questions...");
-      const genResponse = await generateQuestions(studySetId, "short-answer", uploadedDocId);
-      console.log("Questions generated successfully:", genResponse);
-
+      setUploadedDocId(docId);
       setUploadSuccess(
-        `${selectedFile.name} uploaded and AI study set generated successfully!`
+        `${selectedFile.name} uploaded and processed into study set successfully!`
       );
-
       setSelectedFile(null);
 
     } catch (error) {
-      console.error("Upload or generation failed:", error);
+      console.error("Upload failed:", error);
 
       setUploadError(
-        error.message || "Failed to upload document and generate questions."
+        error.message || "Failed to upload and process document."
       );
 
     } finally {
       setUploading(false);
+      setStatusMessage("");
+    }
+  };
+
+  // ================= USER-CONTROLLED QUESTION GENERATION =================
+  const handleGenerate = async () => {
+    if (!studySetId) {
+      setUploadError("No study set selected. Please create or select a study set first.");
+      return;
+    }
+
+    try {
+      setGenerating(true);
+      setStatusMessage(`Generating ${selectedGenType} questions with AI...`);
+      setUploadError("");
+      setGenSuccess("");
+
+      const genResponse = await generateQuestions(studySetId, selectedGenType, uploadedDocId);
+      console.log("Questions generated successfully:", genResponse);
+
+      setGenSuccess(
+        `AI engine successfully generated ${genResponse?.questions?.length || ''} ${selectedGenType.toUpperCase()} question(s) for your study set!`
+      );
+
+    } catch (error) {
+      console.error("Question generation failed:", error);
+
+      setUploadError(
+        error.message || "Failed to generate questions."
+      );
+
+    } finally {
+      setGenerating(false);
       setStatusMessage("");
     }
   };
@@ -294,11 +331,11 @@ function UploadPage({ studySetId }) {
                     className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                   >
 
-                    <Sparkles size={17} />
+                    <Upload size={17} />
 
                     {uploading
                       ? (statusMessage || "Processing...")
-                      : "Generate Study Set"}
+                      : "Upload & Process Document"}
 
                   </button>
 
@@ -437,6 +474,100 @@ function UploadPage({ studySetId }) {
 
         </div>
 
+      </div>
+
+      {/* ================= USER-CONTROLLED QUESTION GENERATION PANEL ================= */}
+      <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="text-[#4E1F6E]" size={20} />
+          <h2 className="text-xl font-bold text-[#3E3E75]">
+            Choose Question Type to Generate
+          </h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Select the type of questions you want the AI engine to generate from your study materials:
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              id: "mcq",
+              title: "Multiple Choice",
+              desc: "4-option recall & recognition questions",
+              badge: "MCQ",
+              icon: ListChecks,
+            },
+            {
+              id: "short-answer",
+              title: "Short Answer",
+              desc: "Active recall & concise terminology",
+              badge: "Short",
+              icon: FileText,
+            },
+            {
+              id: "application",
+              title: "Application",
+              desc: "Scenario-based practical problems",
+              badge: "Scenario",
+              icon: Lightbulb,
+            },
+            {
+              id: "long",
+              title: "Long Answer",
+              desc: "Comprehensive synthesis & deep concepts",
+              badge: "Conceptual",
+              icon: BookOpen,
+            },
+          ].map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => setSelectedGenType(type.id)}
+              className={`flex flex-col text-left p-4 rounded-xl border-2 transition-all ${
+                selectedGenType === type.id
+                  ? "border-[#4E1F6E] bg-[#98E8DE]/15 shadow-sm"
+                  : "border-gray-200 bg-gray-50 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#98E8DE]/40">
+                  <type.icon size={18} className="text-[#4E1F6E]" />
+                </div>
+                <span className="text-[10px] font-semibold text-[#4E1F6E] bg-[#98E8DE]/40 px-2 py-0.5 rounded-full">
+                  {type.badge}
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-[#3E3E75]">{type.title}</h3>
+              <p className="mt-1 text-xs text-gray-500">{type.desc}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <button
+            onClick={handleGenerate}
+            disabled={generating || !studySetId}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Sparkles size={17} />
+            {generating ? (statusMessage || "Generating...") : `Generate ${selectedGenType.toUpperCase()} Questions`}
+          </button>
+
+          {genSuccess && (
+            <button
+              onClick={() => navigate("/quiz")}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#087C7B] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#066362]"
+            >
+              Configure & Start Quiz →
+            </button>
+          )}
+        </div>
+
+        {genSuccess && (
+          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
+            <p className="text-sm font-medium text-green-700">{genSuccess}</p>
+          </div>
+        )}
       </div>
 
     </div>

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
-import { ListChecks, FileText, Lightbulb } from 'lucide-react'
+import { ListChecks, FileText, Lightbulb, BookOpen } from 'lucide-react'
 import { fetchQuestions, createAttempt } from '../services/api'
 
 const questionTypes = [
@@ -29,6 +29,14 @@ const questionTypes = [
     description: 'Scenario-driven problems that test your ability to apply concepts to realistic situations.',
     badge: 'Mastery Level',
     icon: Lightbulb,
+    route: '/quiz/qna',
+  },
+  {
+    id: 'long',
+    title: 'Long Answer',
+    description: 'Deep conceptual questions testing synthesis, analysis, and comprehensive understanding.',
+    badge: 'Comprehensive',
+    icon: BookOpen,
     route: '/quiz/qna',
   },
 ]

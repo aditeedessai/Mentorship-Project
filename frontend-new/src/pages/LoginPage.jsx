@@ -9,10 +9,9 @@ function LoginPage({ onLogin, onSignUp }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Temporary frontend login
-    // Backend authentication will be connected later
-    if (email && password) {
-      onLogin();
+    // Temporary frontend-only login bypass until backend authentication is implemented.
+    if (onLogin) {
+      onLogin({ name: "Demo Student", email: email || "student@example.com" });
     }
   };
 
