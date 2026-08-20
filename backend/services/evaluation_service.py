@@ -13,7 +13,8 @@ from backend.answer_evaluation.performance_scorer import (
 
 from backend.database.attempt_repository import (
     save_attempt,
-    get_attempt
+    get_attempt,
+    ensure_attempt_exists
 )
 
 from backend.database.evaluation_repository import (
@@ -22,7 +23,8 @@ from backend.database.evaluation_repository import (
 )
 
 from backend.database.quiz_repository import (
-    save_questions
+    save_questions,
+    get_question_by_id
 )
 
 from backend.answer_evaluation.grading import grade_for_percentage
@@ -111,17 +113,33 @@ def run_evaluation(
     study_set_id: str = None,
     document_id: str = None,
     attempt_id: str = None,
-    display_performance: bool = False
+    display_performance: bool = False,
+    status: str = "in_progress"
 ):
     """
     Run or update the quiz evaluation workflow for an attempt.
 
     - When questions are provided: evaluates student answers and records them under attempt_id.
     - Performance summary is displayed ONLY if display_performance=True or when viewing performance.
+    - `status` is forwarded to save_attempt() ('in_progress' by default). Callers
+      should pass status="completed" once the student has finished every section -
+      see study_service.run_study_flow, which does this the moment all 4
+      question types are done.
     """
 
     if not attempt_id:
         attempt_id = str(uuid.uuid4())
+
+    # Guarantees a quiz_attempts row exists before any evaluations are
+    # saved below - evaluations.attempt_id is a real foreign key in
+    # Postgres, and save_attempt() (with real totals) only runs once,
+    # at the end of this function. Safe to call every time: it's a
+    # no-op if the attempt already exists (see its docstring).
+    ensure_attempt_exists(
+        attempt_id=attempt_id,
+        study_set_id=study_set_id,
+        document_id=document_id
+    )
 
     questions = questions or []
     if questions:
@@ -355,7 +373,8 @@ def run_evaluation(
         study_set_id=study_set_id,
         document_id=document_id,
         total_marks=total_marks,
-        marks_awarded=earned_marks
+        marks_awarded=earned_marks,
+        status=status
     )
 
     # Display performance summary if requested or if viewing performance
@@ -379,4 +398,204 @@ def get_current_performance(attempt_id: str):
     """
     return run_evaluation(questions=[], attempt_id=attempt_id, display_performance=True)
 
-
+
+def evaluate_and_save_attempt_answers(
+    attempt_id: str,
+    answers: list
+) -> dict:
+    """
+    Evaluates student answers for a quiz attempt, saves each evaluation row to Supabase,
+    recalculates cumulative attempt marks, updates quiz_attempts in Supabase, and returns
+    evaluation summary.
+    """
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        raise ValueError(f"Attempt with ID '{attempt_id}' not found")
+    if attempt.get("status") == "completed":
+        raise ValueError("Cannot submit answers for a completed attempt")
+
+    for item in answers:
+        q_id = item["question_id"]
+        student_ans = item["student_answer"]
+
+        question = get_question_by_id(q_id)
+        if not question:
+            raise ValueError(f"Question with ID '{q_id}' not found")
+
+        raw_type = str(question.get("question_type", "short")).lower().strip()
+        q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
+
+        raw_max = question.get("marks")
+        if raw_max is not None:
+            try:
+                max_marks = float(raw_max)
+            except (ValueError, TypeError):
+                max_marks = 2.0 if q_type == "mcq" else 10.0
+        else:
+            max_marks = 2.0 if q_type == "mcq" else 10.0
+
+        if q_type == "mcq":
+            eval_result = evaluate_mcq(
+                student_choice=student_ans,
+                correct_choice=question.get("correct_option", ""),
+                max_marks=max_marks
+            )
+        else:
+            eval_result = evaluate_answer(
+                student_answer=student_ans,
+                reference_answer=question.get("reference_answer", ""),
+                max_marks=max_marks
+            )
+
+        save_evaluation(
+            question_id=q_id,
+            student_answer=student_ans,
+            evaluation=eval_result,
+            attempt_id=attempt_id
+        )
+
+    eval_records = get_evaluations_with_question_details(attempt_id)
+
+    total_marks = sum(float(rec.get("max_marks", 0.0)) for rec in eval_records)
+    earned_marks = sum(float(rec.get("marks_awarded", 0.0)) for rec in eval_records)
+    percentage = round((earned_marks / total_marks * 100.0), 2) if total_marks > 0 else 0.0
+
+    save_attempt(
+        attempt_id=attempt_id,
+        study_set_id=attempt.get("study_set_id"),
+        document_id=attempt.get("document_id"),
+        total_marks=total_marks,
+        marks_awarded=earned_marks,
+        status=attempt.get("status", "in_progress")
+    )
+
+    eval_responses = []
+    for rec in eval_records:
+        is_corr = rec.get("is_correct")
+        if is_corr is None:
+            final_s = rec.get("final_score")
+            is_corr = (final_s >= 0.55) if final_s is not None else None
+
+        eval_responses.append({
+            "question_id": rec["question_id"],
+            "student_answer": rec.get("student_answer"),
+            "marks_awarded": float(rec["marks_awarded"]),
+            "final_score": float(rec["final_score"]),
+            "is_correct": is_corr,
+            "semantic_score": float(rec["semantic_score"]) if rec.get("semantic_score") is not None else None,
+            "concept_score": float(rec["concept_score"]) if rec.get("concept_score") is not None else None,
+            "matched_concepts": rec.get("matched_concepts"),
+            "missed_concepts": rec.get("missed_concepts"),
+            "keyword_stuffing_detected": False,
+            "logic_inversion_detected": False,
+        })
+
+    return {
+        "attempt_id": attempt_id,
+        "total_marks": total_marks,
+        "earned_marks": earned_marks,
+        "percentage": percentage,
+        "results": eval_responses
+    }
+
+
+def get_attempt_performance_summary(attempt_id: str) -> dict:
+    """
+    Retrieves and calculates performance metrics (cumulative, section-wise, and topic-wise)
+    from real Supabase evaluations and questions records for a given attempt.
+    """
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        raise ValueError(f"Attempt with ID '{attempt_id}' not found")
+
+    eval_records = get_evaluations_with_question_details(attempt_id)
+
+    if not eval_records:
+        return {
+            "attempt_id": attempt_id,
+            "status": attempt.get("status", "in_progress"),
+            "cumulative": {
+                "total_marks_obtained": 0.0,
+                "total_maximum_marks": 0.0,
+                "overall_percentage": 0.0,
+                "overall_remark": grade_for_percentage(0.0).remark,
+                "strongest_section": None,
+                "weakest_section": None,
+            },
+            "sections": [],
+            "topics": []
+        }
+
+    section_totals = defaultdict(lambda: {"marks_obtained": 0.0, "maximum_marks": 0.0})
+    topic_totals = defaultdict(lambda: {"marks_obtained": 0.0, "maximum_marks": 0.0})
+
+    for rec in eval_records:
+        q_type = str(rec.get("question_type") or "short").lower().strip()
+        if q_type not in ["mcq", "application", "long", "short"]:
+            q_type = "short"
+
+        topic = str(rec.get("topic") or "general").strip() or "general"
+
+        marks_awarded = float(rec.get("marks_awarded", 0.0))
+        max_marks = float(rec.get("max_marks", 2.0 if q_type == "mcq" else 10.0))
+
+        section_totals[q_type]["marks_obtained"] += marks_awarded
+        section_totals[q_type]["maximum_marks"] += max_marks
+
+        topic_totals[topic]["marks_obtained"] += marks_awarded
+        topic_totals[topic]["maximum_marks"] += max_marks
+
+    sections = []
+    sec_pcts = {}
+    for sec_name, data in section_totals.items():
+        obtained = round(data["marks_obtained"], 2)
+        max_m = round(data["maximum_marks"], 2)
+        pct = round((obtained / max_m * 100.0), 2) if max_m > 0 else 0.0
+        remark = grade_for_percentage(pct).remark
+        sec_pcts[sec_name] = pct
+        sections.append({
+            "section_name": sec_name,
+            "marks_obtained": obtained,
+            "maximum_marks": max_m,
+            "percentage": pct,
+            "remark": remark
+        })
+
+    topics = []
+    for topic_name, data in topic_totals.items():
+        obtained = round(data["marks_obtained"], 2)
+        max_m = round(data["maximum_marks"], 2)
+        pct = round((obtained / max_m * 100.0), 2) if max_m > 0 else 0.0
+        remark = grade_for_percentage(pct).remark
+        topics.append({
+            "topic_name": topic_name,
+            "marks_obtained": obtained,
+            "maximum_marks": max_m,
+            "percentage": pct,
+            "remark": remark
+        })
+
+    total_obtained = round(sum(d["marks_obtained"] for d in section_totals.values()), 2)
+    total_maximum = round(sum(d["maximum_marks"] for d in section_totals.values()), 2)
+    overall_pct = round((total_obtained / total_maximum * 100.0), 2) if total_maximum > 0 else 0.0
+    overall_remark = grade_for_percentage(overall_pct).remark
+
+    strongest = max(sec_pcts, key=sec_pcts.get) if len(sec_pcts) >= 2 else None
+    weakest = min(sec_pcts, key=sec_pcts.get) if len(sec_pcts) >= 2 else None
+
+    cumulative = {
+        "total_marks_obtained": total_obtained,
+        "total_maximum_marks": total_maximum,
+        "overall_percentage": overall_pct,
+        "overall_remark": overall_remark,
+        "strongest_section": strongest,
+        "weakest_section": weakest,
+    }
+
+    return {
+        "attempt_id": attempt_id,
+        "status": attempt.get("status", "in_progress"),
+        "cumulative": cumulative,
+        "sections": sections,
+        "topics": topics,
+    }

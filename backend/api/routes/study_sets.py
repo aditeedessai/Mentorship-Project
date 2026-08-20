@@ -3,20 +3,12 @@ import uuid
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
-try:
-    from api.schemas.study_set import (
-        CreateStudySetRequest,
-        StudySetListResponse,
-        StudySetResponse,
-    )
-    from mock_data.study_sets import MOCK_STUDY_SETS
-except ModuleNotFoundError:
-    from backend.api.schemas.study_set import (
-        CreateStudySetRequest,
-        StudySetListResponse,
-        StudySetResponse,
-    )
-    from backend.mock_data.study_sets import MOCK_STUDY_SETS
+from backend.api.schemas.study_set import (
+    CreateStudySetRequest,
+    StudySetListResponse,
+    StudySetResponse,
+)
+from backend.services import study_service
 
 router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
 
@@ -29,15 +21,14 @@ router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
     description="Creates a new study set with the provided name and returns study set details."
 )
 def create_study_set(payload: CreateStudySetRequest) -> StudySetResponse:
-    now = datetime.now(timezone.utc)
-    new_set = StudySetResponse(
-        study_set_id=uuid.uuid4(),
-        name=payload.name,
-        created_at=now,
-        updated_at=now
-    )
-    MOCK_STUDY_SETS.append(new_set)
-    return new_set
+    try:
+        data = study_service.create_study_set(payload.name)
+        return StudySetResponse(**data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create study set: {str(e)}"
+        )
 
 
 @router.get(
@@ -48,7 +39,16 @@ def create_study_set(payload: CreateStudySetRequest) -> StudySetResponse:
     description="Retrieves a list of available study sets."
 )
 def list_study_sets() -> StudySetListResponse:
-    return StudySetListResponse(study_sets=MOCK_STUDY_SETS)
+    try:
+        sets_data = study_service.list_study_sets()
+        return StudySetListResponse(
+            study_sets=[StudySetResponse(**s) for s in sets_data]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list study sets: {str(e)}"
+        )
 
 
 @router.get(
@@ -59,11 +59,19 @@ def list_study_sets() -> StudySetListResponse:
     description="Retrieves details for a specific study set by its UUID."
 )
 def get_study_set(study_set_id: UUID) -> StudySetResponse:
-    for study_set in MOCK_STUDY_SETS:
-        if study_set.study_set_id == study_set_id:
-            return study_set
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Study set with ID '{study_set_id}' not found"
-    )
+    try:
+        data = study_service.get_study_set(str(study_set_id))
+        if not data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Study set with ID '{study_set_id}' not found"
+            )
+        return StudySetResponse(**data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get study set details: {str(e)}"
+        )
 

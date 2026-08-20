@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from api.schemas.question import QuestionType
+from backend.api.schemas.question import QuestionType
 
 
 class AnswerItem(BaseModel):

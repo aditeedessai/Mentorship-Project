@@ -25,7 +25,7 @@ def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
     5. Create chunks
     6. Register document record in SQLite
     7. Generate SBERT embeddings
-    8. Store embeddings in ChromaDB with document_id and study_set_id
+    8. Store embeddings in Supabase (document_chunks) with document_id and study_set_id
 
     Returns:
         document_id: Unique ID for the uploaded document.
@@ -121,7 +121,7 @@ def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
     embeddings = generate_embeddings(chunks)
 
     # ---------------------------------------------------------
-    # Store in ChromaDB
+    # Store in Supabase (document_chunks)
     # ---------------------------------------------------------
 
     store_embeddings(

@@ -1,28 +1,18 @@
 from fastapi import APIRouter, FastAPI
 
-try:
-    from api.routes import (
-        attempts,
-        documents,
-        health,
-        performance,
-        questions,
-        study_sets,
-    )
-except ModuleNotFoundError:
-    from backend.api.routes import (
-        attempts,
-        documents,
-        health,
-        performance,
-        questions,
-        study_sets,
-    )
+from backend.api.routes import (
+    attempts,
+    documents,
+    health,
+    performance,
+    questions,
+    study_sets,
+)
 
 app = FastAPI(
-    title="Mentorship Project API",
+    title="STUDY ENGINE API",
     version="1.0.0",
-    description="FastAPI API layer for the Mentorship Project study engine.",
+    description="FastAPI API layer for the study engine.",
 )
 
 # Base API Router under /api

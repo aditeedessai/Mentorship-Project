@@ -1,21 +1,14 @@
-from datetime import datetime, timezone
 from pathlib import Path
-import uuid
+import tempfile
 from uuid import UUID
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
-try:
-    from api.schemas.document import (
-        DocumentListResponse,
-        DocumentResponse,
-    )
-    from mock_data.documents import MOCK_DOCUMENTS
-except ModuleNotFoundError:
-    from backend.api.schemas.document import (
-        DocumentListResponse,
-        DocumentResponse,
-    )
-    from backend.mock_data.documents import MOCK_DOCUMENTS
+from backend.api.schemas.document import (
+    DocumentListResponse,
+    DocumentResponse,
+)
+from backend.database import study_set_repository
+from backend.services import document_service
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 
@@ -39,9 +32,15 @@ def upload_documents(
             detail="At least one file must be provided for upload."
         )
 
-    now = datetime.now(timezone.utc)
-    uploaded_docs = []
+    # 1. Verify study set exists in Supabase
+    study_set = study_set_repository.get_study_set(str(study_set_id))
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Study set with ID '{study_set_id}' not found"
+        )
 
+    # 2. Validate file extensions
     for file in files:
         file_ext = Path(file.filename or "").suffix.lower()
         if file_ext not in ALLOWED_EXTENSIONS:
@@ -50,15 +49,35 @@ def upload_documents(
                 detail=f"Unsupported file format '{file_ext}'. Allowed formats: .pdf, .docx, .pptx"
             )
 
-        placeholder_doc = DocumentResponse(
-            document_id=uuid.uuid4(),
-            study_set_id=study_set_id,
-            file_name=file.filename or "uploaded_document",
-            file_path=f"/uploads/{file.filename or 'uploaded_document'}",
-            created_at=now
-        )
-        uploaded_docs.append(placeholder_doc)
-        MOCK_DOCUMENTS.append(placeholder_doc)
+    uploaded_docs = []
+
+    # 3. Save files temporarily and process through document_service
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for file in files:
+            orig_name = file.filename or "uploaded_document"
+            temp_file_path = Path(temp_dir) / orig_name
+
+            try:
+                with open(temp_file_path, "wb") as f:
+                    content = file.file.read()
+                    f.write(content)
+
+                # Process PDF/DOCX/PPTX: text extraction, cleaning, chunking, metadata insertion, SBERT embedding generation & pgvector storage
+                doc_id = document_service.process_pdf(
+                    pdf_path=str(temp_file_path),
+                    study_set_id=str(study_set_id)
+                )
+
+                # Fetch inserted document record from database
+                doc_record = study_set_repository.get_document_by_id(doc_id)
+                if doc_record:
+                    uploaded_docs.append(DocumentResponse(**doc_record))
+
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error processing file '{orig_name}': {str(e)}"
+                )
 
     return DocumentListResponse(documents=uploaded_docs)
 
@@ -71,11 +90,23 @@ def upload_documents(
     description="Retrieves all documents associated with the specified study set UUID."
 )
 def list_study_set_documents(study_set_id: UUID) -> DocumentListResponse:
-    matching_docs = [
-        doc for doc in MOCK_DOCUMENTS
-        if doc.study_set_id == study_set_id
-    ]
-    return DocumentListResponse(documents=matching_docs)
+    study_set = study_set_repository.get_study_set(str(study_set_id))
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Study set with ID '{study_set_id}' not found"
+        )
+
+    try:
+        docs = study_set_repository.get_documents_by_study_set(str(study_set_id))
+        return DocumentListResponse(
+            documents=[DocumentResponse(**d) for d in docs]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve documents: {str(e)}"
+        )
 
 
 @router.get(
@@ -86,11 +117,19 @@ def list_study_set_documents(study_set_id: UUID) -> DocumentListResponse:
     description="Retrieves information for a specific document by its UUID."
 )
 def get_document(document_id: UUID) -> DocumentResponse:
-    for doc in MOCK_DOCUMENTS:
-        if doc.document_id == document_id:
-            return doc
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Document with ID '{document_id}' not found"
-    )
+    try:
+        doc = study_set_repository.get_document_by_id(str(document_id))
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID '{document_id}' not found"
+            )
+        return DocumentResponse(**doc)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve document details: {str(e)}"
+        )
 

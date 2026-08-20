@@ -3,6 +3,7 @@ import psycopg2
 import psycopg2.extras
 from pathlib import Path
 from dotenv import load_dotenv
+from pgvector.psycopg2 import register_vector
 
 # Loads DATABASE_URL from backend/.env, resolved relative to this file
 # (not wherever the process happens to be launched from).
@@ -14,14 +15,14 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError(
         "DATABASE_URL not found. Add it to backend/.env "
-        "(Supabase → Connect → Session pooler connection string)."
+        "(Supabase -> Connect -> Session pooler connection string)."
     )
 
 
 class ConnectionWrapper:
     """
     Makes a psycopg2 connection behave like the sqlite3.Connection object
-    every repository file was written against — specifically, letting
+    every repository file was written against - specifically, letting
     connection.execute(query, params) work directly, since psycopg2 only
     exposes .execute() on cursor objects, not the connection itself.
 
@@ -55,24 +56,28 @@ def get_connection():
     repository code keeps working unchanged. Rows come back dict-like
     (RealDictCursor), matching the old sqlite3.Row + dict(row) pattern
     used throughout the repository files.
+
+    register_vector(conn) lets psycopg2 adapt plain Python lists /
+    numpy arrays directly into Postgres's `vector` type - without this,
+    inserting an embedding into document_chunks.embedding would need a
+    manual string-format + ::vector cast on every call site instead.
     """
     conn = psycopg2.connect(
         DATABASE_URL,
         cursor_factory=psycopg2.extras.RealDictCursor,
     )
+    register_vector(conn)
     return ConnectionWrapper(conn)
 
 
 def init_db():
     """
-    No-op now that schema lives in supabase/migrations/ and is applied
-    via `supabase db push`, not created here at runtime.
-
-    Kept as a callable (rather than deleted) because test_scoring_integration.py
-    still calls it in a pytest fixture — this just verifies the DB is
-    reachable instead of trying to run SQLite-style DDL against Postgres,
-    which would either error or silently do nothing useful now that the
-    tables already exist.
+    No-op now that schema lives in supabase/migrations/ and is applied via
+    `supabase db push`, not created here at runtime. Kept as a callable
+    (rather than deleted) because test_scoring_integration.py still calls
+    it in a pytest fixture - this just verifies the DB is reachable
+    instead of running SQLite-style DDL against Postgres, which would
+    either error or silently do nothing now that the tables already exist.
     """
     connection = get_connection()
     try:
