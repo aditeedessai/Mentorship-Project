@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { fetchResults } from "../services/api";
 import {
   CheckCircle,
   TrendingUp,
@@ -32,26 +34,20 @@ const formatTopicName = (name) => {
   );
 };
 
-export default function ResultsPage({ attemptId = "attempt-001" }) {
+export default function ResultsPage({ attemptId: propAttemptId }) {
+  const location = useLocation();
+  const attemptId = propAttemptId || location.state?.attemptId;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function fetchResults() {
+    async function loadResults() {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(
-          `http://127.0.0.1:8001/api/attempts/${attemptId}/results`
-        );
-
-        if (!res.ok) {
-          throw new Error(`Server returned ${res.status}`);
-        }
-
-        const json = await res.json();
+        const json = await fetchResults(attemptId);
         setData(json);
       } catch (err) {
         console.warn("Backend API fetch notice:", err);
@@ -61,7 +57,7 @@ export default function ResultsPage({ attemptId = "attempt-001" }) {
       }
     }
 
-    fetchResults();
+    loadResults();
   }, [attemptId]);
 
   // Loading State
@@ -76,54 +72,53 @@ export default function ResultsPage({ attemptId = "attempt-001" }) {
     );
   }
 
-  // Fallback defaults matching ResultResponse schema
-  const fallback = {
-    attempt_id: attemptId,
-    status: "completed",
-    cumulative: {
-      total_marks_obtained: 36.0,
-      total_maximum_marks: 40.0,
-      overall_percentage: 90.0,
-      overall_remark: "Excellent",
-      strongest_section: "mcq",
-      weakest_section: "application",
-    },
-    sections: [
-      { section_name: "mcq", marks_obtained: 10.0, maximum_marks: 10.0, percentage: 100.0, remark: "Excellent" },
-      { section_name: "application", marks_obtained: 8.0, maximum_marks: 10.0, percentage: 80.0, remark: "Very Good" },
-      { section_name: "long", marks_obtained: 9.0, maximum_marks: 10.0, percentage: 90.0, remark: "Excellent" },
-      { section_name: "short", marks_obtained: 9.0, maximum_marks: 10.0, percentage: 90.0, remark: "Excellent" },
-    ],
-    topics: [
-      { topic_name: "general", marks_obtained: 36.0, maximum_marks: 40.0, percentage: 90.0, remark: "Excellent" },
-    ],
-  };
+  // Error State - Do NOT display fake/mock results
+  if (error) {
+    return (
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-2xl bg-white p-8 shadow-sm">
+        <AlertCircle className="text-red-500" size={36} />
+        <p className="text-base font-semibold text-[#3E3E75]">
+          Failed to load evaluation results
+        </p>
+        <p className="text-xs text-gray-500">{error}</p>
+      </div>
+    );
+  }
 
-  const activeData = data || fallback;
-  const cumulative = activeData.cumulative || fallback.cumulative;
-  const sections = activeData.sections || fallback.sections;
-  const topics = activeData.topics || fallback.topics;
+  if (!data) {
+    return (
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 rounded-2xl bg-white p-8 shadow-sm">
+        <AlertCircle className="text-amber-500" size={36} />
+        <p className="text-base font-semibold text-[#3E3E75]">
+          No results data found for this attempt.
+        </p>
+      </div>
+    );
+  }
+
+  const cumulative = data.cumulative || {
+    total_marks_obtained: 0,
+    total_maximum_marks: 0,
+    overall_percentage: 0,
+    overall_remark: "N/A",
+    strongest_section: null,
+    weakest_section: null,
+  };
+  const sections = data.sections || [];
+  const topics = data.topics || [];
 
   return (
     <div>
-      {/* Offline / Fallback notice */}
-      {error && (
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
-          <AlertCircle size={16} />
-          <span>Local mock view active (Backend endpoint notice: {error})</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[#3E3E75]">Performance & Results</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Attempt ID: <span className="font-mono text-xs font-semibold text-[#4E1F6E]">{activeData.attempt_id}</span>
+            Attempt ID: <span className="font-mono text-xs font-semibold text-[#4E1F6E]">{data.attempt_id}</span>
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-[#3E3E75] shadow-sm">
-          Status: {activeData.status ? activeData.status.toUpperCase() : "COMPLETED"}
+          Status: {data.status ? data.status.toUpperCase() : "COMPLETED"}
         </div>
       </div>
 

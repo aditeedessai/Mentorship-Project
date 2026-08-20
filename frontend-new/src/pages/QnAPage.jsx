@@ -112,11 +112,11 @@ export default function QnAPage() {
       // Finish the attempt
       await finishAttempt(attemptId)
 
-      // Navigate back
-      navigate('/quiz')
+      // Navigate to results with real attemptId
+      navigate('/results', { state: { attemptId } })
     } catch (err) {
       console.error('Failed to submit quiz:', err)
-      navigate('/quiz')
+      navigate('/results', { state: { attemptId } })
     } finally {
       setIsSubmitting(false)
     }

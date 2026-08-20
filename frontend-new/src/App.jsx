@@ -7,7 +7,7 @@ import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
 import Sidebar from "./components/Sidebar";
-import api from "./api/api";
+import { fetchStudySets, createStudySet } from "./services/api";
 
 import {
   CheckCircle,
@@ -40,14 +40,14 @@ function App() {
 
   // ================= FETCH STUDY SETS =================
   useEffect(() => {
-    const fetchStudySets = async () => {
+    const loadStudySets = async () => {
       try {
         setStudySetsLoading(true);
         setStudySetsError("");
 
-        const data = await api.get("/api/study-sets");
+        const sets = await fetchStudySets();
 
-        setStudySets(data.study_sets || []);
+        setStudySets(sets || []);
       } catch (error) {
         console.error("Failed to fetch study sets:", error);
         setStudySetsError("Unable to load study sets.");
@@ -56,7 +56,7 @@ function App() {
       }
     };
 
-    fetchStudySets();
+    loadStudySets();
   }, []);
 
   // ================= CREATE STUDY SET =================
@@ -70,9 +70,7 @@ function App() {
       setStudySetsLoading(true);
       setStudySetsError("");
 
-      const response = await api.post("/api/study-sets", {
-        name: studySetName.trim(),
-      });
+      const response = await createStudySet(studySetName.trim());
 
       console.log("Study set created:", response);
 
@@ -84,8 +82,7 @@ function App() {
       console.error("Error creating study set:", error);
 
       setStudySetsError(
-        error.response?.data?.detail ||
-          "Failed to create study set."
+        error.message || "Failed to create study set."
       );
     } finally {
       setStudySetsLoading(false);
@@ -130,7 +127,7 @@ function App() {
   // ================= QUIZ PAGES =================
   if (currentPage === "quiz-configure") {
     return (
-      <ConfigureSession />
+      <ConfigureSession studySetId={selectedStudySetId} />
     );
   }
 
@@ -174,7 +171,7 @@ function App() {
 
         {/* ================= QUIZ CONFIGURATION ================= */}
         {currentPage === "quiz" && (
-          <ConfigureSession />
+          <ConfigureSession studySetId={selectedStudySetId} />
         )}
 
         {/* ================= DASHBOARD ================= */}

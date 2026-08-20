@@ -7,10 +7,18 @@
 // ── helpers ──────────────────────────────────────────────────────────
 
 async function request(url, options = {}) {
+  const headers = { ...options.headers }
+
+  // Only set application/json if body is NOT FormData and Content-Type isn't set yet
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
+  }
+
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers,
   })
+
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`API ${options.method || 'GET'} ${url} → ${res.status}: ${body}`)
@@ -42,7 +50,60 @@ export async function fetchStudySets() {
   return data.study_sets // array of { study_set_id, name, ... }
 }
 
+/**
+ * Create a new study set (POST /api/study-sets).
+ * @param {string} name
+ * @returns {Promise<{ study_set_id: string, name: string, created_at: string, updated_at: string }>}
+ */
+export async function createStudySet(name) {
+  return request('/api/study-sets', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  })
+}
+
+// ── Documents ────────────────────────────────────────────────────────
+
+/**
+ * Upload a document file to a study set (POST /api/study-sets/{studySetId}/documents).
+ * @param {string} studySetId
+ * @param {File | FormData} fileOrFormData
+ */
+export async function uploadDocument(studySetId, fileOrFormData) {
+  let body = fileOrFormData
+  if (fileOrFormData instanceof File) {
+    body = new FormData()
+    body.append('files', fileOrFormData)
+  }
+  return request(`/api/study-sets/${studySetId}/documents`, {
+    method: 'POST',
+    body,
+  })
+}
+
 // ── Questions ────────────────────────────────────────────────────────
+
+/**
+ * Generate questions for a study set using the backend AI engine.
+ * (POST /api/study-sets/{studySetId}/questions/generate)
+ *
+ * @param {string} studySetId
+ * @param {string} frontendType - 'mcq' | 'short-answer' | 'application' | 'short' | 'long'
+ * @param {string} [documentId] - Optional document UUID
+ */
+export async function generateQuestions(studySetId, frontendType, documentId = null) {
+  const backendType = toBackendType(frontendType)
+  const payload = {
+    question_type: backendType,
+  }
+  if (documentId) {
+    payload.document_id = documentId
+  }
+  return request(`/api/study-sets/${studySetId}/questions/generate`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
 
 /**
  * Fetch questions for a study set, optionally filtered by type.
@@ -121,7 +182,7 @@ export async function finishAttempt(attemptId) {
   })
 }
 
-// ── Evaluations / Results (optional, for future result screens) ──────
+// ── Evaluations / Results ─────────────────────────────────────────────
 
 export async function fetchEvaluations(attemptId) {
   return request(`/api/attempts/${attemptId}/evaluations`)

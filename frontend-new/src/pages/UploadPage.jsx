@@ -1,19 +1,13 @@
 import { useState } from "react";
-import {
-  Upload,
-  FileText,
-  Presentation,
-  FileCheck,
-  X,
-  Sparkles,
-} from "lucide-react";
-import api from "../api/api";
+import { Sparkles, X, FileCheck, Presentation, FileText, Upload } from "lucide-react";
+import { uploadDocument, generateQuestions } from "../services/api";
 
 function UploadPage({ studySetId }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const [uploading, setUploading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
 
@@ -49,7 +43,7 @@ function UploadPage({ studySetId }) {
     setUploadSuccess("");
   };
 
-  // ================= UPLOAD DOCUMENT =================
+  // ================= UPLOAD DOCUMENT & GENERATE QUESTIONS =================
   const handleUpload = async () => {
     if (!selectedFile) {
       setUploadError("Please select a file first.");
@@ -65,37 +59,41 @@ function UploadPage({ studySetId }) {
 
     try {
       setUploading(true);
+      setStatusMessage("Uploading document...");
       setUploadError("");
       setUploadSuccess("");
 
-      const formData = new FormData();
+      // 1. Upload document to study set
+      const uploadResponse = await uploadDocument(studySetId, selectedFile);
+      console.log("Document uploaded successfully:", uploadResponse);
 
-      formData.append("files", selectedFile);
+      // Extract document_id from upload response
+      const uploadedDocId =
+        uploadResponse?.documents && uploadResponse.documents.length > 0
+          ? uploadResponse.documents[0].document_id
+          : null;
 
-      const response = await api.post(
-        `/api/study-sets/${studySetId}/documents`,
-        formData,
-        true 
-      );
-
-      console.log("Document uploaded successfully:", response);
+      // 2. Generate AI questions for the uploaded document
+      setStatusMessage("Generating AI questions...");
+      const genResponse = await generateQuestions(studySetId, "short-answer", uploadedDocId);
+      console.log("Questions generated successfully:", genResponse);
 
       setUploadSuccess(
-        `${selectedFile.name} uploaded successfully.`
+        `${selectedFile.name} uploaded and AI study set generated successfully!`
       );
 
       setSelectedFile(null);
 
     } catch (error) {
-      console.error("Failed to upload document:", error);
+      console.error("Upload or generation failed:", error);
 
       setUploadError(
-        error.response?.data?.detail ||
-          "Failed to upload document."
+        error.message || "Failed to upload document and generate questions."
       );
 
     } finally {
       setUploading(false);
+      setStatusMessage("");
     }
   };
 
@@ -299,7 +297,7 @@ function UploadPage({ studySetId }) {
                     <Sparkles size={17} />
 
                     {uploading
-                      ? "Uploading..."
+                      ? (statusMessage || "Processing...")
                       : "Generate Study Set"}
 
                   </button>

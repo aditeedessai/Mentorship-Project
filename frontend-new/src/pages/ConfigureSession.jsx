@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
 import { ListChecks, FileText, Lightbulb } from 'lucide-react'
-import { fetchStudySets, fetchQuestions, createAttempt } from '../services/api'
+import { fetchQuestions, createAttempt } from '../services/api'
 
 const questionTypes = [
   {
@@ -33,41 +33,42 @@ const questionTypes = [
   },
 ]
 
-export default function ConfigureSession() {
+export default function ConfigureSession({ studySetId: propStudySetId }) {
   const [selectedType, setSelectedType] = useState('short-answer')
   const [questionCount, setQuestionCount] = useState(20)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const studySetId = propStudySetId || location.state?.studySetId
 
   const handleStart = async () => {
     const selected = questionTypes.find((t) => t.id === selectedType)
     if (!selected) return
 
+    if (!studySetId) {
+      setError('No study set selected. Please select a study set from the Dashboard first.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
-      // 1. Fetch study sets and pick the first one
-      const studySets = await fetchStudySets()
-      if (!studySets || studySets.length === 0) {
-        throw new Error('No study sets available. Please create a study set first.')
-      }
-      const studySetId = studySets[0].study_set_id
-
-      // 2. Fetch questions for the selected type
+      // 1. Fetch questions for the selected type using the chosen studySetId
       const questions = await fetchQuestions(studySetId, selectedType)
       if (!questions || questions.length === 0) {
         throw new Error(`No ${selected.title} questions found for this study set.`)
       }
 
-      // 3. Create a new attempt
+      // 2. Create a new attempt for the chosen studySetId
       const attempt = await createAttempt(studySetId)
 
-      // 4. Use the actual number of returned questions (may be fewer than requested count)
+      // 3. Use the actual number of returned questions (may be fewer than requested count)
       const actualCount = Math.min(questionCount, questions.length)
 
-      // 5. Navigate to the quiz page with all data
+      // 4. Navigate to the quiz page with all data
       navigate(selected.route, {
         state: {
           questionCount: actualCount,
