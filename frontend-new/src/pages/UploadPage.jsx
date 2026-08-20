@@ -1,0 +1,577 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Sparkles, X, FileCheck, Presentation, FileText, Upload, ListChecks, Lightbulb, BookOpen } from "lucide-react";
+import { uploadDocument, generateQuestions } from "../services/api";
+
+function UploadPage({ studySetId }) {
+  const navigate = useNavigate();
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadedDocId, setUploadedDocId] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [genSuccess, setGenSuccess] = useState("");
+
+  const [selectedGenType, setSelectedGenType] = useState("short-answer");
+
+  // ================= SELECT FILE =================
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+
+    if (file) {
+      setSelectedFile(file);
+      setUploadError("");
+      setUploadSuccess("");
+      setGenSuccess("");
+    }
+  };
+
+  // ================= DRAG & DROP =================
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setIsDragging(false);
+
+    const file = event.dataTransfer.files[0];
+
+    if (file) {
+      setSelectedFile(file);
+      setUploadError("");
+      setUploadSuccess("");
+      setGenSuccess("");
+    }
+  };
+
+  // ================= REMOVE FILE =================
+  const removeFile = () => {
+    setSelectedFile(null);
+    setUploadError("");
+    setUploadSuccess("");
+    setGenSuccess("");
+  };
+
+  // ================= UPLOAD DOCUMENT ONLY =================
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setUploadError("Please select a file first.");
+      return;
+    }
+
+    if (!studySetId) {
+      setUploadError(
+        "No study set selected. Please create a study set first."
+      );
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setStatusMessage("Uploading and processing document...");
+      setUploadError("");
+      setUploadSuccess("");
+      setGenSuccess("");
+
+      const uploadResponse = await uploadDocument(studySetId, selectedFile);
+      console.log("Document uploaded successfully:", uploadResponse);
+
+      const docId =
+        uploadResponse?.documents && uploadResponse.documents.length > 0
+          ? uploadResponse.documents[0].document_id
+          : null;
+
+      setUploadedDocId(docId);
+      setUploadSuccess(
+        `${selectedFile.name} uploaded and processed into study set successfully!`
+      );
+      setSelectedFile(null);
+
+    } catch (error) {
+      console.error("Upload failed:", error);
+
+      setUploadError(
+        error.message || "Failed to upload and process document."
+      );
+
+    } finally {
+      setUploading(false);
+      setStatusMessage("");
+    }
+  };
+
+  // ================= USER-CONTROLLED QUESTION GENERATION =================
+  const handleGenerate = async () => {
+    if (!studySetId) {
+      setUploadError("No study set selected. Please create or select a study set first.");
+      return;
+    }
+
+    try {
+      setGenerating(true);
+      setStatusMessage(`Generating ${selectedGenType} questions with AI...`);
+      setUploadError("");
+      setGenSuccess("");
+
+      const genResponse = await generateQuestions(studySetId, selectedGenType, uploadedDocId);
+      console.log("Questions generated successfully:", genResponse);
+
+      setGenSuccess(
+        `AI engine successfully generated ${genResponse?.questions?.length || ''} ${selectedGenType.toUpperCase()} question(s) for your study set!`
+      );
+
+    } catch (error) {
+      console.error("Question generation failed:", error);
+
+      setUploadError(
+        error.message || "Failed to generate questions."
+      );
+
+    } finally {
+      setGenerating(false);
+      setStatusMessage("");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFA]">
+
+      {/* ================= HEADER ================= */}
+      <div className="mb-8">
+
+        <div className="flex items-center gap-2">
+
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#98E8DE]/50">
+
+            <Sparkles
+              size={21}
+              className="text-[#4E1F6E]"
+            />
+
+          </div>
+
+          <div>
+
+            <h1 className="text-3xl font-bold text-[#3E3E75]">
+              Upload Study Material
+            </h1>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Upload your study material and let AI create a
+              personalized learning experience.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* ================= STUDY SET WARNING ================= */}
+      {!studySetId && (
+        <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+
+          <p className="text-sm font-medium text-yellow-800">
+            Please create a study set first, then select
+            <strong> Continue Studying </strong>
+            to upload documents.
+          </p>
+
+        </div>
+      )}
+
+
+      {/* ================= SUCCESS MESSAGE ================= */}
+      {uploadSuccess && (
+        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4">
+
+          <p className="text-sm font-medium text-green-700">
+            {uploadSuccess}
+          </p>
+
+        </div>
+      )}
+
+
+      {/* ================= ERROR MESSAGE ================= */}
+      {uploadError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+
+          <p className="text-sm font-medium text-red-600">
+            {uploadError}
+          </p>
+
+        </div>
+      )}
+
+
+      {/* ================= MAIN UPLOAD AREA ================= */}
+      <div className="grid gap-6 lg:grid-cols-3">
+
+        {/* ================= UPLOAD CARD ================= */}
+        <div className="rounded-2xl bg-white p-6 shadow-sm lg:col-span-2">
+
+          <div
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+
+            onDragLeave={() => setIsDragging(false)}
+
+            onDrop={handleDrop}
+
+            className={`flex min-h-[360px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
+              isDragging
+                ? "border-[#4E1F6E] bg-[#98E8DE]/20"
+                : "border-gray-200 bg-gray-50 hover:border-[#98E8DE] hover:bg-[#98E8DE]/10"
+            }`}
+          >
+
+            {!selectedFile ? (
+
+              <>
+                {/* Upload Icon */}
+
+                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#98E8DE]/40">
+
+                  <Upload
+                    size={34}
+                    className="text-[#4E1F6E]"
+                  />
+
+                </div>
+
+
+                <h2 className="text-xl font-semibold text-[#3E3E75]">
+                  Drop your files here
+                </h2>
+
+
+                <p className="mt-2 max-w-md text-sm text-gray-500">
+                  Drag and drop your study material here, or
+                  browse your computer to select a file.
+                </p>
+
+
+                {/* Browse Files */}
+
+                <label className="mt-6 cursor-pointer rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md">
+
+                  Browse Files
+
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.pptx"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+
+                </label>
+
+
+                <p className="mt-4 text-xs text-gray-400">
+                  Maximum file size: 20 MB
+                </p>
+
+              </>
+
+            ) : (
+
+              /* ================= SELECTED FILE ================= */
+
+              <div className="w-full max-w-lg">
+
+                <div className="rounded-2xl border border-[#98E8DE] bg-white p-5 shadow-sm">
+
+                  <div className="flex items-center gap-4">
+
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+
+                      <FileText
+                        size={23}
+                        className="text-[#4E1F6E]"
+                      />
+
+                    </div>
+
+
+                    <div className="flex-1 text-left">
+
+                      <p className="truncate text-sm font-semibold text-[#3E3E75]">
+                        {selectedFile.name}
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+
+                    </div>
+
+
+                    <button
+                      onClick={removeFile}
+                      className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-red-500"
+                    >
+
+                      <X size={18} />
+
+                    </button>
+
+                  </div>
+
+
+                  {/* ================= UPLOAD BUTTON ================= */}
+
+                  <button
+                    onClick={handleUpload}
+                    disabled={uploading || !studySetId}
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+
+                    <Upload size={17} />
+
+                    {uploading
+                      ? (statusMessage || "Processing...")
+                      : "Upload & Process Document"}
+
+                  </button>
+
+                </div>
+
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
+
+        {/* ================= SUPPORTED FORMATS ================= */}
+
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+
+          <h2 className="text-lg font-semibold text-[#3E3E75]">
+            Supported Formats
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Upload your study materials in any of these formats.
+          </p>
+
+
+          <div className="mt-6 space-y-4">
+
+            {/* ================= PDF ================= */}
+
+            <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-[#98E8DE]/20">
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+
+                <FileText
+                  size={20}
+                  className="text-[#4E1F6E]"
+                />
+
+              </div>
+
+              <div>
+
+                <p className="text-sm font-semibold text-[#3E3E75]">
+                  PDF
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  Lecture notes & textbooks
+                </p>
+
+              </div>
+
+            </div>
+
+
+            {/* ================= DOCX ================= */}
+
+            <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-[#98E8DE]/20">
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+
+                <FileCheck
+                  size={20}
+                  className="text-[#4E1F6E]"
+                />
+
+              </div>
+
+              <div>
+
+                <p className="text-sm font-semibold text-[#3E3E75]">
+                  DOCX
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  Documents & notes
+                </p>
+
+              </div>
+
+            </div>
+
+
+            {/* ================= PPTX ================= */}
+
+            <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-[#98E8DE]/20">
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+
+                <Presentation
+                  size={20}
+                  className="text-[#4E1F6E]"
+                />
+
+              </div>
+
+              <div>
+
+                <p className="text-sm font-semibold text-[#3E3E75]">
+                  PPTX
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  Lecture presentations
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* ================= AI INFORMATION ================= */}
+
+          <div className="mt-6 rounded-xl bg-[#98E8DE]/20 p-4">
+
+            <div className="flex gap-3">
+
+              <Sparkles
+                size={18}
+                className="mt-0.5 shrink-0 text-[#4E1F6E]"
+              />
+
+              <p className="text-xs leading-relaxed text-[#3E3E75]">
+                Your material will be analyzed by AI to create
+                summaries, quizzes, flashcards, and personalized
+                study recommendations.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ================= USER-CONTROLLED QUESTION GENERATION PANEL ================= */}
+      <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="text-[#4E1F6E]" size={20} />
+          <h2 className="text-xl font-bold text-[#3E3E75]">
+            Choose Question Type to Generate
+          </h2>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Select the type of questions you want the AI engine to generate from your study materials:
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[
+            {
+              id: "mcq",
+              title: "Multiple Choice",
+              desc: "4-option recall & recognition questions",
+              badge: "MCQ",
+              icon: ListChecks,
+            },
+            {
+              id: "short-answer",
+              title: "Short Answer",
+              desc: "Active recall & concise terminology",
+              badge: "Short",
+              icon: FileText,
+            },
+            {
+              id: "application",
+              title: "Application",
+              desc: "Scenario-based practical problems",
+              badge: "Scenario",
+              icon: Lightbulb,
+            },
+            {
+              id: "long",
+              title: "Long Answer",
+              desc: "Comprehensive synthesis & deep concepts",
+              badge: "Conceptual",
+              icon: BookOpen,
+            },
+          ].map((type) => (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => setSelectedGenType(type.id)}
+              className={`flex flex-col text-left p-4 rounded-xl border-2 transition-all ${
+                selectedGenType === type.id
+                  ? "border-[#4E1F6E] bg-[#98E8DE]/15 shadow-sm"
+                  : "border-gray-200 bg-gray-50 hover:border-gray-300"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#98E8DE]/40">
+                  <type.icon size={18} className="text-[#4E1F6E]" />
+                </div>
+                <span className="text-[10px] font-semibold text-[#4E1F6E] bg-[#98E8DE]/40 px-2 py-0.5 rounded-full">
+                  {type.badge}
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-[#3E3E75]">{type.title}</h3>
+              <p className="mt-1 text-xs text-gray-500">{type.desc}</p>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <button
+            onClick={handleGenerate}
+            disabled={generating || !studySetId}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Sparkles size={17} />
+            {generating ? (statusMessage || "Generating...") : `Generate ${selectedGenType.toUpperCase()} Questions`}
+          </button>
+
+          {genSuccess && (
+            <button
+              onClick={() => navigate("/quiz")}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#087C7B] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#066362]"
+            >
+              Configure & Start Quiz →
+            </button>
+          )}
+        </div>
+
+        {genSuccess && (
+          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
+            <p className="text-sm font-medium text-green-700">{genSuccess}</p>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+export default UploadPage;
