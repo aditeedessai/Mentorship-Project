@@ -1,6 +1,7 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.question import (
     GenerateQuestionsRequest,
     QuestionListResponse,
@@ -22,21 +23,22 @@ router = APIRouter(tags=["Questions"])
 )
 def generate_questions(
     study_set_id: UUID,
-    payload: GenerateQuestionsRequest
+    payload: GenerateQuestionsRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> QuestionListResponse:
-    # 1. Verify study set exists in Supabase DB
-    study_set = study_set_repository.get_study_set(str(study_set_id))
+    # 1. Verify study set exists and belongs to current_user.user_id
+    study_set = study_set_repository.get_study_set(str(study_set_id), user_id=current_user.user_id)
     if not study_set:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Study set with ID '{study_set_id}' not found"
         )
 
-    # 2. If payload specifies document_id, verify document exists
+    # 2. If payload specifies document_id, verify document exists and belongs to this study set
     doc_id_str = str(payload.document_id) if payload.document_id else None
     if doc_id_str:
         doc = study_set_repository.get_document_by_id(doc_id_str)
-        if not doc:
+        if not doc or doc.get("study_set_id") != str(study_set_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Document with ID '{payload.document_id}' not found"
@@ -77,10 +79,11 @@ def list_questions(
     question_type: QuestionType | None = Query(
         None,
         description="Optional filter by question type (mcq, application, long, short)"
-    )
+    ),
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> QuestionListResponse:
-    # 1. Verify study set exists in Supabase DB
-    study_set = study_set_repository.get_study_set(str(study_set_id))
+    # 1. Verify study set exists and belongs to current_user.user_id
+    study_set = study_set_repository.get_study_set(str(study_set_id), user_id=current_user.user_id)
     if not study_set:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -90,10 +93,16 @@ def list_questions(
     # 2. Query questions from Supabase quiz_repository
     try:
         db_questions = quiz_repository.get_questions_by_study_set(str(study_set_id))
-        if question_type:
+        if question_type and hasattr(question_type, "value"):
+            target_val = question_type.value
             db_questions = [
                 q for q in db_questions
-                if q.get("question_type") == question_type.value
+                if q.get("question_type") == target_val
+            ]
+        elif isinstance(question_type, str):
+            db_questions = [
+                q for q in db_questions
+                if q.get("question_type") == question_type
             ]
         return QuestionListResponse(
             questions=[QuestionResponse(**q) for q in db_questions]
@@ -112,7 +121,10 @@ def list_questions(
     summary="Get question details by ID",
     description="Retrieves student-facing details for a specific question by its ID."
 )
-def get_question(question_id: str) -> QuestionResponse:
+def get_question(
+    question_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> QuestionResponse:
     try:
         q = quiz_repository.get_question_by_id(question_id)
         if not q:
@@ -120,6 +132,16 @@ def get_question(question_id: str) -> QuestionResponse:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Question with ID '{question_id}' not found"
             )
+
+        # Verify ownership through relationship: question -> study_set -> user_id
+        if q.get("study_set_id"):
+            study_set = study_set_repository.get_study_set(q["study_set_id"], user_id=current_user.user_id)
+            if not study_set:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Question with ID '{question_id}' not found"
+                )
+
         return QuestionResponse(**q)
     except HTTPException:
         raise

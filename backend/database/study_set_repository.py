@@ -114,6 +114,37 @@ def list_study_sets(user_id: str = None) -> list[dict]:
         connection.close()
 
 
+def delete_study_set(study_set_id: str, user_id: str = None) -> bool:
+    """
+    Delete a study set by ID with user ownership check.
+
+    If `user_id` is provided, enforces ownership (only deletes if study_set_id
+    and user_id both match). Returns True if a record was deleted, False otherwise.
+    """
+    connection = get_connection()
+    try:
+        if user_id:
+            cursor = connection.execute(
+                """
+                DELETE FROM study_sets
+                WHERE study_set_id = ? AND user_id = ?
+                """,
+                (study_set_id, user_id)
+            )
+        else:
+            cursor = connection.execute(
+                """
+                DELETE FROM study_sets
+                WHERE study_set_id = ?
+                """,
+                (study_set_id,)
+            )
+        connection.commit()
+        return cursor.rowcount > 0
+    finally:
+        connection.close()
+
+
 def update_study_set_timestamp(study_set_id: str):
     """
     Update the updated_at timestamp of a study set.

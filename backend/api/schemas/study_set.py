@@ -22,6 +22,10 @@ class StudySetResponse(BaseModel):
         ...,
         description="Name of the study set"
     )
+    user_id: str | None = Field(
+        None,
+        description="ID of the user who owns the study set"
+    )
     created_at: datetime = Field(
         ...,
         description="Timestamp when the study set was created (TIMESTAMPTZ)"
@@ -38,6 +42,19 @@ class StudySetListResponse(BaseModel):
     study_sets: list[StudySetResponse] = Field(
         default_factory=list,
         description="List of study sets"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DeleteStudySetResponse(BaseModel):
+    message: str = Field(
+        ...,
+        description="Confirmation message for study set deletion"
+    )
+    study_set_id: UUID = Field(
+        ...,
+        description="Unique identifier of the deleted study set (UUID)"
     )
 
     model_config = ConfigDict(from_attributes=True)

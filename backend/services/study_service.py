@@ -11,17 +11,21 @@ from backend.services.evaluation_service import run_evaluation
 from backend.database import study_set_repository
 
 
-def create_study_set(name: str) -> dict:
+def create_study_set(name: str, user_id: str | None = None) -> dict:
     study_set_id = str(uuid.uuid4())
-    return study_set_repository.create_study_set(study_set_id, name)
+    return study_set_repository.create_study_set(study_set_id, name, user_id=user_id)
 
 
-def list_study_sets() -> list[dict]:
-    return study_set_repository.list_study_sets()
+def list_study_sets(user_id: str | None = None) -> list[dict]:
+    return study_set_repository.list_study_sets(user_id=user_id)
 
 
-def get_study_set(study_set_id: str) -> dict | None:
-    return study_set_repository.get_study_set(study_set_id)
+def get_study_set(study_set_id: str, user_id: str | None = None) -> dict | None:
+    return study_set_repository.get_study_set(study_set_id, user_id=user_id)
+
+
+def delete_study_set(study_set_id: str, user_id: str | None = None) -> bool:
+    return study_set_repository.delete_study_set(study_set_id, user_id=user_id)
 
 
 # Only these file formats are allowed

@@ -1,29 +1,34 @@
-/**
- * Centralized API service layer.
- * All backend calls go through /api which the Vite dev-server proxies
- * to the FastAPI backend.
- */
+import { supabase } from "./supabase";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
 async function request(url, options = {}) {
-  const headers = { ...options.headers }
+  const headers = { ...options.headers };
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+  } catch (err) {
+    console.warn("Could not retrieve Supabase session:", err);
+  }
 
   // Only set application/json if body is NOT FormData and Content-Type isn't set yet
-  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
-    headers['Content-Type'] = 'application/json'
+  if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
   }
 
   const res = await fetch(url, {
     ...options,
     headers,
-  })
+  });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`API ${options.method || 'GET'} ${url} → ${res.status}: ${body}`)
+    const body = await res.text().catch(() => "");
+    throw new Error(`API ${options.method || "GET"} ${url} → ${res.status}: ${body}`);
   }
-  return res.json()
+  return res.json();
 }
 
 // ── Question-type mapping ────────────────────────────────────────────

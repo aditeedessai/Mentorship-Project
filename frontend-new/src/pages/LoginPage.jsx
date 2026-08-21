@@ -1,17 +1,42 @@
 import { useState } from "react";
 import { Eye, EyeOff, BookOpen } from "lucide-react";
+import { supabase } from "../services/supabase";
 
 function LoginPage({ onLogin, onSignUp }) {
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    // Temporary frontend-only login bypass until backend authentication is implemented.
-    if (onLogin) {
-      onLogin({ name: "Demo Student", email: email || "student@example.com" });
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message || "Failed to sign in. Please check your credentials.");
+        setLoading(false);
+        return;
+      }
+
+      if (onLogin && data?.user) {
+        onLogin({
+          id: data.user.id,
+          name: data.user.user_metadata?.full_name || email.split("@")[0],
+          email: data.user.email,
+        });
+      }
+    } catch (err) {
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -199,15 +224,23 @@ function LoginPage({ onLogin, onSignUp }) {
             </div>
 
 
+            {/* Error Banner */}
+            {error && (
+              <div className="rounded-xl bg-red-50 p-3 text-xs font-medium text-red-600 border border-red-200">
+                {error}
+              </div>
+            )}
+
             {/* Login Button */}
             <button
               type="submit"
+              disabled={loading}
               className="w-full rounded-xl bg-[#4E1F6E] py-3.5 text-sm font-semibold text-white
                          transition-all duration-200
                          hover:-translate-y-0.5 hover:bg-[#3E3E75]
-                         hover:shadow-lg"
+                         hover:shadow-lg disabled:opacity-50"
             >
-              Login
+              {loading ? "Logging in..." : "Login"}
             </button>
 
           </form>

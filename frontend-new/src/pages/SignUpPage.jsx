@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, BookOpen } from "lucide-react";
+import { supabase } from "../services/supabase";
 
 function SignUpPage({ onSignUp, onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,25 +13,50 @@ function SignUpPage({ onSignUp, onLogin }) {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    // Check password confirmation
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
-    setError("");
+    setLoading(true);
 
-    // Temporary frontend signup
-    // Backend/database will be connected later
-    onSignUp({
-      name,
-      dob,
-      email,
-    });
+    try {
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            date_of_birth: dob,
+          },
+        },
+      });
+
+      if (authError) {
+        setError(authError.message || "Failed to create account.");
+        setLoading(false);
+        return;
+      }
+
+      if (onSignUp && data?.user) {
+        onSignUp({
+          id: data.user.id,
+          name,
+          dob,
+          email: data.user.email,
+        });
+      }
+    } catch (err) {
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

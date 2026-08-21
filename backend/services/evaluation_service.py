@@ -399,6 +399,9 @@ def get_current_performance(attempt_id: str):
     return run_evaluation(questions=[], attempt_id=attempt_id, display_performance=True)
 
 
+from backend.config.word_limits import validate_answer_word_limit
+
+
 def evaluate_and_save_attempt_answers(
     attempt_id: str,
     answers: list
@@ -413,6 +416,24 @@ def evaluate_and_save_attempt_answers(
         raise ValueError(f"Attempt with ID '{attempt_id}' not found")
     if attempt.get("status") == "completed":
         raise ValueError("Cannot submit answers for a completed attempt")
+
+    # Pre-validate word limits for all submitted answers BEFORE evaluating or saving
+    for item in answers:
+        q_id = item["question_id"]
+        student_ans = item["student_answer"]
+
+        question = get_question_by_id(q_id)
+        if not question:
+            raise ValueError(f"Question with ID '{q_id}' not found")
+
+        raw_type = str(question.get("question_type", "short")).lower().strip()
+        q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
+
+        is_valid, word_count, max_limit = validate_answer_word_limit(q_type, student_ans)
+        if not is_valid:
+            raise ValueError(
+                f"Answer exceeds the maximum allowed word limit of {max_limit} words."
+            )
 
     for item in answers:
         q_id = item["question_id"]

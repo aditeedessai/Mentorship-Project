@@ -115,10 +115,16 @@ def _format_attempt_dict(row: dict) -> dict:
     return d
 
 
-def get_attempt(attempt_id: str):
+def get_attempt(attempt_id: str, user_id: str = None) -> dict | None:
     """
     Retrieve a previously saved quiz attempt.
+
+    If `user_id` is provided, verifies ownership through the Study Set
+    relationship (attempt -> study_set -> user_id). If the attempt does not exist,
+    has a NULL study_set_id, or belongs to a Study Set owned by another user,
+    returns None.
     """
+    from backend.database import study_set_repository
 
     connection = get_connection()
 
@@ -143,7 +149,17 @@ def get_attempt(attempt_id: str):
         if row is None:
             return None
 
-        return _format_attempt_dict(row)
+        attempt = _format_attempt_dict(row)
+
+        if user_id:
+            study_set_id = attempt.get("study_set_id")
+            if not study_set_id:
+                return None
+            study_set = study_set_repository.get_study_set(study_set_id, user_id=user_id)
+            if not study_set:
+                return None
+
+        return attempt
 
     finally:
         connection.close()

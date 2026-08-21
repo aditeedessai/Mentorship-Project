@@ -13,7 +13,7 @@ from backend.embeddings.vector_store import store_embeddings
 from backend.database.study_set_repository import create_study_set, create_document, get_study_set
 
 
-def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
+def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) -> str:
     """
     Process a study-material PDF/DOCX/PPTX file under a study set.
 
@@ -53,14 +53,16 @@ def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
         study_set_id = str(uuid.uuid4())
         create_study_set(
             study_set_id=study_set_id,
-            name=path.stem
+            name=path.stem,
+            user_id=user_id
         )
     else:
         # Check if study set exists in DB; if not, create it
-        if get_study_set(study_set_id) is None:
+        if get_study_set(study_set_id, user_id=user_id) is None:
             create_study_set(
                 study_set_id=study_set_id,
-                name=path.stem
+                name=path.stem,
+                user_id=user_id
             )
 
     # ---------------------------------------------------------
@@ -141,7 +143,11 @@ def process_pdf(pdf_path: str, study_set_id: str = None) -> str:
     return document_id
 
 
-def create_study_set_from_files(file_paths: list[str], name: str = None) -> tuple[str, list[str]]:
+def create_study_set_from_files(
+    file_paths: list[str],
+    name: str = None,
+    user_id: str = None
+) -> tuple[str, list[str]]:
     """
     Create a new study set and process multiple study-material files under it.
 
@@ -161,13 +167,14 @@ def create_study_set_from_files(file_paths: list[str], name: str = None) -> tupl
     study_set_id = str(uuid.uuid4())
     create_study_set(
         study_set_id=study_set_id,
-        name=name
+        name=name,
+        user_id=user_id
     )
 
     document_ids = []
     for file_path in file_paths:
         print(f"\nProcessing file under Study Set '{name}': {file_path}")
-        doc_id = process_pdf(file_path, study_set_id=study_set_id)
+        doc_id = process_pdf(file_path, study_set_id=study_set_id, user_id=user_id)
         document_ids.append(doc_id)
 
     print(
@@ -177,11 +184,14 @@ def create_study_set_from_files(file_paths: list[str], name: str = None) -> tupl
     return study_set_id, document_ids
 
 
-def process_multiple_files(file_paths: list[str]) -> tuple[str, list[str]]:
+def process_multiple_files(
+    file_paths: list[str],
+    user_id: str = None
+) -> tuple[str, list[str]]:
     """
     Process multiple study-material files as a single Study Set.
 
     Returns:
         tuple (study_set_id, document_ids)
     """
-    return create_study_set_from_files(file_paths)
+    return create_study_set_from_files(file_paths, user_id=user_id)

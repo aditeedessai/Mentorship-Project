@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 import uuid
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.answer import (
     EvaluationListResponse,
     EvaluationResponse,
@@ -34,11 +35,15 @@ router = APIRouter(prefix="/attempts", tags=["Attempts"])
     summary="Start a new test attempt",
     description="Initializes a new quiz attempt for a study set with status 'in_progress'."
 )
-def start_attempt(payload: StartAttemptRequest) -> AttemptResponse:
+def start_attempt(
+    payload: StartAttemptRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> AttemptResponse:
     study_set_id_str = str(payload.study_set_id)
     doc_id_str = str(payload.document_id) if payload.document_id else None
 
-    study_set = study_set_repository.get_study_set(study_set_id_str)
+    # 1. Verify study set exists and belongs to current_user.user_id
+    study_set = study_set_repository.get_study_set(study_set_id_str, user_id=current_user.user_id)
     if not study_set:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -47,7 +52,7 @@ def start_attempt(payload: StartAttemptRequest) -> AttemptResponse:
 
     if doc_id_str:
         doc = study_set_repository.get_document_by_id(doc_id_str)
-        if not doc:
+        if not doc or doc.get("study_set_id") != study_set_id_str:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Document with ID '{payload.document_id}' not found"
@@ -64,7 +69,7 @@ def start_attempt(payload: StartAttemptRequest) -> AttemptResponse:
         status=AttemptStatus.IN_PROGRESS.value
     )
 
-    att = get_attempt_from_db(attempt_id)
+    att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -80,8 +85,11 @@ def start_attempt(payload: StartAttemptRequest) -> AttemptResponse:
     summary="Get test attempt details",
     description="Retrieves current metadata and status for a specific test attempt."
 )
-def get_attempt(attempt_id: str) -> AttemptResponse:
-    att = get_attempt_from_db(attempt_id)
+def get_attempt(
+    attempt_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> AttemptResponse:
+    att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -99,8 +107,17 @@ def get_attempt(attempt_id: str) -> AttemptResponse:
 )
 def submit_section_answers(
     attempt_id: str,
-    payload: SubmitAnswersRequest
+    payload: SubmitAnswersRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> EvaluationListResponse:
+    # Verify attempt ownership BEFORE evaluating or saving answers
+    att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
+    if not att:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Attempt with ID '{attempt_id}' not found"
+        )
+
     try:
         answers_data = [
             {"question_id": item.question_id, "student_answer": item.student_answer}
@@ -134,8 +151,11 @@ def submit_section_answers(
     summary="Finish a test attempt",
     description="Finalizes an active quiz attempt, updating its status from 'in_progress' to 'completed'."
 )
-def finish_attempt(attempt_id: str) -> AttemptResponse:
-    att = get_attempt_from_db(attempt_id)
+def finish_attempt(
+    attempt_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> AttemptResponse:
+    att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -157,7 +177,7 @@ def finish_attempt(attempt_id: str) -> AttemptResponse:
         status=AttemptStatus.COMPLETED.value
     )
 
-    updated_att = get_attempt_from_db(attempt_id)
+    updated_att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     return AttemptResponse(**updated_att)
 
 
@@ -168,8 +188,11 @@ def finish_attempt(attempt_id: str) -> AttemptResponse:
     summary="Get question-level evaluations for an attempt",
     description="Retrieves question-level evaluation records for a specific test attempt."
 )
-def get_attempt_evaluations(attempt_id: str) -> EvaluationListResponse:
-    att = get_attempt_from_db(attempt_id)
+def get_attempt_evaluations(
+    attempt_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> EvaluationListResponse:
+    att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

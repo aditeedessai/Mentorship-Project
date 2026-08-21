@@ -9,6 +9,7 @@ import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
 import Sidebar from "./components/Sidebar";
 import { fetchStudySets, createStudySet } from "./services/api";
+import { supabase } from "./services/supabase";
 
 import {
   CheckCircle,
@@ -41,8 +42,38 @@ function App() {
   // ================= SELECTED STUDY SET =================
   const [selectedStudySetId, setSelectedStudySetId] = useState(null);
 
+  // ================= AUTH SESSION LISTENER =================
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
+          email: session.user.email,
+        });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
+          email: session.user.email,
+        });
+      } else {
+        setUser(null);
+        setStudySets([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   // ================= FETCH STUDY SETS =================
   useEffect(() => {
+    if (!user) return;
+
     const loadStudySets = async () => {
       try {
         setStudySetsLoading(true);
@@ -60,7 +91,7 @@ function App() {
     };
 
     loadStudySets();
-  }, []);
+  }, [user]);
 
   // ================= CREATE STUDY SET =================
   const handleCreateStudySet = async () => {
@@ -129,6 +160,7 @@ function App() {
       <Sidebar
         onNavigate={setCurrentPage}
         currentPage={currentPage}
+        user={user}
       />
 
       {/* ================= MAIN CONTENT ================= */}

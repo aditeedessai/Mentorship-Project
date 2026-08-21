@@ -1,8 +1,9 @@
 from pathlib import Path
 import tempfile
 from uuid import UUID
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
+from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
@@ -24,7 +25,8 @@ router = APIRouter(tags=["Documents"])
 )
 def upload_documents(
     study_set_id: UUID,
-    files: list[UploadFile] = File(...)
+    files: list[UploadFile] = File(...),
+    current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> DocumentListResponse:
     if not files:
         raise HTTPException(
@@ -32,8 +34,8 @@ def upload_documents(
             detail="At least one file must be provided for upload."
         )
 
-    # 1. Verify study set exists in Supabase
-    study_set = study_set_repository.get_study_set(str(study_set_id))
+    # 1. Verify study set exists and belongs to current_user.user_id
+    study_set = study_set_repository.get_study_set(str(study_set_id), user_id=current_user.user_id)
     if not study_set:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -65,7 +67,8 @@ def upload_documents(
                 # Process PDF/DOCX/PPTX: text extraction, cleaning, chunking, metadata insertion, SBERT embedding generation & pgvector storage
                 doc_id = document_service.process_pdf(
                     pdf_path=str(temp_file_path),
-                    study_set_id=str(study_set_id)
+                    study_set_id=str(study_set_id),
+                    user_id=current_user.user_id
                 )
 
                 # Fetch inserted document record from database
@@ -89,8 +92,11 @@ def upload_documents(
     summary="List documents in a study set",
     description="Retrieves all documents associated with the specified study set UUID."
 )
-def list_study_set_documents(study_set_id: UUID) -> DocumentListResponse:
-    study_set = study_set_repository.get_study_set(str(study_set_id))
+def list_study_set_documents(
+    study_set_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> DocumentListResponse:
+    study_set = study_set_repository.get_study_set(str(study_set_id), user_id=current_user.user_id)
     if not study_set:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -116,7 +122,10 @@ def list_study_set_documents(study_set_id: UUID) -> DocumentListResponse:
     summary="Get document details by ID",
     description="Retrieves information for a specific document by its UUID."
 )
-def get_document(document_id: UUID) -> DocumentResponse:
+def get_document(
+    document_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> DocumentResponse:
     try:
         doc = study_set_repository.get_document_by_id(str(document_id))
         if not doc:
@@ -124,6 +133,15 @@ def get_document(document_id: UUID) -> DocumentResponse:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Document with ID '{document_id}' not found"
             )
+
+        # Verify ownership through relationship: document -> study_set -> user_id
+        study_set = study_set_repository.get_study_set(doc["study_set_id"], user_id=current_user.user_id)
+        if not study_set:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document with ID '{document_id}' not found"
+            )
+
         return DocumentResponse(**doc)
     except HTTPException:
         raise
