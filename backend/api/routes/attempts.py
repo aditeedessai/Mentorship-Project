@@ -176,10 +176,13 @@ def finish_attempt(
         document_id=att.get("document_id"),
         status=AttemptStatus.COMPLETED.value
     )
-
     updated_att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
+    if not updated_att:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve updated attempt"
+        )
     return AttemptResponse(**updated_att)
-
 
 @router.get(
     "/{attempt_id}/evaluations",

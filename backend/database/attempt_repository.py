@@ -4,7 +4,8 @@ from backend.database.database import get_connection
 def ensure_attempt_exists(
     attempt_id: str,
     study_set_id: str = None,
-    document_id: str = None
+    document_id: str = None,
+    user_id: str = None
 ):
     """
     Creates a placeholder quiz_attempts row if one doesn't already exist,
@@ -16,6 +17,13 @@ def ensure_attempt_exists(
     very first evaluation saved for a brand-new attempt_id fails the FK
     check, since the parent row doesn't exist yet.
 
+    `user_id` must come from the authenticated Supabase user (never from
+    the frontend/request body) and is stored directly on the row, not
+    just inferred via study_set_id - this preserves ownership even if
+    the underlying study set is later deleted (see delete_study_set()),
+    which otherwise orphans the attempt and permanently blocks the owner
+    from viewing their own historical results.
+
     ON CONFLICT DO NOTHING is deliberate here (unlike save_attempt()'s
     DO UPDATE) - this must never overwrite an attempt's already-accumulated
     marks/status back to the 0/in_progress placeholder on a later call.
@@ -24,6 +32,7 @@ def ensure_attempt_exists(
 
     doc_id = document_id or None
     set_id = study_set_id or None
+    usr_id = user_id or None
 
     try:
         connection.execute(
@@ -32,14 +41,15 @@ def ensure_attempt_exists(
                 attempt_id,
                 study_set_id,
                 document_id,
+                user_id,
                 total_marks,
                 marks_awarded,
                 status
             )
-            VALUES (?, ?, ?, 0, 0, 'in_progress')
+            VALUES (?, ?, ?, ?, 0, 0, 'in_progress')
             ON CONFLICT (attempt_id) DO NOTHING
             """,
-            (attempt_id, set_id, doc_id)
+            (attempt_id, set_id, doc_id, usr_id)
         )
 
         connection.commit()
@@ -54,7 +64,8 @@ def save_attempt(
     marks_awarded: float,
     study_set_id: str = None,
     document_id: str = None,
-    status: str = "in_progress"
+    status: str = "in_progress",
+    user_id: str = None
 ):
     """
     Save the result of one quiz attempt.
@@ -63,12 +74,18 @@ def save_attempt(
     still being completed keeps it as-is. Callers should only pass
     status='completed' once the student has finished every section
     (see evaluation_service.run_evaluation's status parameter).
+
+    `user_id` must come from the authenticated Supabase user, never the
+    frontend/request body. COALESCE in the ON CONFLICT clause means a
+    later call omitting user_id won't accidentally null out an owner
+    already set on an earlier call for this same attempt_id.
     """
 
     connection = get_connection()
 
     doc_id = document_id or None
     set_id = study_set_id or None
+    usr_id = user_id or None
 
     try:
         connection.execute(
@@ -77,14 +94,16 @@ def save_attempt(
                 attempt_id,
                 study_set_id,
                 document_id,
+                user_id,
                 total_marks,
                 marks_awarded,
                 status
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (attempt_id) DO UPDATE SET
                 study_set_id = COALESCE(EXCLUDED.study_set_id, quiz_attempts.study_set_id),
                 document_id = COALESCE(EXCLUDED.document_id, quiz_attempts.document_id),
+                user_id = COALESCE(EXCLUDED.user_id, quiz_attempts.user_id),
                 total_marks = EXCLUDED.total_marks,
                 marks_awarded = EXCLUDED.marks_awarded,
                 status = EXCLUDED.status,
@@ -94,6 +113,7 @@ def save_attempt(
                 attempt_id,
                 set_id,
                 doc_id,
+                usr_id,
                 total_marks,
                 marks_awarded,
                 status
@@ -119,13 +139,16 @@ def get_attempt(attempt_id: str, user_id: str = None) -> dict | None:
     """
     Retrieve a previously saved quiz attempt.
 
-    If `user_id` is provided, verifies ownership through the Study Set
-    relationship (attempt -> study_set -> user_id). If the attempt does not exist,
-    has a NULL study_set_id, or belongs to a Study Set owned by another user,
-    returns None.
+    If `user_id` is provided, ownership is checked directly against
+    quiz_attempts.user_id - not via the study_set relationship. This
+    preserves access to an attempt's historical results even after its
+    study_set has been deleted (study_set_id becomes NULL in that case,
+    per delete_study_set()'s cascade behavior) - previously, deleting a
+    study set permanently orphaned every attempt under it, since there
+    was no other path back to the owner. study_set_id is still stored
+    and still used for the study_set relationship itself, just no
+    longer relied on for ownership checks.
     """
-    from backend.database import study_set_repository
-
     connection = get_connection()
 
     try:
@@ -135,6 +158,7 @@ def get_attempt(attempt_id: str, user_id: str = None) -> dict | None:
                 attempt_id,
                 study_set_id,
                 document_id,
+                user_id,
                 total_marks,
                 marks_awarded,
                 status,
@@ -151,13 +175,8 @@ def get_attempt(attempt_id: str, user_id: str = None) -> dict | None:
 
         attempt = _format_attempt_dict(row)
 
-        if user_id:
-            study_set_id = attempt.get("study_set_id")
-            if not study_set_id:
-                return None
-            study_set = study_set_repository.get_study_set(study_set_id, user_id=user_id)
-            if not study_set:
-                return None
+        if user_id and attempt.get("user_id") != user_id:
+            return None
 
         return attempt
 
@@ -165,14 +184,29 @@ def get_attempt(attempt_id: str, user_id: str = None) -> dict | None:
         connection.close()
 
 
-def list_attempts(study_set_id=None, document_id=None):
-    """Return saved quiz attempts, optionally filtered by study set or document."""
+def list_attempts(study_set_id=None, document_id=None, user_id=None):
+    """
+    Return saved quiz attempts, optionally filtered by study set,
+    document, or user. `user_id` filtering is direct against
+    quiz_attempts.user_id (see get_attempt()'s docstring for why this
+    doesn't go through study_set_id).
+    """
     connection = get_connection()
     try:
-        if study_set_id:
+        if user_id:
             rows = connection.execute(
                 """
-                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded, status, created_at, updated_at
+                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
+                FROM quiz_attempts
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        elif study_set_id:
+            rows = connection.execute(
+                """
+                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
                 FROM quiz_attempts
                 WHERE study_set_id = ?
                 ORDER BY created_at DESC
@@ -182,7 +216,7 @@ def list_attempts(study_set_id=None, document_id=None):
         elif document_id:
             rows = connection.execute(
                 """
-                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded, status, created_at, updated_at
+                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
                 FROM quiz_attempts
                 WHERE document_id = ?
                 ORDER BY created_at DESC
@@ -192,7 +226,7 @@ def list_attempts(study_set_id=None, document_id=None):
         else:
             rows = connection.execute(
                 """
-                SELECT attempt_id, study_set_id, document_id, total_marks, marks_awarded, status, created_at, updated_at
+                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
                 FROM quiz_attempts
                 ORDER BY created_at DESC
                 """
