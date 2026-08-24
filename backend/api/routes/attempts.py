@@ -213,6 +213,38 @@ def get_attempt_evaluations(
             final_s = rec.get("final_score")
             is_corr = (final_s >= 0.55) if final_s is not None else None
 
+        # Build correct_answer text
+        correct_ans = None
+        q_type = (rec.get("question_type") or "").lower()
+        if q_type == "mcq":
+            corr_opt = rec.get("correct_option")
+            opts = rec.get("options")
+            if isinstance(opts, str):
+                try:
+                    import json
+                    opts = json.loads(opts)
+                except Exception:
+                    opts = {}
+            if corr_opt and isinstance(opts, dict) and corr_opt in opts:
+                correct_ans = f"Option {corr_opt}: {opts[corr_opt]}"
+            elif corr_opt:
+                correct_ans = f"Option {corr_opt}"
+            else:
+                correct_ans = rec.get("reference_answer")
+        else:
+            correct_ans = rec.get("reference_answer")
+
+        # Build feedback summary text
+        feedback_str = None
+        if is_corr:
+            feedback_str = "Great job! Your answer matches the model criteria."
+        else:
+            missed = rec.get("missed_concepts")
+            if missed and isinstance(missed, list) and len(missed) > 0:
+                feedback_str = f"Missed key concepts: {', '.join(missed)}"
+            else:
+                feedback_str = "Review this topic in your study material to reinforce the concept."
+
         eval_responses.append(
             EvaluationResponse(
                 question_id=rec["question_id"],
@@ -226,6 +258,11 @@ def get_attempt_evaluations(
                 missed_concepts=rec.get("missed_concepts"),
                 keyword_stuffing_detected=False,
                 logic_inversion_detected=False,
+                question_text=rec.get("question_text"),
+                question_type=rec.get("question_type"),
+                correct_answer=correct_ans,
+                max_marks=float(rec.get("max_marks", 2.0 if q_type == "mcq" else 10.0)),
+                feedback=feedback_str,
             )
         )
 

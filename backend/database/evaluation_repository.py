@@ -67,7 +67,7 @@ def _format_eval_dict(row: dict) -> dict:
     for field in ("semantic_score", "concept_score", "final_score", "marks_awarded", "max_marks"):
         if d.get(field) is not None:
             d[field] = float(d[field])
-    for field in ("matched_concepts", "missed_concepts"):
+    for field in ("matched_concepts", "missed_concepts", "options"):
         if isinstance(d.get(field), str):
             try:
                 d[field] = json.loads(d[field])
@@ -98,7 +98,7 @@ def get_evaluations_by_attempt(attempt_id: str):
 
 def get_evaluations_with_question_details(attempt_id: str):
     """
-    Return saved evaluations joined with question metadata (question_type, topic, max_marks).
+    Return saved evaluations joined with question metadata (question_text, question_type, topic, reference_answer, correct_option, options, max_marks).
     """
     connection = get_connection()
     try:
@@ -117,6 +117,10 @@ def get_evaluations_with_question_details(attempt_id: str):
                 e.missed_concepts,
                 q.question_type,
                 q.topic,
+                q.question AS question_text,
+                q.reference_answer,
+                q.correct_option,
+                q.options,
                 COALESCE(q.marks, CASE WHEN q.question_type = 'mcq' THEN 2.0 ELSE 10.0 END) AS max_marks
             FROM evaluations e
             LEFT JOIN questions q ON e.question_id = q.question_id
@@ -128,4 +132,5 @@ def get_evaluations_with_question_details(attempt_id: str):
         return [_format_eval_dict(row) for row in rows]
     finally:
         connection.close()
+
 

@@ -76,6 +76,8 @@ export default function ResultsPage({ onNavigate }) {
         let rawList = [];
         if (Array.isArray(evalsData)) {
           rawList = evalsData;
+        } else if (Array.isArray(evalsData?.results)) {
+          rawList = evalsData.results;
         } else if (Array.isArray(evalsData?.evaluations)) {
           rawList = evalsData.evaluations;
         } else if (Array.isArray(evalsData?.questions)) {
@@ -146,101 +148,153 @@ export default function ResultsPage({ onNavigate }) {
     );
   }
 
-  // Section Data Normalization
-  const rawSections =
-    resultsData?.sections ||
-    performanceData?.section_performance ||
-    performanceData?.sections ||
-    [];
-  const sectionBreakdown = Array.isArray(rawSections) && rawSections.length > 0
-    ? rawSections
-    : [{ section_name: 'MCQ', score: 4, max_marks: 10, accuracy: 40 }];
+  const hasEvaluations = evaluations.length > 0;
 
-  const calculatedTotal = sectionBreakdown.reduce(
-    (acc, sec) => acc + Number(sec.score ?? sec.marks_obtained ?? sec.marks_awarded ?? 0),
-    0
-  );
-  const calculatedMax = sectionBreakdown.reduce(
-    (acc, sec) => acc + Number(sec.max_marks ?? sec.total_marks ?? 10),
-    0
-  );
+  if (!hasEvaluations) {
+    return (
+      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#98E8DE]/40 text-[#4E1F6E] mb-4">
+          <HelpCircle size={28} />
+        </div>
+        <h2 className="text-xl font-bold text-[#3E3E75] mb-2">No Evaluations Recorded</h2>
+        <p className="text-gray-500 mb-6 text-sm">
+          No question evaluation records were found for this quiz attempt.
+        </p>
+        <button
+          type="button"
+          onClick={handleGoDashboard}
+          className="w-full rounded-xl bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3E3E75]"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
-  const totalScore = Number(
-    resultsData?.total_score ??
-      resultsData?.marks_awarded ??
-      performanceData?.total_score ??
-      calculatedTotal
-  );
+  // Helper for question passed status
+  const isQuestionPassed = (q) => {
+    if (q.is_correct !== undefined && q.is_correct !== null) {
+      return Boolean(q.is_correct);
+    }
+    if (q.correct !== undefined && q.correct !== null) {
+      return Boolean(q.correct);
+    }
+    const awarded = Number(q.marks_awarded ?? q.score ?? 0);
+    const maxM = Number(q.max_marks ?? 1);
+    return awarded >= maxM * 0.5;
+  };
 
-  const maxScore = Number(
-    resultsData?.max_score ??
-      resultsData?.total_marks ??
-      performanceData?.max_score ??
-      (calculatedMax > 0 ? calculatedMax : 10)
-  );
-
-  const percentage =
-    resultsData?.overall_accuracy !== undefined
-      ? Math.round(resultsData.overall_accuracy)
-      : performanceData?.overall_accuracy !== undefined
-      ? Math.round(performanceData.overall_accuracy)
-      : maxScore > 0
-      ? Math.round((totalScore / maxScore) * 100)
-      : 0;
-
-  // Calculate exact counts for right and wrong questions
-  const totalQuestionsCount = Math.round(maxScore);
-  const correctQuestionsCount = Math.round(totalScore);
+  const totalQuestionsCount = evaluations.length;
+  const correctQuestionsCount = evaluations.filter(isQuestionPassed).length;
   const wrongQuestionsCount = Math.max(0, totalQuestionsCount - correctQuestionsCount);
 
-  const strengths =
-    resultsData?.strengths ||
-    performanceData?.strengths ||
-    [
-      'Strong conceptual grasp on foundational definitions',
-      'High accuracy on Multiple Choice recall questions',
-    ];
+  const totalScore = evaluations.reduce(
+    (acc, q) => acc + Number(q.marks_awarded ?? q.score ?? 0),
+    0
+  );
+  const maxScore = evaluations.reduce(
+    (acc, q) => acc + Number(q.max_marks ?? 2.0),
+    0
+  );
 
-  const improvements =
-    resultsData?.improvements ||
-    resultsData?.areas_for_improvement ||
-    performanceData?.weaknesses ||
-    [
-      'Practice applying core principles to multi-step scenario questions',
-      'Provide more detailed rationale on Short Answer explanations',
-    ];
+  const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
-  // Robust question builder: uses API evaluations or builds from recorded score
-  const getSectionQuestions = (sectionName) => {
-    if (evaluations.length > 0) {
-      const normSec = (sectionName || '').toLowerCase();
-      const matched = evaluations.filter((q) => {
-        const qType = (q.question_type || q.type || q.category || '').toLowerCase();
-        return (
-          qType.includes(normSec) ||
-          (normSec.includes('mcq') && (qType.includes('choice') || qType.includes('mcq')))
-        );
-      });
-      if (matched.length > 0) return matched;
-      return evaluations;
-    }
+  // Build section breakdown dynamically from actual evaluations
+  const sectionMap = {};
+  evaluations.forEach((q) => {
+    let typeKey = (q.question_type || q.type || 'mcq').toLowerCase().trim();
+    if (typeKey.includes('mcq') || typeKey.includes('choice')) typeKey = 'mcq';
+    else if (typeKey.includes('short')) typeKey = 'short-answer';
+    else if (typeKey.includes('app')) typeKey = 'application';
+    else if (typeKey.includes('long')) typeKey = 'long';
 
-    // Dynamic fallback generation if backend only saved the summary score
-    return Array.from({ length: totalQuestionsCount }).map((_, i) => {
-      const isCorrect = i < correctQuestionsCount;
-      return {
-        id: `q-${i + 1}`,
-        question_text: `Question ${i + 1}: Core Concept Assessment`,
-        student_answer: isCorrect ? 'Correct option selected' : 'Incorrect option selected',
-        correct_answer: 'Verified Standard Answer',
-        is_correct: isCorrect,
-        score: isCorrect ? 1 : 0,
-        max_marks: 1,
-        feedback: isCorrect
-          ? 'Great job! Your selection accurately matched the model criteria.'
-          : 'Review this topic in your study material to reinforce the concept.',
+    const displayNameMap = {
+      'mcq': 'MCQ',
+      'short-answer': 'Short Answer',
+      'application': 'Application',
+      'long': 'Long Answer',
+    };
+    const name = displayNameMap[typeKey] || typeKey.toUpperCase();
+
+    if (!sectionMap[name]) {
+      sectionMap[name] = {
+        section_name: name,
+        score: 0,
+        max_marks: 0,
+        total_questions: 0,
+        correct_questions: 0,
       };
+    }
+    const marks = Number(q.marks_awarded ?? q.score ?? 0);
+    const maxM = Number(q.max_marks ?? (typeKey === 'mcq' ? 2 : 10));
+    sectionMap[name].score += marks;
+    sectionMap[name].max_marks += maxM;
+    sectionMap[name].total_questions += 1;
+    if (isQuestionPassed(q)) {
+      sectionMap[name].correct_questions += 1;
+    }
+  });
+
+  const sectionBreakdown = Object.values(sectionMap).map((sec) => ({
+    ...sec,
+    accuracy: sec.max_marks > 0 ? Math.round((sec.score / sec.max_marks) * 100) : 0,
+  }));
+
+  // Strengths & Improvements derived deterministically without fake static fallbacks
+  let strengths = [];
+  let improvements = [];
+
+  if (Array.isArray(resultsData?.strengths) && resultsData.strengths.length > 0) {
+    strengths = resultsData.strengths;
+  } else if (Array.isArray(performanceData?.strengths) && performanceData.strengths.length > 0) {
+    strengths = performanceData.strengths;
+  } else if (hasEvaluations) {
+    sectionBreakdown.forEach((sec) => {
+      if (sec.accuracy >= 70) {
+        strengths.push(`High accuracy on ${sec.section_name} questions (${sec.accuracy}%)`);
+      }
     });
+    if (percentage >= 80) {
+      strengths.push(`Strong overall score of ${percentage}% across evaluated material`);
+    }
+    if (strengths.length === 0) {
+      strengths.push(`Completed all ${totalQuestionsCount} questions in the study session`);
+    }
+  }
+
+  if (Array.isArray(resultsData?.improvements) && resultsData.improvements.length > 0) {
+    improvements = resultsData.improvements;
+  } else if (Array.isArray(resultsData?.areas_for_improvement) && resultsData.areas_for_improvement.length > 0) {
+    improvements = resultsData.areas_for_improvement;
+  } else if (Array.isArray(performanceData?.weaknesses) && performanceData.weaknesses.length > 0) {
+    improvements = performanceData.weaknesses;
+  } else if (hasEvaluations) {
+    sectionBreakdown.forEach((sec) => {
+      if (sec.accuracy < 70) {
+        improvements.push(`Review key concepts in ${sec.section_name} (accuracy: ${sec.accuracy}%)`);
+      }
+    });
+    if (wrongQuestionsCount > 0) {
+      improvements.push(`Practice active recall on the ${wrongQuestionsCount} missed question(s)`);
+    }
+    if (improvements.length === 0) {
+      improvements.push('Maintain consistent study sessions to retain long-term mastery');
+    }
+  }
+
+  // Get question breakdown for expanded section drawer
+  const getSectionQuestions = (sectionName) => {
+    if (!sectionName) return evaluations;
+    const normSec = sectionName.toLowerCase();
+    const matched = evaluations.filter((q) => {
+      const qType = (q.question_type || q.type || '').toLowerCase();
+      if (normSec.includes('mcq') && (qType.includes('mcq') || qType.includes('choice'))) return true;
+      if (normSec.includes('short') && qType.includes('short')) return true;
+      if (normSec.includes('app') && qType.includes('app')) return true;
+      if (normSec.includes('long') && qType.includes('long')) return true;
+      return qType.includes(normSec);
+    });
+    return matched.length > 0 ? matched : evaluations;
   };
 
   return (
@@ -402,37 +456,34 @@ export default function ResultsPage({ onNavigate }) {
             {/* Questions List */}
             <div className="space-y-4">
               {getSectionQuestions(expandedSection).map((q, qIdx) => {
-                const isPassed =
-                  q.is_correct ||
-                  q.correct ||
-                  Number(q.score ?? q.marks_awarded ?? 0) >= (Number(q.max_marks) || 1) * 0.7;
+                const isPassed = isQuestionPassed(q);
 
                 const questionPrompt =
                   q.question_text ||
                   q.questions?.question_text ||
                   q.question ||
                   q.prompt ||
-                  `Question ${qIdx + 1}: Key Concept Test`;
+                  `Question ${qIdx + 1}`;
 
                 const userAnswer =
                   q.student_answer ||
                   q.user_answer ||
                   q.answer ||
                   q.submitted_answer ||
-                  (isPassed ? 'Selected correct option' : 'Selected incorrect option');
+                  'No answer submitted';
 
                 const correctAnswer =
                   q.correct_answer ||
                   q.questions?.correct_answer ||
                   q.model_answer ||
-                  'Correct Model Answer';
+                  'Reference Answer';
 
                 const feedbackText =
                   q.feedback ||
                   q.explanation ||
                   (isPassed
-                    ? 'Your answer is correct and covers the necessary concepts.'
-                    : 'Review the lecture notes on this section to reinforce your understanding.');
+                    ? 'Great job! Your answer matches the evaluation criteria.'
+                    : 'Review the study material on this section to reinforce your understanding.');
 
                 return (
                   <div
