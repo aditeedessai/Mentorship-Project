@@ -63,22 +63,17 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
       return
     }
 
-    if (!documentId) {
-      setError('Please upload a document before starting a quiz.')
-      return
-    }
-
     setLoading(true)
     setError(null)
 
     try {
-      // 1. Generate questions using AI engine for the selected type & document
+      // 1. Generate questions using AI engine for the selected type & study set
       await generateQuestions(studySetId, selectedType, documentId)
 
       // 2. Fetch the newly generated questions for the selected type
       const questions = await fetchQuestions(studySetId, selectedType)
       if (!questions || questions.length === 0) {
-        throw new Error(`No ${selected.title} questions could be generated for this document.`)
+        throw new Error(`No ${selected.title} questions could be generated for this study set.`)
       }
 
       // 3. Create a new attempt for the studySetId
@@ -99,7 +94,12 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
       })
     } catch (err) {
       console.error('Failed to start session:', err)
-      setError(err.message || 'Failed to start session. Is the backend running?')
+      const msg = err.message || ''
+      if (msg.includes('No study material') || msg.includes('400')) {
+        setError('Please upload a document before starting a quiz.')
+      } else {
+        setError(msg || 'Failed to start session. Is the backend running?')
+      }
     } finally {
       setLoading(false)
     }

@@ -17,13 +17,13 @@ import {
   HelpCircle,
 } from 'lucide-react';
 
-export default function ResultsPage({ onNavigate }) {
+export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) {
   const { attemptId: paramAttemptId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   const attemptId = paramAttemptId || location.state?.attemptId;
-  const studySetId = location.state?.studySetId;
+  const studySetId = location.state?.studySetId || propStudySetId;
 
   const [loading, setLoading] = useState(true);
   const [resultsData, setResultsData] = useState(null);
@@ -31,8 +31,8 @@ export default function ResultsPage({ onNavigate }) {
   const [evaluations, setEvaluations] = useState([]);
   const [error, setError] = useState(null);
 
-  // Expanded section state
-  const [expandedSection, setExpandedSection] = useState('MCQ');
+  // Expanded section state (defaults to first section in attempt if null)
+  const [expandedSection, setExpandedSection] = useState(null);
 
   const handleGoDashboard = () => {
     if (onNavigate) {
@@ -43,10 +43,9 @@ export default function ResultsPage({ onNavigate }) {
   };
 
   const handleRetakeQuiz = () => {
+    navigate('/quiz', { state: { studySetId } });
     if (onNavigate) {
       onNavigate('quiz');
-    } else {
-      navigate('/quiz', { state: { studySetId } });
     }
   };
 
@@ -297,6 +296,11 @@ export default function ResultsPage({ onNavigate }) {
     return matched.length > 0 ? matched : evaluations;
   };
 
+  const activeExpandedSection =
+    expandedSection !== null
+      ? expandedSection
+      : (sectionBreakdown.length > 0 ? sectionBreakdown[0].section_name : null);
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 transition-all duration-300">
       {/* Header Banner */}
@@ -368,7 +372,7 @@ export default function ResultsPage({ onNavigate }) {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-[#3E3E75]">Section-Wise Breakdown</h2>
           <span className="text-xs text-gray-400 font-medium">
-            {expandedSection ? 'Click section again to collapse' : 'Click a section to see individual questions'}
+            {activeExpandedSection ? 'Click section again to collapse' : 'Click a section to see individual questions'}
           </span>
         </div>
 
@@ -385,12 +389,12 @@ export default function ResultsPage({ onNavigate }) {
                 ? Math.round((secScore / secMax) * 100)
                 : percentage;
 
-            const isExpanded = expandedSection === secName;
+            const isExpanded = activeExpandedSection === secName;
 
             return (
               <div
                 key={idx}
-                onClick={() => setExpandedSection(isExpanded ? null : secName)}
+                onClick={() => setExpandedSection(isExpanded ? false : secName)}
                 className={`group rounded-2xl p-5 cursor-pointer transition-all duration-300 border ${
                   isExpanded
                     ? 'border-[#45A9A9] bg-[#98E8DE]/10 shadow-md ring-2 ring-[#98E8DE]/50'
@@ -429,12 +433,12 @@ export default function ResultsPage({ onNavigate }) {
         </div>
 
         {/* Dynamic Question Details Drawer */}
-        {expandedSection && (
+        {activeExpandedSection && (
           <div className="mt-6 rounded-2xl bg-[#F8FAFA] border border-[#98E8DE]/60 p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-200">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#45A9A9]">Section Review</span>
-                <h3 className="text-lg font-bold text-[#3E3E75] capitalize">{expandedSection} Questions</h3>
+                <h3 className="text-lg font-bold text-[#3E3E75] capitalize">{activeExpandedSection} Questions</h3>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-[#136a6a] bg-[#98E8DE]/40 px-2.5 py-1 rounded-lg">
@@ -445,7 +449,7 @@ export default function ResultsPage({ onNavigate }) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setExpandedSection(null)}
+                  onClick={() => setExpandedSection(false)}
                   className="text-xs font-semibold text-gray-500 hover:text-[#4E1F6E] transition ml-2"
                 >
                   ✕ Close
@@ -455,7 +459,7 @@ export default function ResultsPage({ onNavigate }) {
 
             {/* Questions List */}
             <div className="space-y-4">
-              {getSectionQuestions(expandedSection).map((q, qIdx) => {
+              {getSectionQuestions(activeExpandedSection).map((q, qIdx) => {
                 const isPassed = isQuestionPassed(q);
 
                 const questionPrompt =

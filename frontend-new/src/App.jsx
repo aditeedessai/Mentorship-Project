@@ -173,12 +173,12 @@ function App() {
         )}
 
        {/* ================= RESULTS / PROGRESS ================= */}
-      {(currentPage === "results" || currentPage === "progress") && (
-  <ResultsPage onNavigate={setCurrentPage} />
-           )}
+      {(location.pathname === "/results" || currentPage === "results" || currentPage === "progress") && (
+        <ResultsPage onNavigate={setCurrentPage} studySetId={selectedStudySetId} />
+      )}
 
         {/* ================= QUIZ CONFIGURATION ================= */}
-        {(currentPage === "quiz" || location.pathname === "/quiz") && (
+        {(location.pathname === "/quiz" || (currentPage === "quiz" && location.pathname !== "/results")) && (
           <ConfigureSession studySetId={selectedStudySetId} />
         )}
 
