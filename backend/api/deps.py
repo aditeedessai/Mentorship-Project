@@ -1,11 +1,12 @@
 import os
 import requests
+from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import Header, HTTPException, status
 from pydantic import BaseModel, Field
 
-load_dotenv()
-
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_DIR / ".env")
 
 class AuthenticatedUser(BaseModel):
     """
