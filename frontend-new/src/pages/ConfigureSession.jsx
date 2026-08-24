@@ -4,7 +4,7 @@ import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
 import { ListChecks, FileText, Lightbulb, BookOpen } from 'lucide-react'
-import { fetchQuestions, createAttempt } from '../services/api'
+import { fetchQuestions, createAttempt, generateQuestions } from '../services/api'
 
 const questionTypes = [
   {
@@ -50,8 +50,11 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
   const location = useLocation()
 
   const studySetId = propStudySetId || location.state?.studySetId
+  const documentId = location.state?.documentId
 
   const handleStart = async () => {
+    if (loading) return
+
     const selected = questionTypes.find((t) => t.id === selectedType)
     if (!selected) return
 
@@ -60,23 +63,31 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
       return
     }
 
+    if (!documentId) {
+      setError('Please upload a document before starting a quiz.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
-      // 1. Fetch questions for the selected type using the chosen studySetId
+      // 1. Generate questions using AI engine for the selected type & document
+      await generateQuestions(studySetId, selectedType, documentId)
+
+      // 2. Fetch the newly generated questions for the selected type
       const questions = await fetchQuestions(studySetId, selectedType)
       if (!questions || questions.length === 0) {
-        throw new Error(`No ${selected.title} questions found for this study set.`)
+        throw new Error(`No ${selected.title} questions could be generated for this document.`)
       }
 
-      // 2. Create a new attempt for the chosen studySetId
+      // 3. Create a new attempt for the studySetId
       const attempt = await createAttempt(studySetId)
 
-      // 3. Use the actual number of returned questions (may be fewer than requested count)
+      // 4. Determine actual question count
       const actualCount = Math.min(questionCount, questions.length)
 
-      // 4. Navigate to the quiz page with all data
+      // 5. Navigate to the quiz page with session state
       navigate(selected.route, {
         state: {
           questionCount: actualCount,

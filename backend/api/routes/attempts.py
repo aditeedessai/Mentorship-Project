@@ -66,7 +66,8 @@ def start_attempt(
         marks_awarded=0.0,
         study_set_id=study_set_id_str,
         document_id=doc_id_str,
-        status=AttemptStatus.IN_PROGRESS.value
+        status=AttemptStatus.IN_PROGRESS.value,
+        user_id=current_user.user_id
     )
 
     att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
@@ -174,7 +175,8 @@ def finish_attempt(
         marks_awarded=float(att.get("marks_awarded", 0.0)),
         study_set_id=att.get("study_set_id"),
         document_id=att.get("document_id"),
-        status=AttemptStatus.COMPLETED.value
+        status=AttemptStatus.COMPLETED.value,
+        user_id=current_user.user_id
     )
     updated_att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not updated_att:
