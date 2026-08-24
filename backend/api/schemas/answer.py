@@ -83,6 +83,27 @@ class EvaluationResponse(BaseModel):
         None,
         description="Flag indicating if logic inversion or contradiction was detected"
     )
+    question_text: str | None = Field(
+        None,
+        description="Prompt text of the evaluated question"
+    )
+    question_type: str | None = Field(
+        None,
+        description="Type of question (mcq, short, application, long)"
+    )
+    correct_answer: str | None = Field(
+        None,
+        description="Correct option or reference solution"
+    )
+    max_marks: float | None = Field(
+        None,
+        ge=0.0,
+        description="Maximum possible marks for this question"
+    )
+    feedback: str | None = Field(
+        None,
+        description="Evaluation summary or feedback string"
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

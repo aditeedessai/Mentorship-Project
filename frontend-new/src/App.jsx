@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { supabase } from "./services/supabase";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import ResultsPage from "./pages/ResultsPage";
+import SectionResultPage from "./pages/SectionResultPage";
 import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
 import Sidebar from "./components/Sidebar";
 import { fetchStudySets, createStudySet } from "./services/api";
-import { supabase } from "./services/supabase";
-
 import {
   CheckCircle,
   CalendarDays,
@@ -139,23 +139,22 @@ function App() {
     }
   }
 
-  // ================= QUIZ PAGES =================
+  // ================= QUIZ & RESULT PAGES =================
   if (location.pathname === "/quiz/mcq" || currentPage === "quiz-mcq") {
-    return (
-      <MCQPage />
-    );
+    return <MCQPage />;
   }
 
   if (location.pathname === "/quiz/qna" || currentPage === "quiz-qna") {
-    return (
-      <QnAPage />
-    );
+    return <QnAPage />;
+  }
+
+  if (location.pathname === "/section-result" || currentPage === "section-result") {
+    return <SectionResultPage />;
   }
 
   // ================= MAIN APP =================
   return (
     <div className="flex min-h-screen bg-[#F8FAFA]">
-
       {/* ================= SIDEBAR ================= */}
       <Sidebar
         onNavigate={setCurrentPage}
@@ -165,22 +164,21 @@ function App() {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="ml-64 flex-1 overflow-y-auto p-8">
-
         {/* ================= UPLOAD ================= */}
         {currentPage === "upload" && (
           <UploadPage
             studySetId={selectedStudySetId}
+            onNavigate={setCurrentPage}
           />
         )}
 
-        {/* ================= RESULTS / PROGRESS ================= */}
-        {(currentPage === "results" ||
-          currentPage === "progress") && (
-          <ResultsPage />
-        )}
+       {/* ================= RESULTS / PROGRESS ================= */}
+      {(currentPage === "results" || currentPage === "progress") && (
+  <ResultsPage onNavigate={setCurrentPage} />
+           )}
 
         {/* ================= QUIZ CONFIGURATION ================= */}
-        {currentPage === "quiz" && (
+        {(currentPage === "quiz" || location.pathname === "/quiz") && (
           <ConfigureSession studySetId={selectedStudySetId} />
         )}
 
@@ -200,10 +198,8 @@ function App() {
 
             {/* ================= TOP ROW ================= */}
             <div className="grid gap-6 lg:grid-cols-3">
-
               {/* ---------- EXAM READINESS ---------- */}
               <div className="rounded-2xl bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md lg:col-span-2">
-
                 <div className="mb-5 flex items-start justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-[#3E3E75]">
@@ -224,7 +220,6 @@ function App() {
                 </div>
 
                 <div className="flex items-center gap-8">
-
                   <div className="flex h-28 w-28 items-center justify-center rounded-full border-[8px] border-[#45A9A9]">
                     <span className="text-3xl font-bold text-[#4E1F6E]">
                       85
@@ -265,7 +260,6 @@ function App() {
 
               {/* ---------- UPCOMING EXAMS ---------- */}
               <div className="rounded-2xl bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-
                 <div className="mb-5 flex items-center gap-2">
                   <CalendarDays
                     size={18}
@@ -278,7 +272,6 @@ function App() {
                 </div>
 
                 <div className="space-y-4">
-
                   <div className="border-l-4 border-[#4E1F6E] pl-3">
                     <div className="flex justify-between">
                       <span className="text-sm font-semibold text-[#3E3E75]">
@@ -326,17 +319,14 @@ function App() {
                       Final Paper • 13 days
                     </p>
                   </div>
-
                 </div>
               </div>
             </div>
 
             {/* ================= SECOND ROW ================= */}
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
-
               {/* ---------- TODAY'S TASKS ---------- */}
               <div className="rounded-2xl bg-white p-6 shadow-sm">
-
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold text-[#3E3E75]">
@@ -355,7 +345,6 @@ function App() {
                 </div>
 
                 <div className="space-y-4">
-
                   <div className="flex items-center gap-3 rounded-xl bg-[#98E8DE]/30 p-4">
                     <CheckCircle
                       size={20}
@@ -418,13 +407,11 @@ function App() {
                       Pending
                     </span>
                   </div>
-
                 </div>
               </div>
 
               {/* ---------- TOPIC MASTERY ---------- */}
               <div className="rounded-2xl bg-white p-6 shadow-sm">
-
                 <div className="mb-6">
                   <h2 className="text-xl font-semibold text-[#3E3E75]">
                     Topic Mastery
@@ -436,7 +423,6 @@ function App() {
                 </div>
 
                 <div className="space-y-6">
-
                   <div>
                     <div className="mb-2 flex justify-between">
                       <span className="text-sm font-medium text-[#3E3E75]">
@@ -493,16 +479,13 @@ function App() {
                       />
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
 
             {/* ================= STUDY SETS ================= */}
             <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
-
               <div className="mb-6 flex items-center justify-between">
-
                 <div>
                   <h2 className="text-xl font-semibold text-[#3E3E75]">
                     Your Study Sets
@@ -522,15 +505,12 @@ function App() {
                 >
                   + Create Study Set
                 </button>
-
               </div>
 
               {/* CREATE STUDY SET FORM */}
               {showCreateStudySet && (
                 <div className="mb-6 rounded-xl border border-[#98E8DE] bg-[#F8FAFA] p-5">
-
                   <div className="mb-4 flex items-center justify-between">
-
                     <div>
                       <h3 className="text-lg font-semibold text-[#3E3E75]">
                         Create Study Set
@@ -551,7 +531,6 @@ function App() {
                     >
                       <X size={18} />
                     </button>
-
                   </div>
 
                   <input
@@ -577,7 +556,6 @@ function App() {
                   )}
 
                   <div className="mt-4 flex justify-end gap-3">
-
                     <button
                       onClick={() => {
                         setShowCreateStudySet(false);
@@ -596,14 +574,12 @@ function App() {
                     >
                       {studySetsLoading ? "Creating..." : "Create"}
                     </button>
-
                   </div>
                 </div>
               )}
 
               {/* STUDY SETS */}
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-
                 {studySetsLoading && (
                   <div className="md:col-span-2 lg:col-span-3">
                     <p className="text-sm text-gray-500">
@@ -637,9 +613,7 @@ function App() {
                       key={studySet.study_set_id}
                       className="group rounded-xl border border-gray-100 bg-gray-50 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-[#98E8DE] hover:bg-white hover:shadow-md"
                     >
-
                       <div className="mb-4 flex items-start justify-between">
-
                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/50">
                           <BookOpen
                             size={21}
@@ -650,7 +624,6 @@ function App() {
                         <span className="rounded-full bg-[#98E8DE] px-3 py-1 text-xs font-medium text-[#3E3E75]">
                           Ready
                         </span>
-
                       </div>
 
                       <h3 className="text-base font-semibold text-[#3E3E75]">
@@ -662,7 +635,6 @@ function App() {
                       </p>
 
                       <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-
                         <span>Study Set</span>
 
                         <span>
@@ -672,7 +644,6 @@ function App() {
                               ).toLocaleDateString()
                             : "Recently created"}
                         </span>
-
                       </div>
 
                       <button
@@ -687,10 +658,8 @@ function App() {
                         Continue Studying
                         <span>→</span>
                       </button>
-
                     </div>
                   ))}
-
               </div>
             </div>
           </>
