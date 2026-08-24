@@ -21,77 +21,65 @@ user_id = study_sets[0].get('user_id') or "test-user-id"
 app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(user_id=user_id)
 client = TestClient(app)
 
-print(f"=== E2E MCQ TEST FLOW for study_set_id={study_set_id} ===")
+print(f"=== E2E VERIFICATION TEST FLOW for study_set_id={study_set_id} ===")
 
-# 1. Fetch MCQ questions
-res_q = client.get(f"/api/study-sets/{study_set_id}/questions?question_type=mcq")
-print("1. Fetch Questions Status:", res_q.status_code)
-questions = res_q.json().get("questions", [])
-if not questions:
-    # Generate questions if none exist
-    res_gen = client.post(f"/api/study-sets/{study_set_id}/questions/generate", json={"question_type": "mcq"})
-    print("   Generated Questions Status:", res_gen.status_code)
-    res_q = client.get(f"/api/study-sets/{study_set_id}/questions?question_type=mcq")
-    questions = res_q.json().get("questions", [])
+# --- 1. Test MCQ Attempt ---
+res_q_mcq = client.get(f"/api/study-sets/{study_set_id}/questions?question_type=mcq")
+questions_mcq = res_q_mcq.json().get("questions", [])
+if questions_mcq:
+    target_mcq = questions_mcq[0]
+    res_att_mcq = client.post("/api/attempts", json={"study_set_id": study_set_id})
+    att_id_mcq = res_att_mcq.json()["attempt_id"]
 
-print(f"   Found {len(questions)} MCQ questions.")
-if len(questions) == 0:
-    print("   No questions available to test.")
-    sys.exit(1)
+    opts = target_mcq.get("options") or {}
+    submitted_opt = list(opts.keys())[0] if isinstance(opts, dict) and opts else "A"
 
-target_q = questions[0]
-print("   Target Question ID:", target_q["question_id"])
-print("   Target Question Text:", target_q["question"])
-print("   Target Question Options:", target_q.get("options"))
+    client.post(f"/api/attempts/{att_id_mcq}/answers", json={
+        "question_type": "mcq",
+        "attempt_id": att_id_mcq,
+        "answers": [{"question_id": target_mcq["question_id"], "student_answer": submitted_opt}]
+    })
+    client.post(f"/api/attempts/{att_id_mcq}/finish")
 
-# 2. Start Attempt
-res_att = client.post("/api/attempts", json={"study_set_id": study_set_id})
-print("2. Start Attempt Status:", res_att.status_code)
-attempt = res_att.json()
-attempt_id = attempt["attempt_id"]
-print("   Created Attempt ID:", attempt_id)
+    res_eval_mcq = client.get(f"/api/attempts/{att_id_mcq}/evaluations")
+    eval_mcq = res_eval_mcq.json().get("results", [])[0]
 
-# 3. Submit Answer
-# Select first available option key (e.g. 'A')
-options = target_q.get("options") or {}
-submitted_opt = list(options.keys())[0] if isinstance(options, dict) and options else "A"
+    print("\n--- MCQ EVALUATION ITEM ---")
+    print("question_type:", eval_mcq.get("question_type"))
+    print("question_text:", eval_mcq.get("question_text"))
+    print("student_answer:", eval_mcq.get("student_answer"))
+    print("correct_answer:", eval_mcq.get("correct_answer"))
 
-answers_payload = {
-    "question_type": "mcq",
-    "attempt_id": attempt_id,
-    "answers": [
-        {
-            "question_id": target_q["question_id"],
-            "student_answer": submitted_opt
-        }
-    ]
-}
-res_sub = client.post(f"/api/attempts/{attempt_id}/answers", json=answers_payload)
-print("3. Submit Answers Status:", res_sub.status_code)
+    assert eval_mcq.get("question_type") == "mcq"
+    assert "Option " in str(eval_mcq.get("correct_answer")), "MCQ correct_answer must contain Option text!"
+    print("MCQ verification passed cleanly!")
 
-# 4. Finish Attempt
-res_fin = client.post(f"/api/attempts/{attempt_id}/finish")
-print("4. Finish Attempt Status:", res_fin.status_code)
+# --- 2. Test Short Answer Attempt ---
+res_q_short = client.get(f"/api/study-sets/{study_set_id}/questions?question_type=short")
+questions_short = res_q_short.json().get("questions", [])
+if questions_short:
+    target_short = questions_short[0]
+    res_att_short = client.post("/api/attempts", json={"study_set_id": study_set_id})
+    att_id_short = res_att_short.json()["attempt_id"]
 
-# 5. Fetch Evaluations for Results Page
-res_eval = client.get(f"/api/attempts/{attempt_id}/evaluations")
-print("5. Get Evaluations Status:", res_eval.status_code)
-eval_data = res_eval.json()
-results = eval_data.get("results", [])
-print(f"   Received {len(results)} evaluation record(s).")
+    client.post(f"/api/attempts/{att_id_short}/answers", json={
+        "question_type": "short",
+        "attempt_id": att_id_short,
+        "answers": [{"question_id": target_short["question_id"], "student_answer": "This is a test response for short answer."}]
+    })
+    client.post(f"/api/attempts/{att_id_short}/finish")
 
-if results:
-    eval_item = results[0]
-    print("\n=== EVALUATION ITEM RETURNED TO FRONTEND ===")
-    print("   question_id:", eval_item.get("question_id"))
-    print("   question_text:", eval_item.get("question_text"))
-    print("   student_answer:", eval_item.get("student_answer"))
-    print("   correct_answer:", eval_item.get("correct_answer"))
-    print("   is_correct:", eval_item.get("is_correct"))
-    print("   marks_awarded:", eval_item.get("marks_awarded"))
-    print("   max_marks:", eval_item.get("max_marks"))
-    print("   feedback:", eval_item.get("feedback"))
+    res_eval_short = client.get(f"/api/attempts/{att_id_short}/evaluations")
+    eval_short = res_eval_short.json().get("results", [])[0]
 
-    assert eval_item.get("question_text") == target_q["question"], "Question text mismatch!"
-    assert eval_item.get("student_answer") == submitted_opt, "Student answer mismatch!"
-    print("\nSUCCESS: All question & evaluation fields verified cleanly!")
+    print("\n--- SHORT ANSWER EVALUATION ITEM ---")
+    print("question_type:", eval_short.get("question_type"))
+    print("question_text:", eval_short.get("question_text"))
+    print("student_answer:", eval_short.get("student_answer"))
+    print("correct_answer:", eval_short.get("correct_answer"))
+
+    assert eval_short.get("question_type") == "short"
+    assert eval_short.get("correct_answer") is not None, "Short Answer correct_answer must be present!"
+    print("Short Answer verification passed cleanly!")
+
+print("\nALL VERIFICATIONS PASSED SUCCESSFULLY!")

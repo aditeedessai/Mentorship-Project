@@ -215,7 +215,7 @@ def get_attempt_evaluations(
 
         # Build correct_answer text
         correct_ans = None
-        q_type = (rec.get("question_type") or "").lower()
+        q_type = (rec.get("question_type") or "").lower().strip()
         if q_type == "mcq":
             corr_opt = rec.get("correct_option")
             opts = rec.get("options")
@@ -225,12 +225,17 @@ def get_attempt_evaluations(
                     opts = json.loads(opts)
                 except Exception:
                     opts = {}
-            if corr_opt and isinstance(opts, dict) and corr_opt in opts:
-                correct_ans = f"Option {corr_opt}: {opts[corr_opt]}"
+            if corr_opt and isinstance(opts, dict) and str(corr_opt).strip() in opts:
+                key = str(corr_opt).strip()
+                val = str(opts[key]).strip()
+                if val.lower().startswith(f"option {key.lower()}"):
+                    correct_ans = val
+                else:
+                    correct_ans = f"Option {key}: {val}"
             elif corr_opt:
-                correct_ans = f"Option {corr_opt}"
+                correct_ans = f"Option {str(corr_opt).strip()}"
             else:
-                correct_ans = rec.get("reference_answer")
+                correct_ans = None
         else:
             correct_ans = rec.get("reference_answer")
 

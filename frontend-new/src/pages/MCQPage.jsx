@@ -103,23 +103,29 @@ export default function MCQPage() {
         }
       }
 
-      // Submit answers if any
+      // 1. Submit answers if any
       if (answersPayload.length > 0) {
         await submitAnswers(attemptId, 'mcq', answersPayload)
       }
 
-      // Finish the attempt
+      // 2. Finish the attempt
       await finishAttempt(attemptId)
 
-      // Navigate to results with real attemptId
-      navigate('/results', { state: { attemptId } })
+      // 3. Automatically redirect to Performance / Results page after successful submission
+      const studySetId = location.state?.studySetId
+      navigate('/results', {
+        state: {
+          attemptId,
+          studySetId,
+          questionType: 'mcq',
+        },
+      })
     } catch (err) {
       console.error('Failed to submit quiz:', err)
-      navigate('/results', { state: { attemptId } })
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, attemptId, questionCount, questions, selectedAnswers, navigate])
+  }, [isSubmitting, attemptId, questionCount, questions, selectedAnswers, navigate, location.state?.studySetId])
 
   const handleAbortConfirm = useCallback(() => {
     navigate('/')
