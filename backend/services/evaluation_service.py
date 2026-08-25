@@ -417,7 +417,13 @@ def evaluate_and_save_attempt_answers(
     if attempt.get("status") == "completed":
         raise ValueError("Cannot submit answers for a completed attempt")
 
-    # Pre-validate word limits for all submitted answers BEFORE evaluating or saving
+    attempt_study_set_id = attempt.get("study_set_id")
+
+    # Get section completion status to enforce section locking for already completed sections
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    completed_sections = set(completion_info["completed_sections"])
+
+    # Pre-validate all submitted answers BEFORE evaluating or saving any answer
     for item in answers:
         q_id = item["question_id"]
         student_ans = item["student_answer"]
@@ -426,9 +432,23 @@ def evaluate_and_save_attempt_answers(
         if not question:
             raise ValueError(f"Question with ID '{q_id}' not found")
 
+        # 1. Question-to-study-set validation
+        q_study_set_id = str(question.get("study_set_id") or "")
+        if attempt_study_set_id and q_study_set_id != str(attempt_study_set_id):
+            raise ValueError(
+                f"Question with ID '{q_id}' does not belong to the study set associated with this attempt"
+            )
+
         raw_type = str(question.get("question_type", "short")).lower().strip()
         q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
 
+        # 2. Section locking validation
+        if q_type in completed_sections:
+            raise ValueError(
+                f"Section '{q_type}' has already been submitted and is locked for this attempt."
+            )
+
+        # 3. Word limit validation
         is_valid, word_count, max_limit = validate_answer_word_limit(q_type, student_ans)
         if not is_valid:
             raise ValueError(
