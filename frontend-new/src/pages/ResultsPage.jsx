@@ -12,7 +12,6 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
-  Clock,
 } from 'lucide-react';
 
 const normalizeTypeName = (typeStr) => {
@@ -22,33 +21,6 @@ const normalizeTypeName = (typeStr) => {
   if (s.includes('APP') || s === 'APPLICATION') return 'APPLICATION';
   if (s.includes('SHORT') || s === 'SHORT-ANSWER' || s === 'SHORT') return 'SHORT ANSWER';
   return s || 'MCQ';
-};
-
-const formatTimeAgo = (timestamp) => {
-  if (!timestamp) return 'Just now';
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now - date) / 1000);
-
-  if (diffInSeconds < 60) return 'Just now';
-
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) {
-    return `${diffInMinutes} ${diffInMinutes === 1 ? 'min' : 'mins'} ago`;
-  }
-
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) {
-    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
-  }
-
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 30) {
-    return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
-  }
-
-  const diffInMonths = Math.floor(diffInDays / 30);
-  return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
 };
 
 export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) {
@@ -118,9 +90,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
         if (Array.isArray(evalsData)) rawList = evalsData;
         else if (Array.isArray(evalsData?.results)) rawList = evalsData.results;
         else if (Array.isArray(evalsData?.evaluations)) rawList = evalsData.evaluations;
-        else if (Array.isArray(evalsData?.questions)) rawList = evalsData.questions;
-        else if (Array.isArray(resData?.questions)) rawList = resData.questions;
-        else if (Array.isArray(perfData?.questions)) rawList = perfData.questions;
 
         setEvaluations(rawList);
 
@@ -175,95 +144,90 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     }
   }, [isAttemptComplete, passedAttemptId]);
 
-  // Build section performance list from backend performance/evaluations
+  // Overall Cumulative Performance directly from backend
+  const cumulativeData = useMemo(() => {
+    const perf = performanceData || resultsData;
+    return perf?.cumulative || null;
+  }, [performanceData, resultsData]);
+
+  const totalScore = useMemo(() => {
+    if (cumulativeData?.total_marks_obtained !== undefined) {
+      return Math.round(Number(cumulativeData.total_marks_obtained) * 100) / 100;
+    }
+    return 0;
+  }, [cumulativeData]);
+
+  const maxScore = useMemo(() => {
+    if (cumulativeData?.total_maximum_marks !== undefined) {
+      return Number(cumulativeData.total_maximum_marks);
+    }
+    return 0;
+  }, [cumulativeData]);
+
+  const overallPercentage = useMemo(() => {
+    if (cumulativeData?.overall_percentage !== undefined) {
+      return Math.round(Number(cumulativeData.overall_percentage));
+    }
+    return maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+  }, [cumulativeData, totalScore, maxScore]);
+
+  const overallRemark = useMemo(() => {
+    return cumulativeData?.overall_remark || null;
+  }, [cumulativeData]);
+
+  // Section list directly from backend performance/results response
   const sectionsList = useMemo(() => {
     const perf = performanceData || resultsData;
+    const rawSections = perf?.sections || [];
 
-    if (perf?.section_performances && perf.section_performances.length > 0) {
-      return perf.section_performances.map((sp) => {
-        const uiName = normalizeTypeName(sp.section_name || sp.question_type);
-        const earned = Number(sp.marks_obtained ?? sp.earned_marks ?? sp.score ?? 0);
-        const maxM = Number(sp.maximum_marks ?? sp.total_marks ?? sp.max_marks ?? 10);
-        const acc = sp.percentage !== undefined ? Math.round(sp.percentage) : (maxM > 0 ? Math.round((earned / maxM) * 100) : 0);
+    if (rawSections.length > 0) {
+      return rawSections.map((sp) => {
+        const uiName = normalizeTypeName(sp.section_name);
+        const marksObtained = Number(sp.marks_obtained ?? 0);
+        const maximumMarks = Number(sp.maximum_marks ?? 0);
+        const percentage = sp.percentage !== undefined
+          ? Math.round(sp.percentage)
+          : (maximumMarks > 0 ? Math.round((marksObtained / maximumMarks) * 100) : 0);
+
         return {
           name: uiName,
-          score: Math.round(earned * 100) / 100,
-          maxMarks: maxM,
-          accuracy: acc,
-          timestamp: sp.completed_at || perf.completed_at || new Date().toISOString(),
+          rawName: sp.section_name,
+          marksObtained: Math.round(marksObtained * 100) / 100,
+          maximumMarks: Math.round(maximumMarks * 100) / 100,
+          percentage,
+          remark: sp.remark || null,
         };
       });
     }
 
-    if (perf?.sections && perf.sections.length > 0) {
-      return perf.sections.map((sp) => {
-        const uiName = normalizeTypeName(sp.section_name || sp.question_type);
-        const earned = Number(sp.marks_obtained ?? sp.earned_marks ?? sp.score ?? 0);
-        const maxM = Number(sp.maximum_marks ?? sp.total_marks ?? sp.max_marks ?? 10);
-        const acc = sp.percentage !== undefined ? Math.round(sp.percentage) : (maxM > 0 ? Math.round((earned / maxM) * 100) : 0);
-        return {
-          name: uiName,
-          score: Math.round(earned * 100) / 100,
-          maxMarks: maxM,
-          accuracy: acc,
-          timestamp: sp.completed_at || perf.completed_at || new Date().toISOString(),
-        };
-      });
-    }
-
+    // Defensive fallback ONLY if backend sections list is absent but evaluations exist
     if (evaluations && evaluations.length > 0) {
       const grouped = {};
       evaluations.forEach((item) => {
         const typeKey = normalizeTypeName(item.question_type || item.type);
         if (!grouped[typeKey]) {
-          grouped[typeKey] = { name: typeKey, score: 0, maxMarks: 0, timestamp: item.created_at || new Date().toISOString() };
+          grouped[typeKey] = { name: typeKey, marksObtained: 0, maximumMarks: 0 };
         }
         const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
         const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
-        const earned = isSkipped ? 0 : Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
-        const maxM = Number(item.max_marks ?? 1);
-        grouped[typeKey].score += earned;
-        grouped[typeKey].maxMarks += maxM;
+        const earned = isSkipped ? 0 : Number(item.marks_awarded ?? item.score ?? 0);
+        const maxM = Number(item.max_marks ?? 0);
+        grouped[typeKey].marksObtained += earned;
+        grouped[typeKey].maximumMarks += maxM;
       });
 
       return Object.values(grouped).map((g) => ({
         name: g.name,
-        score: Math.round(g.score * 100) / 100,
-        maxMarks: g.maxMarks,
-        accuracy: g.maxMarks > 0 ? Math.round((g.score / g.maxMarks) * 100) : 0,
-        timestamp: g.timestamp,
+        rawName: g.name.toLowerCase(),
+        marksObtained: Math.round(g.marksObtained * 100) / 100,
+        maximumMarks: Math.round(g.maximumMarks * 100) / 100,
+        percentage: g.maximumMarks > 0 ? Math.round((g.marksObtained / g.maximumMarks) * 100) : 0,
+        remark: null,
       }));
     }
 
     return [];
   }, [performanceData, resultsData, evaluations]);
-
-  const totalScore = useMemo(() => {
-    const perf = performanceData || resultsData;
-    const val = perf?.cumulative?.total_marks_obtained ?? perf?.total_score ?? perf?.cumulative?.earned_marks;
-    if (val !== undefined) {
-      return Math.round(Number(val) * 100) / 100;
-    }
-    return Math.round(sectionsList.reduce((acc, s) => acc + s.score, 0) * 100) / 100;
-  }, [performanceData, resultsData, sectionsList]);
-
-  const maxScore = useMemo(() => {
-    const perf = performanceData || resultsData;
-    const val = perf?.cumulative?.total_maximum_marks ?? perf?.total_max_marks ?? perf?.cumulative?.total_marks;
-    if (val !== undefined) {
-      return Number(val);
-    }
-    return sectionsList.reduce((acc, s) => acc + s.maxMarks, 0);
-  }, [performanceData, resultsData, sectionsList]);
-
-  const percentage = useMemo(() => {
-    const perf = performanceData || resultsData;
-    const val = perf?.cumulative?.overall_percentage ?? perf?.overall_percentage;
-    if (val !== undefined) {
-      return Math.round(Number(val));
-    }
-    return maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-  }, [performanceData, resultsData, totalScore, maxScore]);
 
   // Questions for active drawer filter
   const activeQuestions = useMemo(() => {
@@ -277,33 +241,34 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return filtered.map((item, idx) => {
       const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
       const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
-      const awardedMarks = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
+      const awardedMarks = Number(item.marks_awarded ?? item.score ?? 0);
       const maxMarks = Number(item.max_marks ?? 1);
-      const isPassed = !isSkipped && Boolean(item.is_correct ?? (awardedMarks >= maxMarks * 0.5));
 
-      let feedbackText = item.feedback || item.explanation;
-      if (isSkipped) {
-        feedbackText = 'Question skipped by student.';
-      } else if (!feedbackText) {
-        feedbackText = isPassed ? 'Good response.' : 'Needs improvement.';
-      }
+      // Use is_correct directly from backend evaluation schema if provided as boolean
+      const isCorrect = typeof item.is_correct === 'boolean' ? item.is_correct : null;
+
+      // Backend feedback directly, or neutral fallback "No feedback available."
+      const feedbackText = item.feedback && String(item.feedback).trim() !== ''
+        ? item.feedback
+        : 'No feedback available.';
 
       return {
         id: idx + 1,
+        question_id: item.question_id,
         prompt: item.question_text || item.question || item.prompt || `Question ${idx + 1}`,
         userAnswer: isSkipped ? 'Skipped' : rawAns,
         correctAnswer: item.correct_answer || item.model_answer || item.expected_answer || 'N/A',
         feedback: feedbackText,
-        awardedMarks: isSkipped ? 0 : Math.round(awardedMarks * 100) / 100,
-        maxMarks,
-        isPassed,
+        awardedMarks: Math.round(awardedMarks * 100) / 100,
+        maxMarks: Math.round(maxMarks * 100) / 100,
+        isCorrect, // true, false, or null
         isSkipped,
       };
     });
   }, [activeSection, evaluations]);
 
   const activeCorrect = useMemo(() => {
-    return activeQuestions.filter((q) => q.isPassed).length;
+    return activeQuestions.filter((q) => q.isCorrect === true).length;
   }, [activeQuestions]);
 
   const activeSkipped = useMemo(() => {
@@ -311,19 +276,12 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
   }, [activeQuestions]);
 
   const activeWrong = useMemo(() => {
-    return activeQuestions.filter((q) => !q.isPassed && !q.isSkipped).length;
+    return activeQuestions.filter((q) => q.isCorrect === false && !q.isSkipped).length;
   }, [activeQuestions]);
 
   const totalCorrect = useMemo(() => {
     if (!evaluations || evaluations.length === 0) return 0;
-    return evaluations.filter((item) => {
-      const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
-      const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
-      if (isSkipped) return false;
-      const earned = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
-      const maxM = Number(item.max_marks ?? 1);
-      return item.is_correct || (earned >= maxM * 0.5);
-    }).length;
+    return evaluations.filter((item) => item.is_correct === true).length;
   }, [evaluations]);
 
   const totalSkipped = useMemo(() => {
@@ -339,48 +297,69 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return evaluations.filter((item) => {
       const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
       const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
-      if (isSkipped) return false;
-      const earned = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
-      const maxM = Number(item.max_marks ?? 1);
-      const isCorr = item.is_correct || (earned >= maxM * 0.5);
-      return !isCorr;
+      return !isSkipped && item.is_correct === false;
     }).length;
   }, [evaluations]);
 
+  // Derived Strengths directly from backend cumulative.strongest_section and backend section remarks
   const strengths = useMemo(() => {
-    if (performanceData?.strengths && performanceData.strengths.length > 0) {
-      return performanceData.strengths;
-    }
-    const highAcc = sectionsList.filter((s) => s.accuracy >= 60).map((s) => s.name);
-    if (highAcc.length > 0) {
-      return highAcc.map((name) => `Strong performance and conceptual accuracy in ${name} section.`);
-    }
-    if (sectionsList.length > 0) {
-      return ['Demonstrated solid effort across submitted question types.'];
-    }
-    return ['Active study session started.'];
-  }, [performanceData, sectionsList]);
-
-  const improvements = useMemo(() => {
-    if (performanceData?.improvements && performanceData.improvements.length > 0) {
-      return performanceData.improvements;
-    }
-    const lowAcc = sectionsList.filter((s) => s.accuracy < 60).map((s) => s.name);
-    const remaining = performanceData?.remaining_sections || [];
-
     const list = [];
-    if (lowAcc.length > 0) {
-      lowAcc.forEach((name) => list.push(`Review key terminology and core concepts in ${name}.`));
+    const perf = performanceData || resultsData;
+    const strongestSecName = perf?.cumulative?.strongest_section;
+
+    if (strongestSecName) {
+      const formattedName = normalizeTypeName(strongestSecName);
+      const match = sectionsList.find((s) => s.rawName === strongestSecName || s.name === formattedName);
+      if (match && match.remark) {
+        list.push(`Strongest Section: ${match.name} — ${match.marksObtained}/${match.maximumMarks} Marks (${match.percentage}%, Remark: ${match.remark})`);
+      } else if (match) {
+        list.push(`Strongest Section: ${match.name} — ${match.marksObtained}/${match.maximumMarks} Marks (${match.percentage}%)`);
+      } else {
+        list.push(`Strongest Section: ${formattedName}`);
+      }
     }
+
+    if (list.length === 0 && overallRemark) {
+      list.push(`Overall Performance Remark: ${overallRemark}`);
+    }
+
+    if (list.length === 0) {
+      list.push('No backend section strength details available.');
+    }
+
+    return list;
+  }, [performanceData, resultsData, sectionsList, overallRemark]);
+
+  // Derived Areas for Improvement directly from backend cumulative.weakest_section and remaining_sections
+  const improvements = useMemo(() => {
+    const list = [];
+    const perf = performanceData || resultsData;
+    const weakestSecName = perf?.cumulative?.weakest_section;
+    const remaining = perf?.remaining_sections || [];
+
+    if (weakestSecName) {
+      const formattedName = normalizeTypeName(weakestSecName);
+      const match = sectionsList.find((s) => s.rawName === weakestSecName || s.name === formattedName);
+      if (match && match.remark) {
+        list.push(`Weakest Section: ${match.name} — ${match.marksObtained}/${match.maximumMarks} Marks (${match.percentage}%, Remark: ${match.remark})`);
+      } else if (match) {
+        list.push(`Weakest Section: ${match.name} — ${match.marksObtained}/${match.maximumMarks} Marks (${match.percentage}%)`);
+      } else {
+        list.push(`Weakest Section: ${formattedName}`);
+      }
+    }
+
     if (remaining.length > 0) {
       const formattedRem = remaining.map(normalizeTypeName).join(', ');
-      list.push(`Complete remaining section(s): ${formattedRem} to finish the overall quiz attempt.`);
+      list.push(`Remaining section(s) to complete: ${formattedRem}`);
     }
-    if (list.length === 0 && sectionsList.length > 0) {
-      list.push('Keep practicing to maintain top accuracy across all topics.');
+
+    if (list.length === 0) {
+      list.push('No backend improvement recommendations available.');
     }
-    return list.length > 0 ? list : ['Complete all 4 question sections to unlock complete diagnostic insights.'];
-  }, [performanceData, sectionsList]);
+
+    return list;
+  }, [performanceData, resultsData, sectionsList]);
 
   if (loading) {
     return (
@@ -446,10 +425,19 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       <div className="relative overflow-hidden rounded-2xl bg-[#4E1F6E] p-8 text-white shadow-sm">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#98E8DE]/20 px-3 py-1 text-xs font-semibold text-[#98E8DE]">
-              <CheckCircle2 size={14} />
-              {isAttemptComplete ? 'Attempt Completed' : `In-Progress Attempt (${completedSectionsCount}/4 Sections)`}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#98E8DE]/20 px-3 py-1 text-xs font-semibold text-[#98E8DE]">
+                <CheckCircle2 size={14} />
+                {isAttemptComplete ? 'Attempt Completed' : `In-Progress Attempt (${completedSectionsCount}/4 Sections)`}
+              </span>
+              {overallRemark && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#98E8DE]/30 px-3 py-1 text-xs font-bold text-white border border-[#98E8DE]/40">
+                  <Sparkles size={14} className="text-[#98E8DE]" />
+                  Overall Remark: {overallRemark}
+                </span>
+              )}
+            </div>
+
             <h1 className="text-3xl font-bold mt-3">
               {isAttemptComplete ? 'Overall Performance' : 'Cumulative Performance'}
             </h1>
@@ -462,8 +450,8 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
           <div className="flex flex-wrap items-center gap-4 bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/20">
             <div className="text-center px-3">
-              <div className="text-3xl font-black text-[#98E8DE]">{percentage}%</div>
-              <div className="text-xs text-purple-200 mt-0.5 font-medium">Accuracy</div>
+              <div className="text-3xl font-black text-[#98E8DE]">{overallPercentage}%</div>
+              <div className="text-xs text-purple-200 mt-0.5 font-medium">Overall Percentage</div>
             </div>
 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
@@ -527,29 +515,30 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                       : 'border-[#98E8DE]/60 bg-[#F8FAFA] hover:-translate-y-1 hover:border-[#45A9A9] hover:bg-white hover:shadow-md'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-[#4E1F6E]">
                       {sec.name}
                     </span>
                     <span className="rounded-full bg-[#98E8DE]/40 border border-[#98E8DE] px-2.5 py-0.5 text-[11px] font-bold text-[#136a6a]">
-                      {sec.accuracy}%
+                      {sec.percentage}%
                     </span>
                   </div>
 
                   <div className="text-2xl font-bold text-[#3E3E75] mt-3">
-                    {sec.score} <span className="text-xs font-normal text-gray-500">/ {sec.maxMarks}</span>
+                    {sec.marksObtained} <span className="text-xs font-normal text-gray-500">/ {sec.maximumMarks} Marks</span>
                   </div>
 
-                  <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-500 font-medium">
-                    <Clock size={12} className="text-[#45A9A9]" />
-                    <span>Completed {formatTimeAgo(sec.timestamp)}</span>
-                  </div>
+                  {sec.remark && (
+                    <div className="mt-1 text-xs font-semibold text-[#136a6a]">
+                      Remark: <span className="font-bold">{sec.remark}</span>
+                    </div>
+                  )}
 
                   <div className="mt-3">
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
                       <div
                         className="h-full rounded-full bg-[#45A9A9] transition-all duration-500"
-                        style={{ width: `${Math.min(sec.accuracy, 100)}%` }}
+                        style={{ width: `${Math.min(Math.max(sec.percentage, 0), 100)}%` }}
                       />
                     </div>
                   </div>
@@ -602,9 +591,11 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                     className={`rounded-xl border p-5 space-y-3 bg-white ${
                       q.isSkipped
                         ? 'border-amber-200 bg-amber-50/10'
-                        : q.isPassed
+                        : q.isCorrect === true
                         ? 'border-gray-100'
-                        : 'border-rose-200 bg-rose-50/10'
+                        : q.isCorrect === false
+                        ? 'border-rose-200 bg-rose-50/10'
+                        : 'border-gray-200 bg-gray-50/10'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -615,23 +606,27 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                           q.isSkipped
                             ? 'bg-amber-100 text-amber-800'
-                            : q.isPassed
+                            : q.isCorrect === true
                             ? 'bg-[#98E8DE]/50 text-[#136a6a]'
-                            : 'bg-rose-100 text-rose-700'
+                            : q.isCorrect === false
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-gray-100 text-gray-700'
                         }`}
                       >
                         {q.isSkipped ? (
                           <AlertCircle size={13} />
-                        ) : q.isPassed ? (
+                        ) : q.isCorrect === true ? (
                           <CheckCircle2 size={13} />
-                        ) : (
+                        ) : q.isCorrect === false ? (
                           <XCircle size={13} />
-                        )}
+                        ) : null}
                         {q.isSkipped
                           ? `Skipped (0/${q.maxMarks} Marks)`
-                          : q.isPassed
-                          ? `Correct (+${q.awardedMarks} Marks)`
-                          : `Incorrect (${q.awardedMarks}/${q.maxMarks} Marks)`}
+                          : q.isCorrect === true
+                          ? `Correct (+${q.awardedMarks}/${q.maxMarks} Marks)`
+                          : q.isCorrect === false
+                          ? `Incorrect (${q.awardedMarks}/${q.maxMarks} Marks)`
+                          : `${q.awardedMarks}/${q.maxMarks} Marks`}
                       </span>
                     </div>
 
@@ -648,9 +643,11 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                           className={
                             q.isSkipped
                               ? 'text-amber-800 font-semibold italic'
-                              : q.isPassed
+                              : q.isCorrect === true
                               ? 'text-[#3E3E75] font-medium'
-                              : 'text-rose-600 font-semibold'
+                              : q.isCorrect === false
+                              ? 'text-rose-600 font-semibold'
+                              : 'text-[#3E3E75] font-medium'
                           }
                         >
                           {q.userAnswer}
