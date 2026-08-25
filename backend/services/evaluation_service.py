@@ -520,10 +520,20 @@ def evaluate_and_save_attempt_answers(
     }
 
 
-def get_attempt_performance_summary(attempt_id: str) -> dict:
+MANDATORY_SECTIONS = ["mcq", "short", "application", "long"]
+
+
+def get_attempt_section_completion_status(attempt_id: str) -> dict:
     """
-    Retrieves and calculates performance metrics (cumulative, section-wise, and topic-wise)
-    from real Supabase evaluations and questions records for a given attempt.
+    Derives section completion status for an attempt based on evaluations recorded.
+    A section is completed when evaluations exist for that question type for this attempt.
+
+    Returns dict:
+      {
+        "completed_sections": ["mcq", "application"],
+        "remaining_sections": ["short", "long"],
+        "is_attempt_complete": False
+      }
     """
     attempt = get_attempt(attempt_id)
     if not attempt:
@@ -531,10 +541,43 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
 
     eval_records = get_evaluations_with_question_details(attempt_id)
 
+    completed_set = set()
+    for rec in eval_records:
+        raw_type = str(rec.get("question_type") or "short").lower().strip()
+        q_type = raw_type if raw_type in MANDATORY_SECTIONS else "short"
+        completed_set.add(q_type)
+
+    completed_sections = [s for s in MANDATORY_SECTIONS if s in completed_set]
+    remaining_sections = [s for s in MANDATORY_SECTIONS if s not in completed_set]
+    is_attempt_complete = len(remaining_sections) == 0
+
+    return {
+        "completed_sections": completed_sections,
+        "remaining_sections": remaining_sections,
+        "is_attempt_complete": is_attempt_complete,
+    }
+
+
+def get_attempt_performance_summary(attempt_id: str) -> dict:
+    """
+    Retrieves and calculates performance metrics (cumulative, section-wise, and topic-wise)
+    from real Supabase evaluations and questions records for a given attempt.
+    Includes overall section completion status (completed_sections, remaining_sections, is_attempt_complete).
+    """
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        raise ValueError(f"Attempt with ID '{attempt_id}' not found")
+
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    eval_records = get_evaluations_with_question_details(attempt_id)
+
     if not eval_records:
         return {
             "attempt_id": attempt_id,
             "status": attempt.get("status", "in_progress"),
+            "completed_sections": completion_info["completed_sections"],
+            "remaining_sections": completion_info["remaining_sections"],
+            "is_attempt_complete": completion_info["is_attempt_complete"],
             "cumulative": {
                 "total_marks_obtained": 0.0,
                 "total_maximum_marks": 0.0,
@@ -616,7 +659,10 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
     return {
         "attempt_id": attempt_id,
         "status": attempt.get("status", "in_progress"),
+        "completed_sections": completion_info["completed_sections"],
+        "remaining_sections": completion_info["remaining_sections"],
+        "is_attempt_complete": completion_info["is_attempt_complete"],
         "cumulative": cumulative,
         "sections": sections,
         "topics": topics,
-    }
+    }

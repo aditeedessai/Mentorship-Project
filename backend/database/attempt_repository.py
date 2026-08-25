@@ -234,3 +234,41 @@ def list_attempts(study_set_id=None, document_id=None, user_id=None):
         return [_format_attempt_dict(row) for row in rows]
     finally:
         connection.close()
+
+
+def get_active_attempt_by_study_set(study_set_id: str, user_id: str = None) -> dict | None:
+    """
+    Retrieve the current active ('in_progress') attempt for a given study set and user.
+    Returns None if no active attempt exists (e.g. no attempt started yet, or previous attempt was completed).
+    """
+    connection = get_connection()
+    try:
+        if user_id:
+            row = connection.execute(
+                """
+                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
+                FROM quiz_attempts
+                WHERE study_set_id = ? AND user_id = ? AND status = 'in_progress'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (study_set_id, user_id),
+            ).fetchone()
+        else:
+            row = connection.execute(
+                """
+                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
+                FROM quiz_attempts
+                WHERE study_set_id = ? AND status = 'in_progress'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (study_set_id,),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return _format_attempt_dict(row)
+    finally:
+        connection.close()

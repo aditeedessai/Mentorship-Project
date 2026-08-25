@@ -16,6 +16,7 @@ from backend.api.schemas.attempt import (
 from backend.database.attempt_repository import (
     get_attempt as get_attempt_from_db,
     save_attempt,
+    get_active_attempt_by_study_set,
 )
 from backend.database.evaluation_repository import (
     get_evaluations_with_question_details,
@@ -23,6 +24,7 @@ from backend.database.evaluation_repository import (
 from backend.database import study_set_repository
 from backend.services.evaluation_service import (
     evaluate_and_save_attempt_answers,
+    get_attempt_section_completion_status,
 )
 
 router = APIRouter(prefix="/attempts", tags=["Attempts"])
@@ -32,8 +34,8 @@ router = APIRouter(prefix="/attempts", tags=["Attempts"])
     "",
     response_model=AttemptResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Start a new test attempt",
-    description="Initializes a new quiz attempt for a study set with status 'in_progress'."
+    summary="Start or resume a test attempt",
+    description="Initializes a new quiz attempt for a study set, or resumes an ongoing 'in_progress' attempt if one exists."
 )
 def start_attempt(
     payload: StartAttemptRequest,
@@ -58,6 +60,14 @@ def start_attempt(
                 detail=f"Document with ID '{payload.document_id}' not found"
             )
 
+    # 2. Check if an active 'in_progress' attempt already exists for this user + study set
+    active_att = get_active_attempt_by_study_set(study_set_id_str, user_id=current_user.user_id)
+    if active_att:
+        completion_info = get_attempt_section_completion_status(active_att["attempt_id"])
+        active_att.update(completion_info)
+        return AttemptResponse(**active_att)
+
+    # 3. Create new attempt if no in_progress attempt exists
     attempt_id = str(uuid.uuid4())
 
     save_attempt(
@@ -76,7 +86,40 @@ def start_attempt(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create quiz attempt in database"
         )
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    att.update(completion_info)
     return AttemptResponse(**att)
+
+
+@router.get(
+    "/study-sets/{study_set_id}/active-attempt",
+    response_model=AttemptResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get current active in-progress attempt for a study set",
+    description="Retrieves active in-progress quiz attempt metadata and section completion status for a study set."
+)
+def get_active_attempt_for_study_set(
+    study_set_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> AttemptResponse:
+    study_set_id_str = str(study_set_id)
+    study_set = study_set_repository.get_study_set(study_set_id_str, user_id=current_user.user_id)
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Study set with ID '{study_set_id}' not found"
+        )
+
+    active_att = get_active_attempt_by_study_set(study_set_id_str, user_id=current_user.user_id)
+    if not active_att:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No active in-progress attempt found for study set '{study_set_id}'"
+        )
+
+    completion_info = get_attempt_section_completion_status(active_att["attempt_id"])
+    active_att.update(completion_info)
+    return AttemptResponse(**active_att)
 
 
 @router.get(
@@ -84,7 +127,7 @@ def start_attempt(
     response_model=AttemptResponse,
     status_code=status.HTTP_200_OK,
     summary="Get test attempt details",
-    description="Retrieves current metadata and status for a specific test attempt."
+    description="Retrieves current metadata, status, and section completion for a specific test attempt."
 )
 def get_attempt(
     attempt_id: str,
@@ -96,6 +139,8 @@ def get_attempt(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Attempt with ID '{attempt_id}' not found"
         )
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    att.update(completion_info)
     return AttemptResponse(**att)
 
 
@@ -169,6 +214,14 @@ def finish_attempt(
             detail="Attempt is already completed"
         )
 
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    if not completion_info["is_attempt_complete"]:
+        rem = completion_info["remaining_sections"]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot finish attempt: incomplete sections: {rem}"
+        )
+
     save_attempt(
         attempt_id=attempt_id,
         total_marks=float(att.get("total_marks", 0.0)),
@@ -184,6 +237,8 @@ def finish_attempt(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve updated attempt"
         )
+    updated_att.update(completion_info)
+    updated_att["is_attempt_complete"] = True
     return AttemptResponse(**updated_att)
 
 @router.get(
