@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BookOpen, Plus, X, Trash2 } from "lucide-react";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 function StudySetsPage({
   studySets,
@@ -14,6 +15,8 @@ function StudySetsPage({
   const [formError, setFormError] = useState("");
 
   const [deletingStudySetId, setDeletingStudySetId] = useState(null);
+  const [studySetToDelete, setStudySetToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
 
   const handleCreate = async () => {
     if (!studySetName.trim()) {
@@ -31,21 +34,29 @@ function StudySetsPage({
     }
   };
 
-  const handleDelete = async (studySet) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${studySet.name}"?\n\nThis action cannot be undone.`
-    );
+  const handleOpenDeleteModal = (studySet) => {
+    setStudySetToDelete(studySet);
+    setDeleteError("");
+  };
 
-    if (!confirmed) {
-      return;
-    }
+  const handleCloseDeleteModal = () => {
+    if (deletingStudySetId) return;
+    setStudySetToDelete(null);
+    setDeleteError("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!studySetToDelete || deletingStudySetId) return;
 
     try {
-      setDeletingStudySetId(studySet.study_set_id);
+      setDeleteError("");
+      setDeletingStudySetId(studySetToDelete.study_set_id);
 
-      await onDeleteStudySet(studySet.study_set_id);
+      await onDeleteStudySet(studySetToDelete.study_set_id);
+      setStudySetToDelete(null);
     } catch (error) {
       console.error("Failed to delete study set:", error);
+      setDeleteError("Failed to delete study set. Please try again.");
     } finally {
       setDeletingStudySetId(null);
     }
@@ -221,7 +232,7 @@ function StudySetsPage({
                         {/* DELETE BUTTON */}
                         <button
                           type="button"
-                          onClick={() => handleDelete(studySet)}
+                          onClick={() => handleOpenDeleteModal(studySet)}
                           disabled={isDeleting}
                           title="Delete study set"
                           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -272,6 +283,20 @@ function StudySetsPage({
             </div>
           )}
       </div>
+
+      {/* ================= DELETE CONFIRMATION MODAL ================= */}
+      <DeleteConfirmModal
+        isOpen={!!studySetToDelete}
+        title="Delete Study Set?"
+        itemName={studySetToDelete?.name || ""}
+        warningText="This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isLoading={!!deletingStudySetId}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCloseDeleteModal}
+      />
     </div>
   );
 }

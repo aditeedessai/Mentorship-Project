@@ -88,10 +88,33 @@ export async function deleteStudySet(studySetId) {
 // ── Documents ────────────────────────────────────────────────────────
 
 /**
- * Upload a document file to a study set.
+ * Upload multiple document files to a study set in a single request.
+ * POST /api/study-sets/{studySetId}/documents
+ * @param {string} studySetId
+ * @param {File[]} files
+ */
+export async function uploadDocuments(studySetId, files) {
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  return request(`/api/study-sets/${studySetId}/documents`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+/**
+ * Upload a single document file or FormData to a study set.
  * POST /api/study-sets/{studySetId}/documents
  */
 export async function uploadDocument(studySetId, fileOrFormData) {
+  if (Array.isArray(fileOrFormData)) {
+    return uploadDocuments(studySetId, fileOrFormData);
+  }
+
   let body = fileOrFormData;
 
   if (fileOrFormData instanceof File) {

@@ -5,13 +5,13 @@ export default function RoughWorkPanel({ value, onChange, onClear }) {
   const [saveStatus, setSaveStatus] = useState('AUTO-SAVED')
 
   useEffect(() => {
-    if (value === undefined || value === '') {
-      setSaveStatus('AUTO-SAVED')
-      return
+    if (!value) return
+    const timer1 = setTimeout(() => setSaveStatus('SAVING...'), 0)
+    const timer2 = setTimeout(() => setSaveStatus('AUTO-SAVED'), 800)
+    return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
     }
-    setSaveStatus('SAVING...')
-    const timer = setTimeout(() => setSaveStatus('AUTO-SAVED'), 800)
-    return () => clearTimeout(timer)
   }, [value])
 
   return (
