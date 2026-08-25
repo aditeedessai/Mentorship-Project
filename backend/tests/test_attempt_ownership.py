@@ -149,6 +149,29 @@ def test_attempt_retrieval_answer_finish_results_ownership():
         assert isinstance(res_sub, EvaluationListResponse)
         assert res_sub.earned_marks == 2.0
 
+    # Submit evaluations for all 4 section types to complete mandatory sections
+    from backend.database import quiz_repository, evaluation_repository
+    for q_type in ["mcq", "short", "application", "long"]:
+        q_sec_id = f"q_own_{q_type}_{uuid.uuid4().hex[:6]}"
+        quiz_repository.save_questions(
+            study_set_id=study_set_id_a,
+            questions=[{
+                "question_id": q_sec_id,
+                "study_set_id": study_set_id_a,
+                "question_type": q_type,
+                "topic": "General",
+                "question": f"Sample {q_type} question?",
+                "reference_answer": "Sample answer",
+                "marks": 2.0 if q_type == "mcq" else 10.0
+            }]
+        )
+        evaluation_repository.save_evaluation(
+            question_id=q_sec_id,
+            student_answer="A" if q_type == "mcq" else "Sample answer",
+            evaluation={"final_score": 1.0, "marks_awarded": 2.0 if q_type == "mcq" else 10.0},
+            attempt_id=attempt_id_a
+        )
+
     # 7 & 8. Finish attempt: User B receives 404, User A can finish
     if pytest:
         with pytest.raises(HTTPException) as exc_info:

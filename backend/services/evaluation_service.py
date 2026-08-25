@@ -417,7 +417,13 @@ def evaluate_and_save_attempt_answers(
     if attempt.get("status") == "completed":
         raise ValueError("Cannot submit answers for a completed attempt")
 
-    # Pre-validate word limits for all submitted answers BEFORE evaluating or saving
+    attempt_study_set_id = attempt.get("study_set_id")
+
+    # Get section completion status to enforce section locking for already completed sections
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    completed_sections = set(completion_info["completed_sections"])
+
+    # Pre-validate all submitted answers BEFORE evaluating or saving any answer
     for item in answers:
         q_id = item["question_id"]
         student_ans = item["student_answer"]
@@ -426,9 +432,23 @@ def evaluate_and_save_attempt_answers(
         if not question:
             raise ValueError(f"Question with ID '{q_id}' not found")
 
+        # 1. Question-to-study-set validation
+        q_study_set_id = str(question.get("study_set_id") or "")
+        if attempt_study_set_id and q_study_set_id != str(attempt_study_set_id):
+            raise ValueError(
+                f"Question with ID '{q_id}' does not belong to the study set associated with this attempt"
+            )
+
         raw_type = str(question.get("question_type", "short")).lower().strip()
         q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
 
+        # 2. Section locking validation
+        if q_type in completed_sections:
+            raise ValueError(
+                f"Section '{q_type}' has already been submitted and is locked for this attempt."
+            )
+
+        # 3. Word limit validation
         is_valid, word_count, max_limit = validate_answer_word_limit(q_type, student_ans)
         if not is_valid:
             raise ValueError(
@@ -455,7 +475,17 @@ def evaluate_and_save_attempt_answers(
         else:
             max_marks = 2.0 if q_type == "mcq" else 10.0
 
-        if q_type == "mcq":
+        if student_ans.strip() == "":
+            eval_result = {
+                "final_score": 0.0,
+                "marks_awarded": 0.0,
+                "semantic_score": 0.0,
+                "concept_score": 0.0,
+                "is_correct": False,
+                "matched_concepts": [],
+                "missed_concepts": ["Question skipped by student"],
+            }
+        elif q_type == "mcq":
             eval_result = evaluate_mcq(
                 student_choice=student_ans,
                 correct_choice=question.get("correct_option", ""),
@@ -470,7 +500,7 @@ def evaluate_and_save_attempt_answers(
 
         save_evaluation(
             question_id=q_id,
-            student_answer=student_ans,
+            student_answer="" if student_ans.strip() == "" else student_ans,
             evaluation=eval_result,
             attempt_id=attempt_id
         )
@@ -520,10 +550,20 @@ def evaluate_and_save_attempt_answers(
     }
 
 
-def get_attempt_performance_summary(attempt_id: str) -> dict:
+MANDATORY_SECTIONS = ["mcq", "short", "application", "long"]
+
+
+def get_attempt_section_completion_status(attempt_id: str) -> dict:
     """
-    Retrieves and calculates performance metrics (cumulative, section-wise, and topic-wise)
-    from real Supabase evaluations and questions records for a given attempt.
+    Derives section completion status for an attempt based on evaluations recorded.
+    A section is completed when evaluations exist for that question type for this attempt.
+
+    Returns dict:
+      {
+        "completed_sections": ["mcq", "application"],
+        "remaining_sections": ["short", "long"],
+        "is_attempt_complete": False
+      }
     """
     attempt = get_attempt(attempt_id)
     if not attempt:
@@ -531,10 +571,43 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
 
     eval_records = get_evaluations_with_question_details(attempt_id)
 
+    completed_set = set()
+    for rec in eval_records:
+        raw_type = str(rec.get("question_type") or "short").lower().strip()
+        q_type = raw_type if raw_type in MANDATORY_SECTIONS else "short"
+        completed_set.add(q_type)
+
+    completed_sections = [s for s in MANDATORY_SECTIONS if s in completed_set]
+    remaining_sections = [s for s in MANDATORY_SECTIONS if s not in completed_set]
+    is_attempt_complete = len(remaining_sections) == 0
+
+    return {
+        "completed_sections": completed_sections,
+        "remaining_sections": remaining_sections,
+        "is_attempt_complete": is_attempt_complete,
+    }
+
+
+def get_attempt_performance_summary(attempt_id: str) -> dict:
+    """
+    Retrieves and calculates performance metrics (cumulative, section-wise, and topic-wise)
+    from real Supabase evaluations and questions records for a given attempt.
+    Includes overall section completion status (completed_sections, remaining_sections, is_attempt_complete).
+    """
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        raise ValueError(f"Attempt with ID '{attempt_id}' not found")
+
+    completion_info = get_attempt_section_completion_status(attempt_id)
+    eval_records = get_evaluations_with_question_details(attempt_id)
+
     if not eval_records:
         return {
             "attempt_id": attempt_id,
             "status": attempt.get("status", "in_progress"),
+            "completed_sections": completion_info["completed_sections"],
+            "remaining_sections": completion_info["remaining_sections"],
+            "is_attempt_complete": completion_info["is_attempt_complete"],
             "cumulative": {
                 "total_marks_obtained": 0.0,
                 "total_maximum_marks": 0.0,
@@ -616,7 +689,10 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
     return {
         "attempt_id": attempt_id,
         "status": attempt.get("status", "in_progress"),
+        "completed_sections": completion_info["completed_sections"],
+        "remaining_sections": completion_info["remaining_sections"],
+        "is_attempt_complete": completion_info["is_attempt_complete"],
         "cumulative": cumulative,
         "sections": sections,
         "topics": topics,
-    }
+    }

@@ -112,6 +112,22 @@ class PerformanceResponse(BaseModel):
         ...,
         description="Unique identifier for the quiz attempt"
     )
+    status: AttemptStatus = Field(
+        AttemptStatus.IN_PROGRESS,
+        description="Status of the quiz attempt ('in_progress' or 'completed')"
+    )
+    completed_sections: list[str] = Field(
+        default_factory=list,
+        description="List of completed section names"
+    )
+    remaining_sections: list[str] = Field(
+        default_factory=list,
+        description="List of remaining uncompleted section names"
+    )
+    is_attempt_complete: bool = Field(
+        False,
+        description="Whether all 4 mandatory sections are completed"
+    )
     sections: list[SectionPerformance] = Field(
         default_factory=list,
         description="Performance metrics for completed question-type sections"
@@ -139,6 +155,18 @@ class ResultResponse(BaseModel):
     status: AttemptStatus = Field(
         AttemptStatus.COMPLETED,
         description="Final attempt status ('in_progress' or 'completed')"
+    )
+    completed_sections: list[str] = Field(
+        default_factory=list,
+        description="List of completed section names"
+    )
+    remaining_sections: list[str] = Field(
+        default_factory=list,
+        description="List of remaining uncompleted section names"
+    )
+    is_attempt_complete: bool = Field(
+        False,
+        description="Whether all 4 mandatory sections are completed"
     )
     cumulative: CumulativePerformance = Field(
         ...,
