@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 /**
- * Strict anti-cheating hook for quiz pages.
+ * Anti-cheating hook for quiz pages.
  *
- * Violations (fullscreen exit, tab switch, focus loss, DevTools) immediately
- * terminate the quiz and navigate away. Only clipboard/context-menu/keyboard
- * restrictions produce non-fatal warnings.
+ * Enforces fullscreen mode, focus/visibility monitoring, DevTools detection,
+ * and clipboard restrictions.
+ *
+ * Focus/session-loss violations (fullscreen exit, tab switch, focus loss, DevTools):
+ * - 1st violation: non-fatal warning banner displayed.
+ * - 2nd violation: quiz terminated and user redirected.
+ *
+ * Clipboard restrictions (copy/cut/paste):
+ * - Always non-fatal warning.
  *
  * @param {{ enabled: boolean, onTerminate: (reason: string) => void }} options
  */
@@ -19,6 +25,8 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
   const cleanedUpRef = useRef(false)
   const quizTerminatedRef = useRef(false)
   const lastFocusWarningRef = useRef(0)
+  const focusViolationCountRef = useRef(0)
+  const wasFullscreenEstablishedRef = useRef(false)
   const devToolsIntervalRef = useRef(null)
   const clipboardDismissTimerRef = useRef(null)
   const historyPushedRef = useRef(false)
@@ -30,7 +38,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     onTerminateRef.current = onTerminate
   }, [onTerminate])
 
-  // ── Warning helpers (clipboard only) ─────────────────────────────
+  // ── Warning helpers ──────────────────────────────────────────────
   const addWarning = useCallback((type, title, message) => {
     setWarnings(prev => {
       if (prev.some(w => w.type === type)) return prev
@@ -77,6 +85,29 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     }
   }, [])
 
+  // ── Handler for focus / visibility / fullscreen / DevTools violations
+  const handleFocusLossViolation = useCallback(() => {
+    if (cleanedUpRef.current || quizTerminatedRef.current) return
+
+    // 300ms deduplication between visibilitychange and window blur
+    const now = Date.now()
+    if (now - lastFocusWarningRef.current < 300) return
+    lastFocusWarningRef.current = now
+
+    if (focusViolationCountRef.current === 0) {
+      // 1st violation: Warning only
+      focusViolationCountRef.current = 1
+      addWarning(
+        'focus_warning',
+        'Warning',
+        'Leaving the quiz window or exiting fullscreen may terminate your quiz.'
+      )
+    } else {
+      // 2nd violation: Terminate quiz
+      terminateQuiz()
+    }
+  }, [addWarning, terminateQuiz])
+
   // ── Cleanup for legitimate exits (Abort / Finish) ────────────────
   const cleanup = useCallback(() => {
     // Idempotent: safe to call multiple times
@@ -109,6 +140,8 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // Reset state for this activation
     cleanedUpRef.current = false
     quizTerminatedRef.current = false
+    focusViolationCountRef.current = 0
+    wasFullscreenEstablishedRef.current = false
     fullscreenAttemptCountRef.current = 0
 
     // ────────────────────────────────────────────────────────────────
@@ -119,10 +152,13 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
+        wasFullscreenEstablishedRef.current = true
       } else {
-        // Fullscreen exited while quiz active → terminate immediately
         setIsFullscreenReady(false)
-        terminateQuiz()
+        // Only trigger violation if fullscreen was actually established previously
+        if (wasFullscreenEstablishedRef.current) {
+          handleFocusLossViolation()
+        }
       }
     }
 
@@ -135,6 +171,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
           await document.documentElement.requestFullscreen()
         }
         setIsFullscreenReady(true)
+        wasFullscreenEstablishedRef.current = true
       } catch {
         // Browser rejected — will retry on first user interaction
         setIsFullscreenReady(false)
@@ -146,6 +183,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       if (cleanedUpRef.current || quizTerminatedRef.current) return
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
+        wasFullscreenEstablishedRef.current = true
         removeInteractionListeners()
         return
       }
@@ -154,9 +192,10 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       try {
         await document.documentElement.requestFullscreen()
         setIsFullscreenReady(true)
+        wasFullscreenEstablishedRef.current = true
         removeInteractionListeners()
       } catch {
-        // If we've exhausted attempts, fullscreen is unavailable → terminate
+        // If exhausted attempts, terminate
         if (fullscreenAttemptCountRef.current >= 3) {
           terminateQuiz()
         }
@@ -180,28 +219,23 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     attemptFullscreen()
 
     // ────────────────────────────────────────────────────────────────
-    // 2. VISIBILITY MONITORING — tab switch terminates quiz
+    // 2. VISIBILITY MONITORING — tab switch
     // ────────────────────────────────────────────────────────────────
     const handleVisibilityChange = () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
       if (document.visibilityState === 'hidden') {
-        lastFocusWarningRef.current = Date.now()
-        terminateQuiz()
+        handleFocusLossViolation()
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     // ────────────────────────────────────────────────────────────────
-    // 3. WINDOW FOCUS — blur terminates quiz (deduplicated with visibility)
+    // 3. WINDOW FOCUS — blur
     // ────────────────────────────────────────────────────────────────
     const handleWindowBlur = () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
-      // Deduplicate: if visibility handler already fired within 300ms, skip
-      const now = Date.now()
-      if (now - lastFocusWarningRef.current < 300) return
-      lastFocusWarningRef.current = now
-      terminateQuiz()
+      handleFocusLossViolation()
     }
 
     window.addEventListener('blur', handleWindowBlur)
@@ -292,7 +326,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     document.addEventListener('keydown', handleKeyDown)
 
     // ────────────────────────────────────────────────────────────────
-    // 8. DEVTOOLS DETECTION — terminates quiz when detected
+    // 8. DEVTOOLS DETECTION
     // ────────────────────────────────────────────────────────────────
     const DEVTOOLS_THRESHOLD = 160
 
@@ -303,7 +337,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       const heightDiff = window.outerHeight - window.innerHeight
 
       if (widthDiff > DEVTOOLS_THRESHOLD || heightDiff > DEVTOOLS_THRESHOLD) {
-        terminateQuiz()
+        handleFocusLossViolation()
       }
     }
 
@@ -372,7 +406,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
       historyPushedRef.current = false
     }
-  }, [enabled, addWarning, removeWarning, terminateQuiz])
+  }, [enabled, addWarning, removeWarning, handleFocusLossViolation, terminateQuiz])
 
   return {
     isFullscreenReady,

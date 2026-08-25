@@ -178,6 +178,33 @@ export async function fetchQuestions(studySetId, frontendType) {
 // ── Attempts ─────────────────────────────────────────────────────────
 
 /**
+ * Fetch the active in-progress attempt for a study set if one exists.
+ * GET /api/attempts/study-sets/{studySetId}/active-attempt
+ * Returns null if no active attempt exists (404).
+ */
+export async function fetchActiveAttempt(studySetId) {
+  try {
+    return await request(`/api/attempts/study-sets/${studySetId}/active-attempt`);
+  } catch (err) {
+    if (err.message && err.message.includes("404")) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Get the active in-progress attempt for a study set, or create a new attempt if none exists.
+ */
+export async function getOrCreateAttempt(studySetId) {
+  const active = await fetchActiveAttempt(studySetId);
+  if (active) {
+    return active;
+  }
+  return createAttempt(studySetId);
+}
+
+/**
  * Create a new attempt.
  * POST /api/attempts
  */

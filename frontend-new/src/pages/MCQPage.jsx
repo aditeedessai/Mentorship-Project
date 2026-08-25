@@ -6,7 +6,7 @@ import QuizCenter from '../components/quiz/QuizCenter'
 import RoughWorkPanel from '../components/quiz/RoughWorkPanel'
 import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
-import { submitAnswers, finishAttempt } from '../services/api'
+import { submitAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 
 export default function MCQPage() {
@@ -116,18 +116,15 @@ export default function MCQPage() {
         }
       }
 
-      // 1. Submit answers if any
+      // 1. Submit section answers if any
       if (answersPayload.length > 0) {
         await submitAnswers(attemptId, 'mcq', answersPayload)
       }
 
-      // 2. Finish the attempt
-      await finishAttempt(attemptId)
-
-      // 3. Cleanup anti-cheating before navigating away
+      // 2. Cleanup anti-cheating before navigating away
       antiCheatCleanup()
 
-      // 4. Navigate to results
+      // 3. Navigate to results
       const studySetId = location.state?.studySetId
       navigate('/results', {
         state: {
