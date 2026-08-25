@@ -4,7 +4,9 @@ import QuizHeader from '../components/quiz/QuizHeader'
 import QuestionNavigator from '../components/quiz/QuestionNavigator'
 import RoughWorkPanel from '../components/quiz/RoughWorkPanel'
 import AbortQuizModal from '../components/quiz/AbortQuizModal'
+import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import { submitAnswers, finishAttempt } from '../services/api'
+import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
 
 export default function QnAPage() {
@@ -32,6 +34,17 @@ export default function QnAPage() {
   const [showAbortModal, setShowAbortModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // ── Anti-Cheating ──────────────────────────────────────────────
+  const {
+    isFullscreenReady,
+    quizTerminated,
+    warnings,
+    cleanup: antiCheatCleanup,
+  } = useQuizAntiCheating({
+    enabled: questionCount > 0,
+    onTerminate: () => navigate('/'),
+  })
+
   // Redirect if no questions were loaded
   useEffect(() => {
     if (questionCount === 0) {
@@ -39,14 +52,14 @@ export default function QnAPage() {
     }
   }, [questionCount, navigate])
 
-  // Timer
+  // Timer — only ticks when fullscreen is established
   useEffect(() => {
-    if (remainingSeconds <= 0) return
+    if (remainingSeconds <= 0 || !isFullscreenReady) return
     const interval = setInterval(() => {
       setRemainingSeconds(prev => Math.max(0, prev - 1))
     }, 1000)
     return () => clearInterval(interval)
-  }, [remainingSeconds])
+  }, [remainingSeconds, isFullscreenReady])
 
   const goToQuestion = useCallback((num) => {
     if (num < 1 || num > questionCount || num === currentQuestion) return
@@ -112,7 +125,10 @@ export default function QnAPage() {
       // 2. Finish the attempt
       await finishAttempt(attemptId)
 
-      // 3. Automatically redirect to Performance / Results page after successful submission
+      // 3. Cleanup anti-cheating before navigating away
+      antiCheatCleanup()
+
+      // 4. Navigate to results
       const studySetId = location.state?.studySetId
       navigate('/results', {
         state: {
@@ -126,7 +142,7 @@ export default function QnAPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, location.state?.studySetId])
+  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, location.state, antiCheatCleanup])
 
   const toggleBookmark = useCallback(() => {
     setBookmarkedQuestions(prev => ({
@@ -143,7 +159,13 @@ export default function QnAPage() {
     setScratchpad(prev => ({ ...prev, [currentQuestion]: '' }))
   }, [currentQuestion])
 
-  if (questionCount === 0) return null
+  const handleAbortConfirm = useCallback(() => {
+    antiCheatCleanup()
+    navigate('/')
+  }, [navigate, antiCheatCleanup])
+
+  // Don't render if no questions or quiz was terminated by anti-cheat
+  if (questionCount === 0 || quizTerminated) return null
 
   const currentQ = questions[currentQuestion - 1] || questions[0]
   const progress = (currentQuestion / questionCount) * 100
@@ -158,7 +180,29 @@ export default function QnAPage() {
       : 'Short Answer'
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-screen overflow-hidden font-sans select-none">
+      {/* Fullscreen gate — blocks quiz until fullscreen is confirmed */}
+      {!isFullscreenReady && (
+        <div className="fixed inset-0 z-[200] bg-white flex items-center justify-center">
+          <div className="text-center max-w-sm px-6">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#F0EAF5] flex items-center justify-center animate-pulse">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#542078" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-[#3E3E75] mb-2">Entering Secure Mode</h2>
+            <p className="text-[13px] text-[#888] leading-relaxed">
+              This quiz requires fullscreen mode for a secure exam environment.
+              Click anywhere or press any key to continue.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Clipboard warning overlay */}
+      <AntiCheatingWarning warnings={warnings} />
+
       <QuizHeader
         remainingSeconds={remainingSeconds}
         isBookmarked={!!bookmarkedQuestions[currentQuestion]}
@@ -226,14 +270,15 @@ export default function QnAPage() {
                 </p>
               </div>
 
-              {/* Answer Textarea */}
-              <div className="flex-1 min-h-[180px]">
+              {/* Answer Textarea – marked as editable so anti-cheat allows typing */}
+              <div className="flex-1 min-h-[180px]" data-ac-editable="true">
                 <textarea
                   value={answers[currentQuestion] || ''}
                   onChange={(e) => handleAnswerChange(e.target.value)}
                   placeholder="Type your answer here..."
-                  className="w-full h-full min-h-[180px] p-4 bg-white border border-[#D8D8D8] rounded-[10px] text-[14px] text-[#333] leading-[1.6] placeholder-[#AAAAAA] resize-none focus:outline-none focus:border-[#087C7B] focus:ring-1 focus:ring-[#087C7B]/20 transition-colors duration-150"
+                  className="w-full h-full min-h-[180px] p-4 bg-white border border-[#D8D8D8] rounded-[10px] text-[14px] text-[#333] leading-[1.6] placeholder-[#AAAAAA] resize-none focus:outline-none focus:border-[#087C7B] focus:ring-1 focus:ring-[#087C7B]/20 transition-colors duration-150 select-text"
                   aria-label={`Answer for question ${currentQuestion}`}
+                  data-ac-editable="true"
                 />
               </div>
             </div>
@@ -278,7 +323,7 @@ export default function QnAPage() {
       {showAbortModal && (
         <AbortQuizModal
           onCancel={() => setShowAbortModal(false)}
-          onConfirm={() => navigate('/')}
+          onConfirm={handleAbortConfirm}
         />
       )}
     </div>
