@@ -103,12 +103,13 @@ export default function MCQPage() {
     setIsSubmitting(true)
 
     try {
-      // Build answers array from selectedAnswers
+      // Build answers array for ALL section questions (answered + skipped)
       const answersPayload = []
       for (let i = 1; i <= questionCount; i++) {
         const q = questions[i - 1]
-        if (selectedAnswers[i] !== undefined && q) {
-          const selectedOption = q.options[selectedAnswers[i]]
+        if (q) {
+          const isAnswered = selectedAnswers[i] !== undefined
+          const selectedOption = isAnswered ? q.options[selectedAnswers[i]] : null
           answersPayload.push({
             question_id: q.question_id,
             student_answer: selectedOption ? selectedOption.letter : '',
@@ -116,7 +117,7 @@ export default function MCQPage() {
         }
       }
 
-      // 1. Submit section answers if any
+      // 1. Submit section answers
       if (answersPayload.length > 0) {
         await submitAnswers(attemptId, 'mcq', answersPayload)
       }

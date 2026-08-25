@@ -211,7 +211,10 @@ function App() {
 
         {/* ================= UPLOAD ================= */}
         {currentPage === "upload" && (
-          <UploadPage studySetId={selectedStudySetId} />
+          <UploadPage
+            studySetId={selectedStudySetId}
+            onNavigate={setCurrentPage}
+          />
         )}
 
         {/* ================= STUDY SETS ================= */}
@@ -232,13 +235,23 @@ function App() {
         {/* ================= RESULTS / PROGRESS ================= */}
         {(currentPage === "results" ||
           currentPage === "progress") && (
-          <ResultsPage />
+          <ResultsPage
+            onNavigate={(page, state) => {
+              if (state?.studySetId) {
+                setSelectedStudySetId(state.studySetId);
+              }
+              setCurrentPage(page);
+            }}
+          />
         )}
 
         {/* ================= QUIZ CONFIGURATION ================= */}
         {currentPage === "quiz" && (
           <ConfigureSession
             studySetId={selectedStudySetId}
+            studySetName={
+              studySets.find((s) => s.study_set_id === selectedStudySetId)?.name
+            }
           />
         )}
 

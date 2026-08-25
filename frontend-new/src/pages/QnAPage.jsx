@@ -105,19 +105,20 @@ export default function QnAPage() {
     setIsSubmitting(true)
 
     try {
-      // Build answers array from typed answers
+      // Build answers array for ALL section questions (answered + skipped)
       const answersPayload = []
       for (let i = 1; i <= questionCount; i++) {
         const q = questions[i - 1]
-        if (answers[i] && answers[i].trim() && q) {
+        if (q) {
+          const hasAnswer = answers[i] && answers[i].trim()
           answersPayload.push({
             question_id: q.question_id,
-            student_answer: answers[i].trim(),
+            student_answer: hasAnswer ? answers[i].trim() : '',
           })
         }
       }
 
-      // 1. Submit section answers if any
+      // 1. Submit section answers
       if (answersPayload.length > 0) {
         await submitAnswers(attemptId, questionType, answersPayload)
       }

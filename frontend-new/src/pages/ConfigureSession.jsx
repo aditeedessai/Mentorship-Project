@@ -4,7 +4,7 @@ import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
 import { ListChecks, FileText, Lightbulb, BookOpen } from 'lucide-react'
-import { fetchQuestions, getOrCreateAttempt, generateQuestions } from '../services/api'
+import { fetchQuestions, getOrCreateAttempt, generateQuestions, fetchStudySets } from '../services/api'
 
 const questionTypes = [
   {
@@ -43,7 +43,7 @@ const questionTypes = [
 
 const toFrontendTypeId = (bType) => (bType === 'short' ? 'short-answer' : bType)
 
-export default function ConfigureSession({ studySetId: propStudySetId }) {
+export default function ConfigureSession({ studySetId: propStudySetId, studySetName: propStudySetName }) {
   const [selectedType, setSelectedType] = useState('mcq')
   const [questionCount, setQuestionCount] = useState(20)
   const [attempt, setAttempt] = useState(null)
@@ -55,6 +55,22 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
 
   const studySetId = propStudySetId || location.state?.studySetId
   const documentId = location.state?.documentId
+  const [fetchedStudySetName, setFetchedStudySetName] = useState('')
+
+  const studySetName = propStudySetName || location.state?.studySetName || fetchedStudySetName
+
+  useEffect(() => {
+    if (!studySetName && studySetId) {
+      fetchStudySets()
+        .then((sets) => {
+          const found = (sets || []).find((s) => s.study_set_id === studySetId)
+          if (found?.name) {
+            setFetchedStudySetName(found.name)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [studySetName, studySetId])
 
   // Fetch or resume the active attempt for this study set on mount
   useEffect(() => {
@@ -137,11 +153,15 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
         throw new Error('Could not establish an active attempt for this study set.')
       }
 
-      // 1. Generate questions using AI engine for the selected type & study set
-      await generateQuestions(studySetId, selectedType, documentId)
+      // 1. Check if questions already exist for the selected type and study set
+      let questions = await fetchQuestions(studySetId, selectedType)
 
-      // 2. Fetch questions for the selected type
-      const questions = await fetchQuestions(studySetId, selectedType)
+      // 2. Only generate new questions if none exist yet
+      if (!questions || questions.length === 0) {
+        await generateQuestions(studySetId, selectedType, documentId)
+        questions = await fetchQuestions(studySetId, selectedType)
+      }
+
       if (!questions || questions.length === 0) {
         throw new Error(`No ${selected.title} questions could be generated for this study set.`)
       }
@@ -177,7 +197,7 @@ export default function ConfigureSession({ studySetId: propStudySetId }) {
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-[48px] pt-[40px]">
-          <ModuleBadge />
+          <ModuleBadge text={studySetName ? `Study Set: ${studySetName}` : 'Study Set'} />
 
           <h1 className="mt-[18px] text-[32px] font-bold text-[#171717] leading-[1.1] tracking-[-0.01em]">
             Configure Session

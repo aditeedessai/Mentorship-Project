@@ -475,7 +475,17 @@ def evaluate_and_save_attempt_answers(
         else:
             max_marks = 2.0 if q_type == "mcq" else 10.0
 
-        if q_type == "mcq":
+        if student_ans.strip() == "":
+            eval_result = {
+                "final_score": 0.0,
+                "marks_awarded": 0.0,
+                "semantic_score": 0.0,
+                "concept_score": 0.0,
+                "is_correct": False,
+                "matched_concepts": [],
+                "missed_concepts": ["Question skipped by student"],
+            }
+        elif q_type == "mcq":
             eval_result = evaluate_mcq(
                 student_choice=student_ans,
                 correct_choice=question.get("correct_option", ""),
@@ -490,7 +500,7 @@ def evaluate_and_save_attempt_answers(
 
         save_evaluation(
             question_id=q_id,
-            student_answer=student_ans,
+            student_answer="" if student_ans.strip() == "" else student_ans,
             evaluation=eval_result,
             attempt_id=attempt_id
         )

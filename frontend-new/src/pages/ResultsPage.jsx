@@ -177,34 +177,36 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
   // Build section performance list from backend performance/evaluations
   const sectionsList = useMemo(() => {
-    if (performanceData?.section_performances && performanceData.section_performances.length > 0) {
-      return performanceData.section_performances.map((sp) => {
-        const uiName = normalizeTypeName(sp.question_type || sp.section_name);
-        const earned = Number(sp.earned_marks ?? sp.score ?? 0);
-        const maxM = Number(sp.total_marks ?? sp.max_marks ?? 10);
+    const perf = performanceData || resultsData;
+
+    if (perf?.section_performances && perf.section_performances.length > 0) {
+      return perf.section_performances.map((sp) => {
+        const uiName = normalizeTypeName(sp.section_name || sp.question_type);
+        const earned = Number(sp.marks_obtained ?? sp.earned_marks ?? sp.score ?? 0);
+        const maxM = Number(sp.maximum_marks ?? sp.total_marks ?? sp.max_marks ?? 10);
         const acc = sp.percentage !== undefined ? Math.round(sp.percentage) : (maxM > 0 ? Math.round((earned / maxM) * 100) : 0);
         return {
           name: uiName,
           score: Math.round(earned * 100) / 100,
           maxMarks: maxM,
           accuracy: acc,
-          timestamp: sp.completed_at || performanceData.completed_at || new Date().toISOString(),
+          timestamp: sp.completed_at || perf.completed_at || new Date().toISOString(),
         };
       });
     }
 
-    if (performanceData?.sections && performanceData.sections.length > 0) {
-      return performanceData.sections.map((sp) => {
+    if (perf?.sections && perf.sections.length > 0) {
+      return perf.sections.map((sp) => {
         const uiName = normalizeTypeName(sp.section_name || sp.question_type);
-        const earned = Number(sp.earned_marks ?? sp.score ?? 0);
-        const maxM = Number(sp.total_marks ?? sp.max_marks ?? 10);
+        const earned = Number(sp.marks_obtained ?? sp.earned_marks ?? sp.score ?? 0);
+        const maxM = Number(sp.maximum_marks ?? sp.total_marks ?? sp.max_marks ?? 10);
         const acc = sp.percentage !== undefined ? Math.round(sp.percentage) : (maxM > 0 ? Math.round((earned / maxM) * 100) : 0);
         return {
           name: uiName,
           score: Math.round(earned * 100) / 100,
           maxMarks: maxM,
           accuracy: acc,
-          timestamp: sp.completed_at || performanceData.completed_at || new Date().toISOString(),
+          timestamp: sp.completed_at || perf.completed_at || new Date().toISOString(),
         };
       });
     }
@@ -216,7 +218,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
         if (!grouped[typeKey]) {
           grouped[typeKey] = { name: typeKey, score: 0, maxMarks: 0, timestamp: item.created_at || new Date().toISOString() };
         }
-        const earned = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
+        const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
+        const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
+        const earned = isSkipped ? 0 : Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
         const maxM = Number(item.max_marks ?? 1);
         grouped[typeKey].score += earned;
         grouped[typeKey].maxMarks += maxM;
@@ -232,28 +236,34 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     }
 
     return [];
-  }, [performanceData, evaluations]);
+  }, [performanceData, resultsData, evaluations]);
 
   const totalScore = useMemo(() => {
-    if (performanceData?.total_score !== undefined) {
-      return Math.round(Number(performanceData.total_score) * 100) / 100;
+    const perf = performanceData || resultsData;
+    const val = perf?.cumulative?.total_marks_obtained ?? perf?.total_score ?? perf?.cumulative?.earned_marks;
+    if (val !== undefined) {
+      return Math.round(Number(val) * 100) / 100;
     }
     return Math.round(sectionsList.reduce((acc, s) => acc + s.score, 0) * 100) / 100;
-  }, [performanceData, sectionsList]);
+  }, [performanceData, resultsData, sectionsList]);
 
   const maxScore = useMemo(() => {
-    if (performanceData?.total_max_marks !== undefined) {
-      return Number(performanceData.total_max_marks);
+    const perf = performanceData || resultsData;
+    const val = perf?.cumulative?.total_maximum_marks ?? perf?.total_max_marks ?? perf?.cumulative?.total_marks;
+    if (val !== undefined) {
+      return Number(val);
     }
     return sectionsList.reduce((acc, s) => acc + s.maxMarks, 0);
-  }, [performanceData, sectionsList]);
+  }, [performanceData, resultsData, sectionsList]);
 
   const percentage = useMemo(() => {
-    if (performanceData?.overall_percentage !== undefined) {
-      return Math.round(Number(performanceData.overall_percentage));
+    const perf = performanceData || resultsData;
+    const val = perf?.cumulative?.overall_percentage ?? perf?.overall_percentage;
+    if (val !== undefined) {
+      return Math.round(Number(val));
     }
     return maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-  }, [performanceData, totalScore, maxScore]);
+  }, [performanceData, resultsData, totalScore, maxScore]);
 
   // Questions for active drawer filter
   const activeQuestions = useMemo(() => {
@@ -265,19 +275,29 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     });
 
     return filtered.map((item, idx) => {
+      const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
+      const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
       const awardedMarks = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
       const maxMarks = Number(item.max_marks ?? 1);
-      const isPassed = item.is_correct ?? (awardedMarks >= maxMarks * 0.5);
+      const isPassed = !isSkipped && Boolean(item.is_correct ?? (awardedMarks >= maxMarks * 0.5));
+
+      let feedbackText = item.feedback || item.explanation;
+      if (isSkipped) {
+        feedbackText = 'Question skipped by student.';
+      } else if (!feedbackText) {
+        feedbackText = isPassed ? 'Good response.' : 'Needs improvement.';
+      }
 
       return {
         id: idx + 1,
         prompt: item.question_text || item.question || item.prompt || `Question ${idx + 1}`,
-        userAnswer: item.student_answer || item.user_answer || item.answer || 'No answer submitted',
+        userAnswer: isSkipped ? 'Skipped' : rawAns,
         correctAnswer: item.correct_answer || item.model_answer || item.expected_answer || 'N/A',
-        feedback: item.feedback || item.explanation || (isPassed ? 'Good response.' : 'Needs improvement.'),
-        awardedMarks: Math.round(awardedMarks * 100) / 100,
+        feedback: feedbackText,
+        awardedMarks: isSkipped ? 0 : Math.round(awardedMarks * 100) / 100,
         maxMarks,
-        isPassed: Boolean(isPassed),
+        isPassed,
+        isSkipped,
       };
     });
   }, [activeSection, evaluations]);
@@ -286,23 +306,46 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return activeQuestions.filter((q) => q.isPassed).length;
   }, [activeQuestions]);
 
+  const activeSkipped = useMemo(() => {
+    return activeQuestions.filter((q) => q.isSkipped).length;
+  }, [activeQuestions]);
+
   const activeWrong = useMemo(() => {
-    return Math.max(0, activeQuestions.length - activeCorrect);
-  }, [activeQuestions, activeCorrect]);
+    return activeQuestions.filter((q) => !q.isPassed && !q.isSkipped).length;
+  }, [activeQuestions]);
 
   const totalCorrect = useMemo(() => {
     if (!evaluations || evaluations.length === 0) return 0;
     return evaluations.filter((item) => {
+      const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
+      const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
+      if (isSkipped) return false;
       const earned = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
       const maxM = Number(item.max_marks ?? 1);
       return item.is_correct || (earned >= maxM * 0.5);
     }).length;
   }, [evaluations]);
 
+  const totalSkipped = useMemo(() => {
+    if (!evaluations || evaluations.length === 0) return 0;
+    return evaluations.filter((item) => {
+      const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
+      return rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
+    }).length;
+  }, [evaluations]);
+
   const totalWrong = useMemo(() => {
     if (!evaluations || evaluations.length === 0) return 0;
-    return Math.max(0, evaluations.length - totalCorrect);
-  }, [evaluations, totalCorrect]);
+    return evaluations.filter((item) => {
+      const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
+      const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
+      if (isSkipped) return false;
+      const earned = Number(item.score ?? item.awarded_marks ?? (item.is_correct ? 1 : 0));
+      const maxM = Number(item.max_marks ?? 1);
+      const isCorr = item.is_correct || (earned >= maxM * 0.5);
+      return !isCorr;
+    }).length;
+  }, [evaluations]);
 
   const strengths = useMemo(() => {
     if (performanceData?.strengths && performanceData.strengths.length > 0) {
@@ -437,6 +480,17 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
               <div className="text-xs text-rose-200 mt-0.5 font-bold uppercase tracking-wider">Wrong</div>
             </div>
 
+            {totalSkipped > 0 && (
+              <>
+                <div className="h-8 w-px bg-white/20 hidden sm:block" />
+
+                <div className="text-center px-3">
+                  <div className="text-3xl font-bold text-amber-300">{totalSkipped}</div>
+                  <div className="text-xs text-amber-200 mt-0.5 font-bold uppercase tracking-wider">Skipped</div>
+                </div>
+              </>
+            )}
+
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
             <div className="text-center px-3">
@@ -526,6 +580,11 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                   <span className="text-xs font-bold text-rose-700 bg-rose-100 px-2.5 py-1 rounded-lg">
                     {activeWrong} Wrong
                   </span>
+                  {activeSkipped > 0 && (
+                    <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-lg">
+                      {activeSkipped} Skipped
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => setActiveSection(null)}
@@ -541,7 +600,11 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                   <div
                     key={q.id}
                     className={`rounded-xl border p-5 space-y-3 bg-white ${
-                      q.isPassed ? 'border-gray-100' : 'border-rose-200 bg-rose-50/10'
+                      q.isSkipped
+                        ? 'border-amber-200 bg-amber-50/10'
+                        : q.isPassed
+                        ? 'border-gray-100'
+                        : 'border-rose-200 bg-rose-50/10'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -550,13 +613,23 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                       </span>
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                          q.isPassed
+                          q.isSkipped
+                            ? 'bg-amber-100 text-amber-800'
+                            : q.isPassed
                             ? 'bg-[#98E8DE]/50 text-[#136a6a]'
                             : 'bg-rose-100 text-rose-700'
                         }`}
                       >
-                        {q.isPassed ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
-                        {q.isPassed
+                        {q.isSkipped ? (
+                          <AlertCircle size={13} />
+                        ) : q.isPassed ? (
+                          <CheckCircle2 size={13} />
+                        ) : (
+                          <XCircle size={13} />
+                        )}
+                        {q.isSkipped
+                          ? `Skipped (0/${q.maxMarks} Marks)`
+                          : q.isPassed
                           ? `Correct (+${q.awardedMarks} Marks)`
                           : `Incorrect (${q.awardedMarks}/${q.maxMarks} Marks)`}
                       </span>
@@ -573,7 +646,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                         </span>
                         <span
                           className={
-                            q.isPassed
+                            q.isSkipped
+                              ? 'text-amber-800 font-semibold italic'
+                              : q.isPassed
                               ? 'text-[#3E3E75] font-medium'
                               : 'text-rose-600 font-semibold'
                           }
