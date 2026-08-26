@@ -3,6 +3,9 @@ import { useLocation } from "react-router-dom";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
+import VerifyOtpPage from "./pages/VerifyOtpPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import StudySetsPage from "./pages/StudySetsPage";
 import ResultsPage from "./pages/ResultsPage";
 import ConfigureSession from "./pages/ConfigureSession";
@@ -31,6 +34,9 @@ function App() {
 
   // ================= AUTH STATE =================
   const [authPage, setAuthPage] = useState("login");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [otpType, setOtpType] = useState("signup");
+  const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
 
   // ================= USER STATE =================
   const [user, setUser] = useState(null);
@@ -159,6 +165,21 @@ function App() {
     }
   };
 
+  // ================= PASSWORD RESET CHECK =================
+  // Takes priority over the auth gate below: verifying a recovery OTP
+  // establishes a real Supabase session, but the user must set a new
+  // password before being allowed into the app.
+  if (needsPasswordReset) {
+    return (
+      <ResetPasswordPage
+        onComplete={() => {
+          setNeedsPasswordReset(false);
+          setAuthPage("login");
+        }}
+      />
+    );
+  }
+
   // ================= AUTH CHECK =================
   if (!user) {
     if (authPage === "login") {
@@ -166,6 +187,7 @@ function App() {
         <LoginPage
           onLogin={setUser}
           onSignUp={() => setAuthPage("signup")}
+          onForgotPassword={() => setAuthPage("forgot-password")}
         />
       );
     }
@@ -173,8 +195,43 @@ function App() {
     if (authPage === "signup") {
       return (
         <SignUpPage
-          onSignUp={setUser}
+          onSignUpSuccess={(email) => {
+            setPendingEmail(email);
+            setOtpType("signup");
+            setAuthPage("verify-otp");
+          }}
           onLogin={() => setAuthPage("login")}
+        />
+      );
+    }
+
+    if (authPage === "forgot-password") {
+      return (
+        <ForgotPasswordPage
+          onCodeSent={(email) => {
+            setPendingEmail(email);
+            setOtpType("recovery");
+            setAuthPage("verify-otp");
+          }}
+          onBack={() => setAuthPage("login")}
+        />
+      );
+    }
+
+    if (authPage === "verify-otp") {
+      return (
+        <VerifyOtpPage
+          email={pendingEmail}
+          type={otpType}
+          onVerified={() => {
+            if (otpType === "recovery") {
+              setNeedsPasswordReset(true);
+            }
+            // For signup, the onAuthStateChange listener above picks up
+            // the new session and sets `user`, which moves the app past
+            // this auth gate into the dashboard automatically.
+          }}
+          onBack={() => setAuthPage("login")}
         />
       );
     }

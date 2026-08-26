@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, Plus, X, Trash2 } from "lucide-react";
+import { BookOpen, Plus, X, Trash2, CheckCircle } from "lucide-react";
 
 function StudySetsPage({
   studySets,
@@ -14,6 +14,10 @@ function StudySetsPage({
   const [formError, setFormError] = useState("");
 
   const [deletingStudySetId, setDeletingStudySetId] = useState(null);
+
+  // Delete confirmation and success message
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState("");
 
   const handleCreate = async () => {
     if (!studySetName.trim()) {
@@ -31,19 +35,46 @@ function StudySetsPage({
     }
   };
 
-  const handleDelete = async (studySet) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${studySet.name}"?\n\nThis action cannot be undone.`
-    );
+  // Open the in-dashboard confirmation
+  const handleDeleteClick = (studySet) => {
+    setDeleteSuccess("");
+    setDeleteConfirmation(studySet);
+  };
 
-    if (!confirmed) {
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    if (deletingStudySetId) {
       return;
     }
+
+    setDeleteConfirmation(null);
+  };
+
+  // Confirm deletion
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation) {
+      return;
+    }
+
+    const studySet = deleteConfirmation;
 
     try {
       setDeletingStudySetId(studySet.study_set_id);
 
       await onDeleteStudySet(studySet.study_set_id);
+
+      // Close confirmation after successful deletion
+      setDeleteConfirmation(null);
+
+      // Show success message on dashboard
+      setDeleteSuccess(
+        `Study set "${studySet.name}" deleted successfully.`
+      );
+
+      // Automatically hide success message after 4 seconds
+      setTimeout(() => {
+        setDeleteSuccess("");
+      }, 4000);
     } catch (error) {
       console.error("Failed to delete study set:", error);
     } finally {
@@ -76,6 +107,29 @@ function StudySetsPage({
           Create Study Set
         </button>
       </div>
+
+      {/* ================= DELETE SUCCESS MESSAGE ================= */}
+      {deleteSuccess && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-[#98E8DE] bg-[#98E8DE]/20 px-5 py-4 text-sm text-[#3E3E75] shadow-sm">
+          <CheckCircle
+            size={20}
+            className="shrink-0 text-[#4E1F6E]"
+          />
+
+          <span className="font-medium">
+            {deleteSuccess}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setDeleteSuccess("")}
+            className="ml-auto rounded-md p-1 text-gray-400 transition hover:bg-white hover:text-gray-600"
+            aria-label="Close success message"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* ================= CREATE FORM ================= */}
       {showCreateForm && (
@@ -160,6 +214,62 @@ function StudySetsPage({
           </p>
         </div>
 
+        {/* ================= DELETE CONFIRMATION ================= */}
+        {deleteConfirmation && (
+          <div className="mb-6 rounded-2xl border border-red-100 bg-red-50/60 p-5 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                <Trash2
+                  size={19}
+                  className="text-red-500"
+                />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-[#3E3E75]">
+                  Delete Study Set?
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-[#3E3E75]">
+                    "{deleteConfirmation.name}"
+                  </span>
+                  ?
+                </p>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  This action cannot be undone.
+                </p>
+
+                <div className="mt-4 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCancelDelete}
+                    disabled={Boolean(deletingStudySetId)}
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={Boolean(deletingStudySetId)}
+                    className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 size={15} />
+
+                    {deletingStudySetId
+                      ? "Deleting..."
+                      : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {studySetsLoading && (
           <p className="text-sm text-gray-500">
             Loading study sets...
@@ -221,8 +331,13 @@ function StudySetsPage({
                         {/* DELETE BUTTON */}
                         <button
                           type="button"
-                          onClick={() => handleDelete(studySet)}
-                          disabled={isDeleting}
+                          onClick={() =>
+                            handleDeleteClick(studySet)
+                          }
+                          disabled={
+                            isDeleting ||
+                            Boolean(deletingStudySetId)
+                          }
                           title="Delete study set"
                           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                         >
@@ -277,3 +392,4 @@ function StudySetsPage({
 }
 
 export default StudySetsPage;
+
