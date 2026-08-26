@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { Eye, EyeOff, BookOpen } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { supabase } from "../services/supabase";
 
-function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
-  const [showPassword, setShowPassword] = useState("");
+function ForgotPasswordPage({ onCodeSent, onBack }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,23 +13,18 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
     setLoading(true);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email
+      );
 
-      if (authError) {
-        setError(authError.message || "Failed to sign in. Please check your credentials.");
+      if (resetError) {
+        setError(resetError.message || "Failed to send reset code.");
         setLoading(false);
         return;
       }
 
-      if (onLogin && data?.user) {
-        onLogin({
-          id: data.user.id,
-          name: data.user.user_metadata?.full_name || email.split("@")[0],
-          email: data.user.email,
-        });
+      if (onCodeSent) {
+        onCodeSent(email);
       }
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
@@ -69,17 +62,15 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
 
 
             <h1 className="max-w-md text-4xl font-bold leading-tight">
-              Study smarter.
+              Forgot your
               <br />
-              Learn better.
-              <br />
-              Achieve more.
+              password?
             </h1>
 
 
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100">
-              Your personalized AI-powered study companion designed to
-              help you understand, practice, and prepare with confidence.
+              No worries. Enter your email and we'll send you a code to
+              reset it and get you back to studying.
             </p>
 
           </div>
@@ -96,7 +87,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
         <div className="p-8 sm:p-12 lg:p-14">
 
           {/* Mobile Logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <div className="mb-7 flex items-center gap-3 lg:hidden">
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#98E8DE]">
 
@@ -115,20 +106,20 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
 
 
           {/* Heading */}
-          <div className="mb-8">
+          <div className="mb-7">
 
             <h2 className="text-3xl font-bold text-[#3E3E75]">
-              Welcome back
+              Reset your password
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
-              Sign in to continue your personalized learning journey.
+              Enter your email address and we'll send you a verification code.
             </p>
 
           </div>
 
 
-          {/* ================= LOGIN FORM ================= */}
+          {/* ================= FORM ================= */}
           <form onSubmit={handleSubmit} className="space-y-5">
 
             {/* Email */}
@@ -153,78 +144,6 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
             </div>
 
 
-            {/* Password */}
-            <div>
-
-              <div className="mb-2 flex items-center justify-between">
-
-                <label className="text-sm font-medium text-[#3E3E75]">
-                  Password
-                </label>
-
-                {/* Forgot Password */}
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  className="text-xs font-medium text-[#4E1F6E] hover:underline"
-                >
-                  Forgot Password?
-                </button>
-
-              </div>
-
-
-              <div className="relative">
-
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-11 text-sm
-                             outline-none transition-all
-                             focus:border-[#45A9A9] focus:bg-white
-                             focus:ring-2 focus:ring-[#98E8DE]/40"
-                />
-
-
-                {/* Show / Hide Password */}
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
-                             hover:text-[#4E1F6E]"
-                >
-
-                  {showPassword ? (
-                    <EyeOff size={19} />
-                  ) : (
-                    <Eye size={19} />
-                  )}
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-            {/* Remember Me */}
-            <div className="flex items-center gap-2">
-
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 accent-[#4E1F6E]"
-              />
-
-              <span className="text-xs text-gray-500">
-                Remember me
-              </span>
-
-            </div>
-
-
             {/* Error Banner */}
             {error && (
               <div className="rounded-xl bg-red-50 p-3 text-xs font-medium text-red-600 border border-red-200">
@@ -232,7 +151,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
               </div>
             )}
 
-            {/* Login Button */}
+            {/* Send Code */}
             <button
               type="submit"
               disabled={loading}
@@ -241,25 +160,25 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
                          hover:-translate-y-0.5 hover:bg-[#3E3E75]
                          hover:shadow-lg disabled:opacity-50"
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? "Sending..." : "Send Reset Code"}
             </button>
 
           </form>
 
 
-          {/* ================= SIGN UP ================= */}
-          <div className="mt-8 text-center">
+          {/* Back to Login */}
+          <div className="mt-7 text-center">
 
             <p className="text-sm text-gray-500">
 
-              Don't have an account?{" "}
+              Remembered your password?{" "}
 
               <button
                 type="button"
-                onClick={onSignUp}
+                onClick={onBack}
                 className="font-semibold text-[#4E1F6E] hover:underline"
               >
-                Sign Up
+                Login
               </button>
 
             </p>
@@ -274,4 +193,4 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
   );
 }
 
-export default LoginPage;
+export default ForgotPasswordPage;

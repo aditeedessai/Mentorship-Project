@@ -2,13 +2,10 @@ import { useState } from "react";
 import { Eye, EyeOff, BookOpen } from "lucide-react";
 import { supabase } from "../services/supabase";
 
-function SignUpPage({ onSignUpSuccess, onLogin }) {
+function ResetPasswordPage({ onComplete }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [name, setName] = useState("");
-  const [dob, setDob] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -27,25 +24,18 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
     setLoading(true);
 
     try {
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
+      const { data, error: updateError } = await supabase.auth.updateUser({
         password,
-        options: {
-          data: {
-            full_name: name,
-            date_of_birth: dob,
-          },
-        },
       });
 
-      if (authError) {
-        setError(authError.message || "Failed to create account.");
+      if (updateError) {
+        setError(updateError.message || "Failed to update password.");
         setLoading(false);
         return;
       }
 
-      if (onSignUpSuccess && data?.user) {
-        onSignUpSuccess(data.user.email);
+      if (onComplete) {
+        onComplete(data);
       }
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
@@ -55,7 +45,7 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFA] px-6 py-8">
+    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFA] px-6">
 
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl lg:grid-cols-2">
 
@@ -83,16 +73,14 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
 
 
             <h1 className="max-w-md text-4xl font-bold leading-tight">
-              Your learning journey
+              Set a new
               <br />
-              starts here.
+              password.
             </h1>
 
 
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100">
-              Create your personalized student profile and let AI Study
-              Engine help you learn smarter, practice better, and prepare
-              with confidence.
+              Choose a strong, new password to keep your account secure.
             </p>
 
           </div>
@@ -131,96 +119,31 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
           <div className="mb-7">
 
             <h2 className="text-3xl font-bold text-[#3E3E75]">
-              Create your account
+              Create a new password
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
-              Set up your profile to start your personalized learning journey.
+              Your identity is verified. Set a new password for your account.
             </p>
 
           </div>
 
 
-          {/* ================= SIGN UP FORM ================= */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ================= FORM ================= */}
+          <form onSubmit={handleSubmit} className="space-y-5">
 
-            {/* Full Name */}
+            {/* New Password */}
             <div>
 
               <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
-                Full Name
-              </label>
-
-              <input
-                type="text"
-                placeholder="Enter your full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm
-                           outline-none transition-all
-                           focus:border-[#45A9A9] focus:bg-white
-                           focus:ring-2 focus:ring-[#98E8DE]/40"
-              />
-
-            </div>
-
-
-            {/* Date of Birth */}
-            <div>
-
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
-                Date of Birth
-              </label>
-
-              <input
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm
-                           text-gray-600 outline-none transition-all
-                           focus:border-[#45A9A9] focus:bg-white
-                           focus:ring-2 focus:ring-[#98E8DE]/40"
-              />
-
-            </div>
-
-
-            {/* Email */}
-            <div>
-
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
-                Email Address
-              </label>
-
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm
-                           outline-none transition-all
-                           focus:border-[#45A9A9] focus:bg-white
-                           focus:ring-2 focus:ring-[#98E8DE]/40"
-              />
-
-            </div>
-
-
-            {/* Password */}
-            <div>
-
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
-                Password
+                New Password
               </label>
 
               <div className="relative">
 
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Create a password"
+                  placeholder="Enter a new password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -252,14 +175,14 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
             <div>
 
               <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
-                Confirm Password
+                Confirm New Password
               </label>
 
               <div className="relative">
 
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
+                  placeholder="Confirm your new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -289,31 +212,14 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
             </div>
 
 
-            {/* Error Message */}
+            {/* Error Banner */}
             {error && (
-              <p className="text-sm font-medium text-red-500">
+              <div className="rounded-xl bg-red-50 p-3 text-xs font-medium text-red-600 border border-red-200">
                 {error}
-              </p>
+              </div>
             )}
 
-
-            {/* Terms */}
-            <div className="flex items-start gap-2 pt-1">
-
-              <input
-                type="checkbox"
-                required
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#4E1F6E]"
-              />
-
-              <p className="text-xs leading-5 text-gray-500">
-                I agree to the Terms of Service and Privacy Policy.
-              </p>
-
-            </div>
-
-
-            {/* Create Account */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -322,30 +228,10 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
                          hover:-translate-y-0.5 hover:bg-[#3E3E75]
                          hover:shadow-lg disabled:opacity-50"
             >
-              {loading ? "Creating Account..." : "Create Account"}
+              {loading ? "Updating..." : "Update Password"}
             </button>
 
           </form>
-
-
-          {/* Login */}
-          <div className="mt-7 text-center">
-
-            <p className="text-sm text-gray-500">
-
-              Already have an account?{" "}
-
-              <button
-                type="button"
-                onClick={onLogin}
-                className="font-semibold text-[#4E1F6E] hover:underline"
-              >
-                Login
-              </button>
-
-            </p>
-
-          </div>
 
         </div>
 
@@ -355,4 +241,4 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
   );
 }
 
-export default SignUpPage;
+export default ResetPasswordPage;
