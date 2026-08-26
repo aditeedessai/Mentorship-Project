@@ -190,7 +190,38 @@ def test_full_e2e_authenticated_flow_and_two_user_isolation():
             attempts.submit_section_answers(attempt_id_a, payload=sub_valid, current_user=user_b)
         assert exc_info.value.status_code == 404
 
-    # 4c. Finish attempt as User A
+    # 4c. Submit answers for remaining 3 section types to complete all 4 mandatory sections
+    for q_type, q_enum in [("mcq", QuestionType.MCQ), ("application", QuestionType.APPLICATION), ("long", QuestionType.LONG)]:
+        q_sec_id = f"q_e2e_{q_type}_{uuid.uuid4().hex[:6]}"
+        quiz_repository.save_questions(
+            study_set_id=study_set_id_a,
+            questions=[{
+                "question_id": q_sec_id,
+                "study_set_id": study_set_id_a,
+                "question_type": q_type,
+                "topic": "Machine Learning",
+                "question": f"Sample {q_type} question?",
+                "reference_answer": "Sample answer",
+                "marks": 2.0 if q_type == "mcq" else 10.0
+            }]
+        )
+        sub_sec = SubmitAnswersRequest(
+            question_type=q_enum,
+            answers=[AnswerItem(question_id=q_sec_id, student_answer="A" if q_type == "mcq" else "Sample answer")]
+        )
+        dummy_eval = {
+            "final_score": 1.0,
+            "marks_awarded": 2.0 if q_type == "mcq" else 10.0,
+            "semantic_score": 0.9,
+            "concept_score": 0.95,
+            "is_correct": True,
+            "matched_concepts": ["concept"],
+            "missed_concepts": []
+        }
+        with patch("backend.services.evaluation_service.evaluate_answer", return_value=dummy_eval), patch("backend.services.evaluation_service.evaluate_mcq", return_value=dummy_eval):
+            attempts.submit_section_answers(attempt_id_a, payload=sub_sec, current_user=user_a)
+
+    # Finish attempt as User A
     finished_a = attempts.finish_attempt(attempt_id_a, current_user=user_a)
     assert finished_a.status.value == "completed"
 

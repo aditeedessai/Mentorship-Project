@@ -7,6 +7,7 @@ export default function SectionResultPage({ onNavigate }) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  
   // Retrieved state passed from the section submission
   const {
     attemptId,

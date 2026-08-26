@@ -47,6 +47,18 @@ class AttemptResponse(BaseModel):
         ge=0.0,
         description="Total marks awarded to the student in this attempt"
     )
+    completed_sections: list[str] = Field(
+        default_factory=list,
+        description="List of completed question-type section names (mcq, short, application, long)"
+    )
+    remaining_sections: list[str] = Field(
+        default_factory=list,
+        description="List of remaining uncompleted question-type section names"
+    )
+    is_attempt_complete: bool = Field(
+        False,
+        description="True if all 4 mandatory question-type sections have been evaluated"
+    )
     created_at: datetime = Field(
         ...,
         description="Timestamp when the attempt was created (TIMESTAMPTZ)"

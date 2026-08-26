@@ -9,8 +9,8 @@ class AnswerItem(BaseModel):
     )
     student_answer: str = Field(
         ...,
-        min_length=1,
-        description="The student's submitted answer (e.g. 'A' for MCQ or text response for open-ended)"
+        min_length=0,
+        description="The student's submitted answer (e.g. 'A' for MCQ, text response for open-ended, or empty string '' for skipped)"
     )
 
 

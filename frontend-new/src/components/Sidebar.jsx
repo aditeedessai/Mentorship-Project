@@ -1,6 +1,7 @@
 import {
   Home,
   Upload,
+  BookOpen,
   ClipboardList,
   CalendarDays,
   TrendingUp,
@@ -11,6 +12,7 @@ import {
 const menuItems = [
   { name: "Home", page: "dashboard", icon: Home },
   { name: "Upload", page: "upload", icon: Upload },
+  { name: "Study Sets", page: "study-sets", icon: BookOpen },
   { name: "Quiz", page: "quiz", icon: ClipboardList },
   { name: "Planner", page: "planner", icon: CalendarDays },
   { name: "Progress", page: "progress", icon: TrendingUp },

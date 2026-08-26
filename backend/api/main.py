@@ -1,4 +1,5 @@
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
     attempts,
@@ -15,7 +16,20 @@ app = FastAPI(
     description="FastAPI API layer for the study engine.",
 )
 
-# Base API Router under /api
+# ── CORS Configuration ───────────────────────────────────────────────
+# Allow the React/Vite frontend to communicate with the FastAPI backend.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Base API Router under /api ───────────────────────────────────────
 api_router = APIRouter(prefix="/api")
 
 # Include all module routers under /api
