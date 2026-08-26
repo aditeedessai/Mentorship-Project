@@ -4,6 +4,7 @@ import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import StudySetsPage from "./pages/StudySetsPage";
+import IndivisualStudySetPage from "./pages/indivisualStudySetPage";
 import ResultsPage from "./pages/ResultsPage";
 import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
@@ -12,7 +13,6 @@ import Sidebar from "./components/Sidebar";
 
 import {
   fetchStudySets,
-  createStudySet,
   deleteStudySet,
 } from "./services/api";
 
@@ -104,31 +104,6 @@ function App() {
     loadStudySets();
   }, [user]);
 
-  // ================= CREATE STUDY SET =================
-  const handleCreateStudySet = async (name) => {
-    if (!name?.trim()) {
-      setStudySetsError("Please enter a study set name.");
-      return false;
-    }
-
-    try {
-      setStudySetsLoading(true);
-      setStudySetsError("");
-
-      const newSet = await createStudySet(name.trim());
-
-      setStudySets((prev) => [newSet, ...prev]);
-      setSelectedStudySetId(newSet.study_set_id);
-
-      return true;
-    } catch (error) {
-      console.error("Failed to create study set:", error);
-      setStudySetsError("Failed to create study set.");
-      return false;
-    } finally {
-      setStudySetsLoading(false);
-    }
-  };
 
   // ================= DELETE STUDY SET =================
   const handleDeleteStudySet = async (studySetId) => {
@@ -213,7 +188,16 @@ function App() {
         {currentPage === "upload" && (
           <UploadPage
             studySetId={selectedStudySetId}
-            onNavigate={setCurrentPage}
+            onNavigate={(page, state) => {
+              if (state?.studySetId) {
+                setSelectedStudySetId(state.studySetId);
+              }
+              setCurrentPage(page);
+            }}
+            onStudySetCreated={(newStudySet) => {
+              setStudySets((prev) => [newStudySet, ...prev]);
+              setSelectedStudySetId(newStudySet.study_set_id);
+            }}
           />
         )}
 
@@ -223,11 +207,29 @@ function App() {
             studySets={studySets}
             studySetsLoading={studySetsLoading}
             studySetsError={studySetsError}
-            onCreateStudySet={handleCreateStudySet}
+            onCreateClick={() => {
+              setSelectedStudySetId(null);
+              setStudySetsError("");
+              setCurrentPage("upload");
+            }}
             onDeleteStudySet={handleDeleteStudySet}
             onContinueStudying={(studySetId) => {
               setSelectedStudySetId(studySetId);
-              setCurrentPage("upload");
+              setCurrentPage("study-set");
+            }}
+          />
+        )}
+
+        {/* ================= INDIVIDUAL STUDY SET ================= */}
+        {currentPage === "study-set" && (
+          <IndivisualStudySetPage
+            studySetId={selectedStudySetId}
+            studySets={studySets}
+            onNavigate={(page, state) => {
+              if (state?.studySetId) {
+                setSelectedStudySetId(state.studySetId);
+              }
+              setCurrentPage(page);
             }}
           />
         )}
@@ -274,8 +276,9 @@ function App() {
               {/* CREATE STUDY SET */}
               <button
                 onClick={() => {
+                  setSelectedStudySetId(null);
                   setStudySetsError("");
-                  setCurrentPage("study-sets");
+                  setCurrentPage("upload");
                 }}
                 className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
               >

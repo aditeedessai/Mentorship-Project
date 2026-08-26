@@ -76,6 +76,14 @@ export async function createStudySet(name) {
 }
 
 /**
+ * Fetch a single study set by ID.
+ * GET /api/study-sets/{studySetId}
+ */
+export async function fetchStudySet(studySetId) {
+  return request(`/api/study-sets/${studySetId}`);
+}
+
+/**
  * Delete a study set.
  * DELETE /api/study-sets/{studySetId}
  */
@@ -86,6 +94,15 @@ export async function deleteStudySet(studySetId) {
 }
 
 // ── Documents ────────────────────────────────────────────────────────
+
+/**
+ * Fetch documents for a specific study set.
+ * GET /api/study-sets/{studySetId}/documents
+ */
+export async function fetchStudySetDocuments(studySetId) {
+  const data = await request(`/api/study-sets/${studySetId}/documents`);
+  return data.documents || [];
+}
 
 /**
  * Upload multiple document files to a study set in a single request.

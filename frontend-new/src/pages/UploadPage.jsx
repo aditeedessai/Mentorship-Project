@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, X, FileCheck, Presentation, FileText, Upload } from "lucide-react";
-import { uploadDocuments } from "../services/api";
+import { createStudySet, uploadDocuments } from "../services/api";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".pptx"];
 
@@ -13,11 +13,12 @@ const getFileIcon = (fileName) => {
   return <FileText size={22} className="text-[#4E1F6E]" />;
 };
 
-function UploadPage({ studySetId, onNavigate }) {
+function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   const navigate = useNavigate();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadedDocId, setUploadedDocId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [studySetName, setStudySetName] = useState("");
 
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -86,7 +87,7 @@ function UploadPage({ studySetId, onNavigate }) {
     setUploadSuccess("");
   };
 
-  // ================= UPLOAD DOCUMENTS =================
+  // ================= UPLOAD DOCUMENTS FOR EXISTING STUDY SET =================
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       setUploadError("Please select at least one file first.");
@@ -132,6 +133,68 @@ function UploadPage({ studySetId, onNavigate }) {
     }
   };
 
+  // ================= CREATE STUDY SET & UPLOAD DOCUMENTS =================
+  const handleCreateAndUpload = async () => {
+    if (selectedFiles.length === 0) {
+      setUploadError("Please select at least one document file.");
+      return;
+    }
+
+    if (!studySetName.trim()) {
+      setUploadError("Please enter a study set name.");
+      return;
+    }
+
+    let newSet = null;
+
+    try {
+      setUploading(true);
+      setUploadError("");
+      setUploadSuccess("");
+
+      // 1. Create Study Set via API
+      setStatusMessage("Creating study set...");
+      newSet = await createStudySet(studySetName.trim());
+
+      const newStudySetId = newSet.study_set_id;
+
+      // 2. Upload Documents to newly created study set via API
+      const fileCount = selectedFiles.length;
+      setStatusMessage(
+        `Uploading and processing ${fileCount} document${fileCount > 1 ? "s" : ""}...`
+      );
+
+      await uploadDocuments(newStudySetId, selectedFiles);
+
+      // 3. Clear state & notify parent
+      setSelectedFiles([]);
+      setStudySetName("");
+
+      if (onStudySetCreated) {
+        onStudySetCreated(newSet);
+      }
+
+      if (onNavigate) {
+        onNavigate("study-sets", { studySetId: newStudySetId });
+      }
+    } catch (error) {
+      console.error("Failed to create study set or upload documents:", error);
+
+      if (newSet) {
+        setUploadError(
+          `Study set "${studySetName.trim()}" was created, but document upload failed: ${error.message || "Upload error"}.`
+        );
+      } else {
+        setUploadError(
+          error.message || "Failed to create study set."
+        );
+      }
+    } finally {
+      setUploading(false);
+      setStatusMessage("");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFA]">
 
@@ -147,27 +210,17 @@ function UploadPage({ studySetId, onNavigate }) {
 
           <div>
             <h1 className="text-3xl font-bold text-[#3E3E75]">
-              Upload Study Material
+              {!studySetId ? "Create Study Set" : "Upload Study Material"}
             </h1>
 
             <p className="mt-1 text-sm text-gray-500">
-              Upload your study material and let AI create a
-              personalized learning experience.
+              {!studySetId
+                ? "Upload your study materials and give your set a name to get started."
+                : "Upload your study material and let AI create a personalized learning experience."}
             </p>
           </div>
         </div>
       </div>
-
-      {/* ================= STUDY SET WARNING ================= */}
-      {!studySetId && (
-        <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-          <p className="text-sm font-medium text-yellow-800">
-            Please create a study set first, then select
-            <strong> Continue Studying </strong>
-            to upload documents.
-          </p>
-        </div>
-      )}
 
       {/* ================= SUCCESS MESSAGE ================= */}
       {uploadSuccess && (
@@ -294,18 +347,20 @@ function UploadPage({ studySetId, onNavigate }) {
                     ))}
                   </div>
 
-                  {/* ================= UPLOAD BUTTON ================= */}
-                  <button
-                    type="button"
-                    onClick={handleUpload}
-                    disabled={uploading || !studySetId || selectedFiles.length === 0}
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Upload size={17} />
-                    {uploading
-                      ? (statusMessage || "Processing...")
-                      : `Upload & Process ${selectedFiles.length} Document${selectedFiles.length > 1 ? "s" : ""}`}
-                  </button>
+                  {/* ================= UPLOAD BUTTON FOR EXISTING STUDY SET ================= */}
+                  {studySetId && (
+                    <button
+                      type="button"
+                      onClick={handleUpload}
+                      disabled={uploading || selectedFiles.length === 0}
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Upload size={17} />
+                      {uploading
+                        ? (statusMessage || "Processing...")
+                        : `Upload & Process ${selectedFiles.length} Document${selectedFiles.length > 1 ? "s" : ""}`}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -402,22 +457,78 @@ function UploadPage({ studySetId, onNavigate }) {
         </div>
       </div>
 
+      {/* ================= STUDY SET NAME & ACTIONS (FOR NEW STUDY SET CREATION) ================= */}
+      {!studySetId && (
+        <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold text-[#3E3E75]">
+            Study Set Name
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Give your new study set a name to organize your learning materials.
+          </p>
+
+          <input
+            type="text"
+            placeholder="Enter study set name"
+            value={studySetName}
+            onChange={(e) => {
+              setStudySetName(e.target.value);
+              setUploadError("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !uploading) {
+                handleCreateAndUpload();
+              }
+            }}
+            className="mt-4 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-[#3E3E75] outline-none transition focus:border-[#45A9A9] focus:ring-2 focus:ring-[#98E8DE]/40"
+          />
+
+          <div className="mt-6 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                onNavigate?.("study-sets");
+              }}
+              disabled={uploading}
+              className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCreateAndUpload}
+              disabled={uploading}
+              className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Upload size={17} />
+              {uploading
+                ? (statusMessage || "Creating...")
+                : "Create"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ================= GENERATE & ANSWER QUIZ ACTION ================= */}
-      {uploadedDocId && (
+      {studySetId && (
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-[#3E3E75]">
-              Documents Ready for Quiz
+              {uploadedDocId ? "Documents Ready for Quiz" : "Study Set Ready"}
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Your documents have been processed. Continue to configure and generate your personalized study questions.
+              {uploadedDocId
+                ? "Your documents have been processed. Continue to configure and generate your personalized study questions."
+                : "Configure your session and generate study questions for this set."}
             </p>
           </div>
 
           <button
             onClick={() => {
-              onNavigate?.("quiz");
+              onNavigate?.("quiz", { studySetId });
               navigate("/quiz", {
                 state: {
                   studySetId,
@@ -425,11 +536,11 @@ function UploadPage({ studySetId, onNavigate }) {
                 },
               });
             }}
-            disabled={!uploadedDocId || uploading}
+            disabled={uploading}
             className="shrink-0 flex items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sparkles size={17} />
-            Generate and Answer Quiz →
+            Continue to Quiz Configuration →
           </button>
         </div>
       )}

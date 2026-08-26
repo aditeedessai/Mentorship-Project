@@ -1,62 +1,62 @@
 import { useState } from "react";
-import { BookOpen, Plus, X, Trash2 } from "lucide-react";
-import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { BookOpen, Plus, X, Trash2, CheckCircle } from "lucide-react";
 
 function StudySetsPage({
   studySets,
   studySetsLoading,
   studySetsError,
-  onCreateStudySet,
+  onCreateClick,
   onDeleteStudySet,
   onContinueStudying,
 }) {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [studySetName, setStudySetName] = useState("");
-  const [formError, setFormError] = useState("");
-
   const [deletingStudySetId, setDeletingStudySetId] = useState(null);
-  const [studySetToDelete, setStudySetToDelete] = useState(null);
-  const [deleteError, setDeleteError] = useState("");
 
-  const handleCreate = async () => {
-    if (!studySetName.trim()) {
-      setFormError("Please enter a study set name.");
+  // Delete confirmation and success message
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState("");
+
+  // Open the in-dashboard confirmation
+  const handleDeleteClick = (studySet) => {
+    setDeleteSuccess("");
+    setDeleteConfirmation(studySet);
+  };
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    if (deletingStudySetId) {
       return;
     }
 
-    setFormError("");
-
-    const success = await onCreateStudySet(studySetName.trim());
-
-    if (success) {
-      setStudySetName("");
-      setShowCreateForm(false);
-    }
+    setDeleteConfirmation(null);
   };
 
-  const handleOpenDeleteModal = (studySet) => {
-    setStudySetToDelete(studySet);
-    setDeleteError("");
-  };
-
-  const handleCloseDeleteModal = () => {
-    if (deletingStudySetId) return;
-    setStudySetToDelete(null);
-    setDeleteError("");
-  };
-
+  // Confirm deletion
   const handleConfirmDelete = async () => {
-    if (!studySetToDelete || deletingStudySetId) return;
+    if (!deleteConfirmation) {
+      return;
+    }
+
+    const studySet = deleteConfirmation;
 
     try {
-      setDeleteError("");
-      setDeletingStudySetId(studySetToDelete.study_set_id);
+      setDeletingStudySetId(studySet.study_set_id);
 
-      await onDeleteStudySet(studySetToDelete.study_set_id);
-      setStudySetToDelete(null);
+      await onDeleteStudySet(studySet.study_set_id);
+
+      // Close confirmation after successful deletion
+      setDeleteConfirmation(null);
+
+      // Show success message on dashboard
+      setDeleteSuccess(
+        `Study set "${studySet.name}" deleted successfully.`
+      );
+
+      // Automatically hide success message after 4 seconds
+      setTimeout(() => {
+        setDeleteSuccess("");
+      }, 4000);
     } catch (error) {
       console.error("Failed to delete study set:", error);
-      setDeleteError("Failed to delete study set. Please try again.");
     } finally {
       setDeletingStudySetId(null);
     }
@@ -77,10 +77,7 @@ function StudySetsPage({
         </div>
 
         <button
-          onClick={() => {
-            setShowCreateForm(true);
-            setFormError("");
-          }}
+          onClick={onCreateClick}
           className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
         >
           <Plus size={18} />
@@ -88,76 +85,30 @@ function StudySetsPage({
         </button>
       </div>
 
-      {/* ================= CREATE FORM ================= */}
-      {showCreateForm && (
-        <div className="mb-6 rounded-2xl border border-[#98E8DE] bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[#3E3E75]">
-                Create Study Set
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                Give your new study set a name.
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                setShowCreateForm(false);
-                setStudySetName("");
-                setFormError("");
-              }}
-              className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Enter study set name"
-            value={studySetName}
-            onChange={(e) => {
-              setStudySetName(e.target.value);
-              setFormError("");
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleCreate();
-              }
-            }}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-[#3E3E75] outline-none transition focus:border-[#45A9A9] focus:ring-2 focus:ring-[#98E8DE]/40"
+      {/* ================= DELETE SUCCESS MESSAGE ================= */}
+      {deleteSuccess && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-[#98E8DE] bg-[#98E8DE]/20 px-5 py-4 text-sm text-[#3E3E75] shadow-sm">
+          <CheckCircle
+            size={20}
+            className="shrink-0 text-[#4E1F6E]"
           />
 
-          {formError && (
-            <p className="mt-2 text-sm text-red-500">
-              {formError}
-            </p>
-          )}
+          <span className="font-medium">
+            {deleteSuccess}
+          </span>
 
-          <div className="mt-4 flex justify-end gap-3">
-            <button
-              onClick={() => {
-                setShowCreateForm(false);
-                setStudySetName("");
-                setFormError("");
-              }}
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={handleCreate}
-              disabled={studySetsLoading}
-              className="rounded-lg bg-[#4E1F6E] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#3E3E75] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {studySetsLoading ? "Creating..." : "Create"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setDeleteSuccess("")}
+            className="ml-auto rounded-md p-1 text-gray-400 transition hover:bg-white hover:text-gray-600"
+            aria-label="Close success message"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
+
+
 
       {/* ================= STUDY SETS ================= */}
       <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -170,6 +121,62 @@ function StudySetsPage({
             Continue learning from your uploaded materials.
           </p>
         </div>
+
+        {/* ================= DELETE CONFIRMATION ================= */}
+        {deleteConfirmation && (
+          <div className="mb-6 rounded-2xl border border-red-100 bg-red-50/60 p-5 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                <Trash2
+                  size={19}
+                  className="text-red-500"
+                />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-[#3E3E75]">
+                  Delete Study Set?
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-[#3E3E75]">
+                    "{deleteConfirmation.name}"
+                  </span>
+                  ?
+                </p>
+
+                <p className="mt-1 text-xs text-gray-500">
+                  This action cannot be undone.
+                </p>
+
+                <div className="mt-4 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCancelDelete}
+                    disabled={Boolean(deletingStudySetId)}
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={Boolean(deletingStudySetId)}
+                    className="flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 size={15} />
+
+                    {deletingStudySetId
+                      ? "Deleting..."
+                      : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {studySetsLoading && (
           <p className="text-sm text-gray-500">
@@ -232,8 +239,13 @@ function StudySetsPage({
                         {/* DELETE BUTTON */}
                         <button
                           type="button"
-                          onClick={() => handleOpenDeleteModal(studySet)}
-                          disabled={isDeleting}
+                          onClick={() =>
+                            handleDeleteClick(studySet)
+                          }
+                          disabled={
+                            isDeleting ||
+                            Boolean(deletingStudySetId)
+                          }
                           title="Delete study set"
                           className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                         >
@@ -257,8 +269,8 @@ function StudySetsPage({
                       <span>
                         {studySet.created_at
                           ? new Date(
-                              studySet.created_at
-                            ).toLocaleDateString()
+                            studySet.created_at
+                          ).toLocaleDateString()
                           : "Recently created"}
                       </span>
                     </div>
@@ -283,20 +295,6 @@ function StudySetsPage({
             </div>
           )}
       </div>
-
-      {/* ================= DELETE CONFIRMATION MODAL ================= */}
-      <DeleteConfirmModal
-        isOpen={!!studySetToDelete}
-        title="Delete Study Set?"
-        itemName={studySetToDelete?.name || ""}
-        warningText="This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        isLoading={!!deletingStudySetId}
-        error={deleteError}
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCloseDeleteModal}
-      />
     </div>
   );
 }
