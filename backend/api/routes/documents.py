@@ -7,8 +7,10 @@ from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
+    SummaryResponse,
 )
 from backend.database import study_set_repository
+from backend.quiz_generation.summary_generator import generate_summary
 from backend.services import document_service
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
@@ -150,4 +152,46 @@ def get_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve document details: {str(e)}"
         )
+
+
+@router.get(
+    "/documents/{document_id}/summary",
+    response_model=SummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get a quick summary of a document",
+    description="Generates a quick, orientation-level summary of a document's study material using Gemini. Generated fresh on each request and not persisted."
+)
+def get_document_summary(
+    document_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> SummaryResponse:
+    doc = study_set_repository.get_document_by_id(str(document_id))
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID '{document_id}' not found"
+        )
+
+    # Verify ownership through relationship: document -> study_set -> user_id
+    study_set = study_set_repository.get_study_set(doc["study_set_id"], user_id=current_user.user_id)
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID '{document_id}' not found"
+        )
+
+    try:
+        summary = generate_summary(document_ids=str(document_id))
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate summary: {str(e)}"
+        )
+
+    return SummaryResponse(**summary)
 

@@ -449,8 +449,8 @@ function UploadPage({ studySetId, onNavigate }) {
 
           <button
             onClick={() => {
-              onNavigate?.("quiz");
-              navigate("/quiz", {
+              onNavigate?.("summary");
+              navigate("/summary", {
                 state: {
                   studySetId,
                   documentId: uploadedDocId,

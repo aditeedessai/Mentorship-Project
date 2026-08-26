@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import UploadPage from "./pages/UploadPage";
+import SummaryPage from "./pages/SummaryPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import VerifyOtpPage from "./pages/VerifyOtpPage";
@@ -269,6 +270,14 @@ function App() {
         {/* ================= UPLOAD ================= */}
         {currentPage === "upload" && (
           <UploadPage
+            studySetId={selectedStudySetId}
+            onNavigate={setCurrentPage}
+          />
+        )}
+
+        {/* ================= SUMMARY ================= */}
+        {currentPage === "summary" && (
+          <SummaryPage
             studySetId={selectedStudySetId}
             onNavigate={setCurrentPage}
           />

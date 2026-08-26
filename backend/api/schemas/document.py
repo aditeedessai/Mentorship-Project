@@ -35,3 +35,24 @@ class DocumentListResponse(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SummaryResponse(BaseModel):
+    """
+    Schema for a quick, orientation-level summary of a document's study
+    material. Generated fresh via Gemini on each request; not persisted.
+    """
+    title: str = Field(
+        ...,
+        description="Short descriptive title for the study material"
+    )
+    overview_paragraphs: list[str] = Field(
+        ...,
+        description="2 to 5 short paragraphs giving a quick overview of the material, one distinct angle per paragraph"
+    )
+    key_topics: list[str] = Field(
+        default_factory=list,
+        description="Short list of key topics covered in the material"
+    )
+
+    model_config = ConfigDict(from_attributes=True)

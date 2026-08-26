@@ -105,6 +105,14 @@ export async function uploadDocument(studySetId, fileOrFormData) {
   });
 }
 
+/**
+ * Fetch a quick summary of a document's study material.
+ * GET /api/documents/{documentId}/summary
+ */
+export async function fetchDocumentSummary(documentId) {
+  return request(`/api/documents/${documentId}/summary`);
+}
+
 // ── Questions ────────────────────────────────────────────────────────
 
 /**
