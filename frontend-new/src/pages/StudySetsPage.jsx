@@ -15,6 +15,7 @@ function StudySetsPage({
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState("");
 
+
   // Open the in-dashboard confirmation
   const handleDeleteClick = (studySet) => {
     setDeleteSuccess("");
@@ -300,3 +301,4 @@ function StudySetsPage({
 }
 
 export default StudySetsPage;
+

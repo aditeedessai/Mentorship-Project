@@ -82,7 +82,6 @@ export async function createStudySet(name) {
 export async function fetchStudySet(studySetId) {
   return request(`/api/study-sets/${studySetId}`);
 }
-
 /**
  * Delete a study set.
  * DELETE /api/study-sets/{studySetId}
@@ -92,6 +91,17 @@ export async function deleteStudySet(studySetId) {
     method: "DELETE",
   });
 }
+
+/**
+ * Generate summary for a study set.
+ * POST /api/study-sets/{studySetId}/summary
+ */
+export async function generateStudySetSummary(studySetId) {
+  return request(`/api/study-sets/${studySetId}/summary`, {
+    method: "POST",
+  });
+}
+
 
 // ── Documents ────────────────────────────────────────────────────────
 

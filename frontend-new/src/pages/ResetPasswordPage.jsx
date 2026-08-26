@@ -3,42 +3,55 @@ import { Eye, EyeOff, BookOpen } from "lucide-react";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
 
-function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
+function ResetPasswordPage({ onComplete }) {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
+      // 1. Get the authenticated user from the active recovery session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      // 1. Derive the identical deterministic client hash using normalized email
-      const clientHashedPassword = await hashPasswordClient(password, normalizedEmail);
-
-      // 2. Sign in with Supabase Auth using the pre-hashed password
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password: clientHashedPassword,
-      });
-
-      if (authError) {
-        setError(authError.message || "Failed to sign in. Please check your credentials.");
+      if (userError || !user?.email) {
+        setError("Password reset session is invalid or has expired. Please request a new link.");
         setLoading(false);
         return;
       }
 
-      if (onLogin && data?.user) {
-        onLogin({
-          id: data.user.id,
-          name: data.user.user_metadata?.full_name || normalizedEmail.split("@")[0],
-          email: data.user.email,
-        });
+      const normalizedEmail = user.email.trim().toLowerCase();
+
+      // 2. Pre-hash the new password with the user's normalized email salt
+      const clientHashedPassword = await hashPasswordClient(password, normalizedEmail);
+
+      // 3. Update the password on Supabase
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        password: clientHashedPassword,
+      });
+
+      if (updateError) {
+        setError(updateError.message || "Failed to update password.");
+        setLoading(false);
+        return;
+      }
+
+      if (onComplete) {
+        onComplete(data);
       }
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
@@ -61,16 +74,13 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
             </div>
 
             <h1 className="max-w-md text-4xl font-bold leading-tight">
-              Study smarter.
+              Set a new
               <br />
-              Learn better.
-              <br />
-              Achieve more.
+              password.
             </h1>
 
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100">
-              Your personalized AI-powered study companion designed to
-              help you understand, practice, and prepare with confidence.
+              Choose a strong, new password to keep your account secure.
             </p>
           </div>
 
@@ -82,7 +92,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
         {/* ================= RIGHT SECTION ================= */}
         <div className="p-8 sm:p-12 lg:p-14">
           {/* Mobile Logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <div className="mb-7 flex items-center gap-3 lg:hidden">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#98E8DE]">
               <BookOpen size={21} className="text-[#4E1F6E]" />
             </div>
@@ -90,56 +100,26 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
           </div>
 
           {/* Heading */}
-          <div className="mb-8">
+          <div className="mb-7">
             <h2 className="text-3xl font-bold text-[#3E3E75]">
-              Welcome back
+              Create a new password
             </h2>
             <p className="mt-2 text-sm text-gray-500">
-              Sign in to continue your personalized learning journey.
+              Your identity is verified. Set a new password for your account.
             </p>
           </div>
 
-          {/* ================= LOGIN FORM ================= */}
+          {/* ================= FORM ================= */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
+            {/* New Password */}
             <div>
               <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
-                Email Address
+                New Password
               </label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm
-                           outline-none transition-all
-                           focus:border-[#45A9A9] focus:bg-white
-                           focus:ring-2 focus:ring-[#98E8DE]/40"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="text-sm font-medium text-[#3E3E75]">
-                  Password
-                </label>
-
-                {/* Forgot Password */}
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  className="text-xs font-medium text-[#4E1F6E] hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder="Enter a new password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -148,8 +128,6 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
                              focus:border-[#45A9A9] focus:bg-white
                              focus:ring-2 focus:ring-[#98E8DE]/40"
                 />
-
-                {/* Show / Hide Password */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -161,15 +139,32 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
               </div>
             </div>
 
-            {/* Remember Me */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 accent-[#4E1F6E]"
-              />
-              <span className="text-xs text-gray-500">
-                Remember me
-              </span>
+            {/* Confirm Password */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm your new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-11 text-sm
+                             outline-none transition-all
+                             focus:border-[#45A9A9] focus:bg-white
+                             focus:ring-2 focus:ring-[#98E8DE]/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
+                             hover:text-[#4E1F6E]"
+                >
+                  {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                </button>
+              </div>
             </div>
 
             {/* Error Banner */}
@@ -179,7 +174,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
               </div>
             )}
 
-            {/* Login Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -188,27 +183,13 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword }) {
                          hover:-translate-y-0.5 hover:bg-[#3E3E75]
                          hover:shadow-lg disabled:opacity-50"
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? "Updating..." : "Update Password"}
             </button>
           </form>
-
-          {/* ================= SIGN UP ================= */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={onSignUp}
-                className="font-semibold text-[#4E1F6E] hover:underline"
-              >
-                Sign Up
-              </button>
-            </p>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-export default LoginPage;
+export default ResetPasswordPage;
