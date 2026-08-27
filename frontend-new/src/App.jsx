@@ -14,7 +14,6 @@ import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
 import Sidebar from "./components/Sidebar";
-import SettingsPage from "./pages/SettingsPage";
 
 import {
   fetchStudySets,
@@ -45,6 +44,17 @@ function App() {
 
   // ================= SELECTED STUDY SET =================
   const [selectedStudySetId, setSelectedStudySetId] = useState(null);
+
+  // ================= CENTRAL NAVIGATION HANDLER =================
+  const handleNavigate = (page, state) => {
+    if (page === "upload") {
+      // When navigating to upload, start a fresh study set creation flow
+      setSelectedStudySetId(null);
+    } else if (state?.studySetId) {
+      setSelectedStudySetId(state.studySetId);
+    }
+    setCurrentPage(page);
+  };
 
   // ================= AUTH SESSION LISTENER =================
   useEffect(() => {
@@ -134,9 +144,6 @@ function App() {
   };
 
   // ================= PASSWORD RESET CHECK =================
-  // Takes priority over the auth gate below: verifying a recovery OTP
-  // establishes a real Supabase session, but the user must set a new
-  // password before being allowed into the app.
   if (needsPasswordReset) {
     return (
       <ResetPasswordPage
@@ -195,9 +202,6 @@ function App() {
             if (otpType === "recovery") {
               setNeedsPasswordReset(true);
             }
-            // For signup, the onAuthStateChange listener above picks up
-            // the new session and sets `user`, which moves the app past
-            // this auth gate into the dashboard automatically.
           }}
           onBack={() => setAuthPage("login")}
         />
@@ -223,27 +227,19 @@ function App() {
   // ================= MAIN APP =================
   return (
     <div className="flex min-h-screen bg-[#F8FAFA]">
-
       {/* ================= SIDEBAR ================= */}
       <Sidebar
-        onNavigate={setCurrentPage}
+        onNavigate={handleNavigate}
         currentPage={currentPage}
         user={user}
       />
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="ml-64 flex-1 overflow-y-auto p-8">
-
         {/* ================= UPLOAD ================= */}
         {currentPage === "upload" && (
           <UploadPage
-            studySetId={selectedStudySetId}
-            onNavigate={(page, state) => {
-              if (state?.studySetId) {
-                setSelectedStudySetId(state.studySetId);
-              }
-              setCurrentPage(page);
-            }}
+            onNavigate={handleNavigate}
             onStudySetCreated={(newStudySet) => {
               setStudySets((prev) => [newStudySet, ...prev]);
               setSelectedStudySetId(newStudySet.study_set_id);
@@ -258,14 +254,11 @@ function App() {
             studySetsLoading={studySetsLoading}
             studySetsError={studySetsError}
             onCreateClick={() => {
-              setSelectedStudySetId(null);
-              setStudySetsError("");
-              setCurrentPage("upload");
+              handleNavigate("upload");
             }}
             onDeleteStudySet={handleDeleteStudySet}
             onContinueStudying={(studySetId) => {
-              setSelectedStudySetId(studySetId);
-              setCurrentPage("study-set");
+              handleNavigate("study-set", { studySetId });
             }}
           />
         )}
@@ -275,12 +268,7 @@ function App() {
           <IndivisualStudySetPage
             studySetId={selectedStudySetId}
             studySets={studySets}
-            onNavigate={(page, state) => {
-              if (state?.studySetId) {
-                setSelectedStudySetId(state.studySetId);
-              }
-              setCurrentPage(page);
-            }}
+            onNavigate={handleNavigate}
           />
         )}
 
@@ -288,12 +276,7 @@ function App() {
         {(currentPage === "results" ||
           currentPage === "progress") && (
             <ResultsPage
-              onNavigate={(page, state) => {
-                if (state?.studySetId) {
-                  setSelectedStudySetId(state.studySetId);
-                }
-                setCurrentPage(page);
-              }}
+              onNavigate={handleNavigate}
             />
           )}
 
@@ -309,13 +292,11 @@ function App() {
 
         {/* ================= DASHBOARD ================= */}
         {currentPage === "dashboard" && (
-          <DashboardPage user={user} onNavigate={setCurrentPage} />
+          <DashboardPage user={user} onNavigate={handleNavigate} />
         )}
-
       </main>
     </div>
   );
 }
 
 export default App;
-
