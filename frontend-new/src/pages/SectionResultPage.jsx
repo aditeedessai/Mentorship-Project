@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchEvaluations, finishAttempt } from '../services/api';
 import { CheckCircle2, ChevronRight, XCircle, ArrowRight, BookOpen, AlertCircle } from 'lucide-react';
@@ -17,15 +17,12 @@ export default function SectionResultPage({ onNavigate }) {
     remainingSections = [],
   } = location.state || {};
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!attemptId);
   const [evaluations, setEvaluations] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!attemptId) {
-      setLoading(false);
-      return;
-    }
+    if (!attemptId) return;
 
     async function loadSectionResults() {
       try {

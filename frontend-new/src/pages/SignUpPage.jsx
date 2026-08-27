@@ -233,7 +233,7 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#4E1F6E] py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-lg disabled:opacity-50"
+              className="w-full rounded-xl bg-[#4E1F6E] py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Creating Account..." : "Create Account"}
             </button>

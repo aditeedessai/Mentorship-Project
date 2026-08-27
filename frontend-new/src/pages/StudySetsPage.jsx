@@ -5,35 +5,16 @@ function StudySetsPage({
   studySets,
   studySetsLoading,
   studySetsError,
-  onCreateStudySet,
+  onCreateClick,
   onDeleteStudySet,
   onContinueStudying,
 }) {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [studySetName, setStudySetName] = useState("");
-  const [formError, setFormError] = useState("");
-
   const [deletingStudySetId, setDeletingStudySetId] = useState(null);
 
   // Delete confirmation and success message
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState("");
 
-  const handleCreate = async () => {
-    if (!studySetName.trim()) {
-      setFormError("Please enter a study set name.");
-      return;
-    }
-
-    setFormError("");
-
-    const success = await onCreateStudySet(studySetName.trim());
-
-    if (success) {
-      setStudySetName("");
-      setShowCreateForm(false);
-    }
-  };
 
   // Open the in-dashboard confirmation
   const handleDeleteClick = (studySet) => {
@@ -97,10 +78,7 @@ function StudySetsPage({
         </div>
 
         <button
-          onClick={() => {
-            setShowCreateForm(true);
-            setFormError("");
-          }}
+          onClick={onCreateClick}
           className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
         >
           <Plus size={18} />
@@ -131,76 +109,7 @@ function StudySetsPage({
         </div>
       )}
 
-      {/* ================= CREATE FORM ================= */}
-      {showCreateForm && (
-        <div className="mb-6 rounded-2xl border border-[#98E8DE] bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[#3E3E75]">
-                Create Study Set
-              </h2>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Give your new study set a name.
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                setShowCreateForm(false);
-                setStudySetName("");
-                setFormError("");
-              }}
-              className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Enter study set name"
-            value={studySetName}
-            onChange={(e) => {
-              setStudySetName(e.target.value);
-              setFormError("");
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleCreate();
-              }
-            }}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-[#3E3E75] outline-none transition focus:border-[#45A9A9] focus:ring-2 focus:ring-[#98E8DE]/40"
-          />
-
-          {formError && (
-            <p className="mt-2 text-sm text-red-500">
-              {formError}
-            </p>
-          )}
-
-          <div className="mt-4 flex justify-end gap-3">
-            <button
-              onClick={() => {
-                setShowCreateForm(false);
-                setStudySetName("");
-                setFormError("");
-              }}
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={handleCreate}
-              disabled={studySetsLoading}
-              className="rounded-lg bg-[#4E1F6E] px-5 py-2 text-sm font-medium text-white transition hover:bg-[#3E3E75] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {studySetsLoading ? "Creating..." : "Create"}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ================= STUDY SETS ================= */}
       <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -361,8 +270,8 @@ function StudySetsPage({
                       <span>
                         {studySet.created_at
                           ? new Date(
-                              studySet.created_at
-                            ).toLocaleDateString()
+                            studySet.created_at
+                          ).toLocaleDateString()
                           : "Recently created"}
                       </span>
                     </div>
