@@ -2,9 +2,7 @@ import {
   Home,
   Upload,
   BookOpen,
-  ClipboardList,
   CalendarDays,
-  TrendingUp,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -13,9 +11,7 @@ const menuItems = [
   { name: "Home", page: "dashboard", icon: Home },
   { name: "Upload", page: "upload", icon: Upload },
   { name: "Study Sets", page: "study-sets", icon: BookOpen },
-  { name: "Quiz", page: "quiz", icon: ClipboardList },
   { name: "Planner", page: "planner", icon: CalendarDays },
-  { name: "Progress", page: "progress", icon: TrendingUp },
   { name: "Settings", page: "settings", icon: Settings },
 ];
 
@@ -48,9 +44,7 @@ function Sidebar({ onNavigate, currentPage = "dashboard", user }) {
         <div className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              currentPage === item.page ||
-              (item.page === "progress" && currentPage === "results");
+            const isActive = currentPage === item.page;
 
             return (
               <button
