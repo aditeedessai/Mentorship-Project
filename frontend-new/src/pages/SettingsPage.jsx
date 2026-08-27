@@ -8,17 +8,26 @@ import {
   Moon,
   Sun,
   LogOut,
+  Settings,
 } from "lucide-react";
 
 const SettingsPage = ({ user }) => {
   return (
-    <div className="min-h-screen bg-[#F8FAFA] px-6 py-8 md:px-10">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#3E3E75]">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Manage your account and application preferences.
-        </p>
+    <div className="min-h-screen bg-[#F8FAFA]">
+      {/* Header Banner */}
+      <div className="mb-8 flex flex-col items-start justify-between gap-6 rounded-2xl bg-[#98E8DE]/25 p-8 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="flex items-center gap-2 text-3xl font-bold text-[#4E1F6E]">
+            Settings
+          </h1>
+          <p className="mt-2 text-sm text-[#3E3E75]/70">
+            Manage your account and application preferences.
+          </p>
+        </div>
+
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/60">
+          <Settings size={44} className="text-[#4E1F6E]" />
+        </div>
       </div>
 
       <div className="max-w-4xl space-y-6">

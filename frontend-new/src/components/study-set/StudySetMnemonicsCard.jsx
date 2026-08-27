@@ -53,7 +53,7 @@ function StudySetMnemonicsCard({
             </p>
           </div>
         </div>
-        <span className="bg-[#4E1F6E]/10 border border-[#4E1F6E]/20 text-[#4E1F6E] font-mono text-xs font-bold px-3.5 py-1 rounded-full shadow-2xs">
+        <span className="shrink-0 whitespace-nowrap bg-[#4E1F6E]/10 border border-[#4E1F6E]/20 text-[#4E1F6E] font-mono text-xs font-bold px-3.5 py-1 rounded-full shadow-2xs">
           AI MEMORY TOOL
         </span>
       </div>

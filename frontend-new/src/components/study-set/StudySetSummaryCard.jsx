@@ -1,5 +1,5 @@
 import {
-  Brain,
+  FileText,
   Loader2,
   AlertCircle,
   RefreshCw,
@@ -25,9 +25,9 @@ function StudySetSummaryCard({
 }) {
   const summaryParagraphs = summary
     ? summary.overview_paragraphs ||
-      (summary.overview
-        ? [summary.overview]
-        : typeof summary === "string"
+    (summary.overview
+      ? [summary.overview]
+      : typeof summary === "string"
         ? [summary]
         : [JSON.stringify(summary)])
     : [];
@@ -43,7 +43,7 @@ function StudySetSummaryCard({
     >
       <div className="flex items-center gap-3 mb-5">
         <div className="bg-gradient-to-br from-[#98E8DE]/40 via-[#98E8DE]/20 to-[#4E1F6E]/10 border border-[#98E8DE]/60 text-[#4E1F6E] p-3 rounded-xl shadow-2xs ring-1 ring-[#98E8DE]/30">
-          <Brain size={22} />
+          <FileText size={22} />
         </div>
         <div>
           <h2 className="text-xl font-extrabold text-[#3E3E75]">Summary</h2>
@@ -109,23 +109,7 @@ function StudySetSummaryCard({
               A comprehensive overview of your documents is ready to be generated.
             </p>
 
-            <div className="space-y-2 mb-6">
-              <p className="font-mono text-[11px] font-bold text-[#4E1F6E] uppercase tracking-wider mb-2">
-                KEY TOPICS PREVIEW
-              </p>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-[#3E3E75]">
-                <CheckCircle2 size={18} className="text-[#006B5F] shrink-0" />
-                <span className="font-medium">Core Concepts</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-[#3E3E75]">
-                <CheckCircle2 size={18} className="text-[#006B5F] shrink-0" />
-                <span className="font-medium">Historical Context</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-[#3E3E75]">
-                <CheckCircle2 size={18} className="text-[#006B5F] shrink-0" />
-                <span className="font-medium">Critical Analysis</span>
-              </div>
-            </div>
+
 
             <button
               type="button"

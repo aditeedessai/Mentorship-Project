@@ -5,6 +5,7 @@ import {
   Presentation,
   FileSpreadsheet,
   File,
+  FolderOpen,
 } from "lucide-react";
 
 const getFileExtension = (fileName) => {
@@ -26,9 +27,21 @@ const getFileIcon = (fileName) => {
 function StudySetDocumentsCard({ documents = [], loading = false }) {
   return (
     <section className="rounded-2xl bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-[0_4px_25px_rgba(78,31,110,0.06)] hover:shadow-[0_8px_30px_rgba(78,31,110,0.09)] border border-gray-100/90 flex flex-col transition-all duration-300">
-      <div className="flex justify-between items-center mb-5">
-        <h2 className="text-xl font-extrabold text-[#3E3E75]">Documents Uploaded</h2>
-        <span className="bg-[#98E8DE]/35 border border-[#98E8DE]/70 text-[#4E1F6E] font-mono text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="bg-gradient-to-br from-[#98E8DE]/40 via-[#98E8DE]/20 to-[#4E1F6E]/10 border border-[#98E8DE]/60 text-[#4E1F6E] p-2.5 rounded-xl shadow-2xs shrink-0">
+            <FolderOpen size={20} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold text-[#3E3E75] leading-tight truncate">
+              Uploaded Documents
+            </h2>
+            <p className="text-xs text-gray-500 truncate">
+              Source files for this set
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 whitespace-nowrap bg-[#98E8DE]/35 border border-[#98E8DE]/70 text-[#4E1F6E] font-mono text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
           {documents.length} File{documents.length === 1 ? "" : "s"}
         </span>
       </div>

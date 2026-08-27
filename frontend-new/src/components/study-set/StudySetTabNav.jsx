@@ -1,4 +1,4 @@
-import { Brain, Layers, Sparkles } from "lucide-react";
+import { FileText, Layers, Brain } from "lucide-react";
 
 function StudySetTabNav({
   activeTab,
@@ -21,7 +21,7 @@ function StudySetTabNav({
             : "text-[#3E3E75] hover:text-[#4E1F6E] hover:bg-[#98E8DE]/25"
         }`}
       >
-        <Brain size={15} />
+        <FileText size={15} />
         <span>Summary</span>
       </button>
 
@@ -53,7 +53,7 @@ function StudySetTabNav({
             : "text-[#3E3E75] hover:text-[#4E1F6E] hover:bg-[#98E8DE]/25"
         }`}
       >
-        <Sparkles size={15} />
+        <Brain size={15} />
         <span>Mnemonics</span>
       </button>
     </div>

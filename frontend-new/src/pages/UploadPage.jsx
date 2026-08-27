@@ -150,21 +150,18 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
   return (
     <div className="min-h-screen bg-[#F8FAFA]">
       {/* ================= HEADER ================= */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#98E8DE]/50">
-            <Sparkles size={21} className="text-[#4E1F6E]" />
-          </div>
+      <div className="mb-8 flex flex-col items-start justify-between gap-6 rounded-2xl bg-[#98E8DE]/25 p-8 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="flex items-center gap-2 text-3xl font-bold text-[#4E1F6E]">
+            Create Study Set
+          </h1>
+          <p className="mt-2 text-sm text-[#3E3E75]/70">
+            Upload your study materials and give your set a name to get started.
+          </p>
+        </div>
 
-          <div>
-            <h1 className="text-3xl font-bold text-[#3E3E75]">
-              Create Study Set
-            </h1>
-
-            <p className="mt-1 text-sm text-gray-500">
-              Upload your study materials and give your set a name to get started.
-            </p>
-          </div>
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/60">
+          <Upload size={44} className="text-[#4E1F6E]" />
         </div>
       </div>
 
@@ -187,9 +184,9 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
       )}
 
       {/* ================= MAIN UPLOAD AREA ================= */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* ================= UPLOAD CARD ================= */}
-        <div className="rounded-2xl bg-white p-6 shadow-sm lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3 items-stretch">
+        {/* ================= TOP LEFT (2 COLS): UPLOAD CARD ================= */}
+        <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 lg:col-span-2 flex flex-col h-full">
           <div
             onDragOver={(event) => {
               event.preventDefault();
@@ -197,7 +194,7 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[360px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
+            className={`flex flex-1 min-h-[300px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 sm:p-8 text-center transition-all duration-300 ${
               isDragging
                 ? "border-[#4E1F6E] bg-[#98E8DE]/20"
                 : "border-gray-200 bg-gray-50 hover:border-[#98E8DE] hover:bg-[#98E8DE]/10"
@@ -206,8 +203,8 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
             {selectedFiles.length === 0 ? (
               <>
                 {/* Upload Icon */}
-                <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#98E8DE]/40">
-                  <Upload size={34} className="text-[#4E1F6E]" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#98E8DE]/40">
+                  <Upload size={30} className="text-[#4E1F6E]" />
                 </div>
 
                 <h2 className="text-xl font-semibold text-[#3E3E75]">
@@ -219,7 +216,7 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
                 </p>
 
                 {/* Browse Files */}
-                <label className="mt-6 cursor-pointer rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md">
+                <label className="mt-5 cursor-pointer rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md">
                   Browse Files
                   <input
                     type="file"
@@ -236,7 +233,7 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
               </>
             ) : (
               /* ================= SELECTED FILES LIST ================= */
-              <div className="w-full max-w-lg">
+              <div className="w-full max-w-lg my-auto">
                 <div className="rounded-2xl border border-[#98E8DE] bg-white p-5 shadow-sm">
                   <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
                     <p className="text-sm font-semibold text-[#3E3E75]">
@@ -293,115 +290,117 @@ function UploadPage({ onNavigate, onStudySetCreated }) {
           </div>
         </div>
 
-        {/* ================= SUPPORTED FORMATS ================= */}
-        <div className="rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-[#3E3E75]">
-            Supported Formats
-          </h2>
+        {/* ================= TOP RIGHT (1 COL): STUDY SET NAME & ACTIONS ================= */}
+        <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 flex flex-col justify-between h-full lg:col-span-1">
+          <div>
+            <h2 className="text-xl font-semibold text-[#3E3E75]">
+              Study Set Name
+            </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
-            Upload your study materials in any of these formats.
-          </p>
+            <p className="mt-1 text-sm text-gray-500">
+              Give your new study set a name to organize your learning materials.
+            </p>
 
-          <div className="mt-6 space-y-4">
-            {/* ================= PDF ================= */}
-            <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-[#98E8DE]/20">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40">
-                <FileText size={20} className="text-[#4E1F6E]" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-[#3E3E75]">PDF</p>
-                <p className="text-xs text-gray-500">Lecture notes & textbooks</p>
-              </div>
-            </div>
-
-            {/* ================= DOCX ================= */}
-            <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-[#98E8DE]/20">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40">
-                <FileCheck size={20} className="text-[#4E1F6E]" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-[#3E3E75]">DOCX</p>
-                <p className="text-xs text-gray-500">Documents & notes</p>
-              </div>
-            </div>
-
-            {/* ================= PPTX ================= */}
-            <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4 transition hover:bg-[#98E8DE]/20">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40">
-                <Presentation size={20} className="text-[#4E1F6E]" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-[#3E3E75]">PPTX</p>
-                <p className="text-xs text-gray-500">Lecture presentations</p>
-              </div>
-            </div>
+            <input
+              type="text"
+              placeholder="Enter study set name"
+              value={studySetName}
+              onChange={(e) => {
+                setStudySetName(e.target.value);
+                setUploadError("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !uploading) {
+                  handleCreateAndUpload();
+                }
+              }}
+              className="mt-4 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-[#3E3E75] outline-none transition focus:border-[#45A9A9] focus:ring-2 focus:ring-[#98E8DE]/40"
+            />
           </div>
 
-          {/* ================= AI INFORMATION ================= */}
-          <div className="mt-6 rounded-xl bg-[#98E8DE]/20 p-4">
-            <div className="flex gap-3">
-              <Sparkles size={18} className="mt-0.5 shrink-0 text-[#4E1F6E]" />
-              <p className="text-xs leading-relaxed text-[#3E3E75]">
-                Your material will be analyzed by AI to create summaries, quizzes, flashcards, and personalized study recommendations.
-              </p>
-            </div>
+          <div className="mt-6 flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleCreateAndUpload}
+              disabled={uploading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Upload size={17} />
+              {uploading
+                ? (statusMessage || "Creating...")
+                : "Create Study Set"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onNavigate?.("study-sets");
+              }}
+              disabled={uploading}
+              className="w-full rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 text-center"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ================= STUDY SET NAME & ACTIONS ================= */}
-      <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-        <h2 className="text-xl font-semibold text-[#3E3E75]">
-          Study Set Name
+      {/* ================= BOTTOM ROW: SUPPORTED FORMATS ================= */}
+      <div className="mt-6 rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100">
+        <h2 className="text-base sm:text-lg font-semibold text-[#3E3E75]">
+          Supported Formats
         </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
-          Give your new study set a name to organize your learning materials.
+        <p className="mt-0.5 text-xs sm:text-sm text-gray-500">
+          Upload your study materials in any of these formats.
         </p>
 
-        <input
-          type="text"
-          placeholder="Enter study set name"
-          value={studySetName}
-          onChange={(e) => {
-            setStudySetName(e.target.value);
-            setUploadError("");
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !uploading) {
-              handleCreateAndUpload();
-            }
-          }}
-          className="mt-4 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-[#3E3E75] outline-none transition focus:border-[#45A9A9] focus:ring-2 focus:ring-[#98E8DE]/40"
-        />
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* ================= PDF ================= */}
+          <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 sm:p-3.5 transition hover:bg-[#98E8DE]/20 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+              <FileText size={19} className="text-[#4E1F6E]" />
+            </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate?.("study-sets");
-            }}
-            disabled={uploading}
-            className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-[#3E3E75] truncate">PDF</p>
+              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Notes & textbooks</p>
+            </div>
+          </div>
 
-          <button
-            type="button"
-            onClick={handleCreateAndUpload}
-            disabled={uploading}
-            className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Upload size={17} />
-            {uploading
-              ? (statusMessage || "Creating...")
-              : "Create Study Set"}
-          </button>
+          {/* ================= DOCX ================= */}
+          <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 sm:p-3.5 transition hover:bg-[#98E8DE]/20 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+              <FileCheck size={19} className="text-[#4E1F6E]" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-[#3E3E75] truncate">DOCX</p>
+              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Documents & notes</p>
+            </div>
+          </div>
+
+          {/* ================= PPTX ================= */}
+          <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 sm:p-3.5 transition hover:bg-[#98E8DE]/20 min-w-0">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+              <Presentation size={19} className="text-[#4E1F6E]" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-semibold text-[#3E3E75] truncate">PPTX</p>
+              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Presentations</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= AI INFORMATION ================= */}
+        <div className="mt-4 rounded-xl bg-[#98E8DE]/20 p-3.5">
+          <div className="flex gap-2.5 items-start">
+            <Sparkles size={16} className="mt-0.5 shrink-0 text-[#4E1F6E]" />
+            <p className="text-xs leading-relaxed text-[#3E3E75]">
+              Your material will be analyzed by AI to create summaries, quizzes, flashcards, and personalized study recommendations.
+            </p>
+          </div>
         </div>
       </div>
     </div>

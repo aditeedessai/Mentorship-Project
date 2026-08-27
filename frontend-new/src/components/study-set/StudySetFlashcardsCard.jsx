@@ -43,7 +43,7 @@ function StudySetFlashcardsCard({
             onClick={() => setPracticeMode(false)}
             className="text-xs font-bold text-[#4E1F6E] hover:text-[#3E3E75] cursor-pointer flex items-center gap-1 bg-[#98E8DE]/20 border border-[#98E8DE]/60 px-3 py-1 rounded-full transition-all"
           >
-            <span>View Deck Preview</span>
+            <span>View Study Deck</span>
             <ChevronRight size={14} />
           </button>
         )}
@@ -98,7 +98,7 @@ function StudySetFlashcardsCard({
 
           <div className="flex-1 text-left w-full">
             <h3 className="text-xl font-extrabold text-[#3E3E75] mb-1">
-              Deck Preview
+              Study Deck
             </h3>
             <p className="text-xs text-gray-500 mb-4">
               Master key terms with interactive AI flashcards.
@@ -155,7 +155,7 @@ function StudySetFlashcardsCard({
 
           <div className="flex-1 text-left w-full">
             <h3 className="text-xl font-extrabold text-[#3E3E75] mb-1">
-              Deck Preview
+              Study Deck
             </h3>
             <p className="text-xs text-gray-500 mb-4">
               {cardList.length} flashcards generated from your study material.
