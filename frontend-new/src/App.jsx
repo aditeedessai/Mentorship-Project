@@ -4,13 +4,10 @@ import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import StudySetsPage from "./pages/StudySetsPage";
-<<<<<<< HEAD
-=======
 import IndivisualStudySetPage from "./pages/indivisualStudySetPage";
 import VerifyOtpPage from "./pages/VerifyOtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
->>>>>>> a6924358fd727bff30c7967efdb20ae3da051822
 import ResultsPage from "./pages/ResultsPage";
 import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
