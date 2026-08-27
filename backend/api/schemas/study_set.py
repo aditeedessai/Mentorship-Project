@@ -76,3 +76,58 @@ class SummaryResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class FlashcardItem(BaseModel):
+    term: str = Field(
+        ...,
+        description="The term, concept, or question for the flashcard"
+    )
+    definition: str = Field(
+        ...,
+        description="Clear and concise definition or explanation"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FlashcardsResponse(BaseModel):
+    flashcards: list[FlashcardItem] = Field(
+        default_factory=list,
+        description="List of generated flashcards"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MnemonicRequest(BaseModel):
+    topic: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="The topic or concept to generate a mnemonic for"
+    )
+    style: str = Field(
+        "acronym",
+        description="Mnemonic style: acronym, rhyme, story, or surprise"
+    )
+
+
+class MnemonicResponse(BaseModel):
+    title: str = Field(
+        ...,
+        description="Short descriptive title for the mnemonic"
+    )
+    mnemonic: str = Field(
+        ...,
+        description="The main mnemonic phrase, rhyme, or story text"
+    )
+    style: str = Field(
+        ...,
+        description="The style used for the mnemonic"
+    )
+    breakdown: list[str] = Field(
+        default_factory=list,
+        description="List mapping mnemonic components to concept explanations"
+    )
+
+    model_config = ConfigDict(from_attributes=True)

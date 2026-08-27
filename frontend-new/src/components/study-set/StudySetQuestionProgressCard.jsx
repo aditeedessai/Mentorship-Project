@@ -6,14 +6,11 @@ import {
   FileQuestion,
 } from "lucide-react";
 
-const QUESTION_TYPE_PROGRESS = [
+const QUESTION_TYPES = [
   {
     id: "mcq",
     title: "Multiple Choice (MCQ)",
-    answered: 10,
-    total: 10,
-    percentage: 100,
-    status: "Completed",
+    defaultTotal: 5,
     icon: <CheckSquare size={16} />,
     colorClass: "bg-gradient-to-r from-[#006B5F] to-[#1D9E75]",
     barClass: "bg-gradient-to-r from-[#006B5F] to-[#62FAE3]",
@@ -21,10 +18,7 @@ const QUESTION_TYPE_PROGRESS = [
   {
     id: "short",
     title: "Short Answer",
-    answered: 5,
-    total: 8,
-    percentage: 62,
-    status: "In Progress",
+    defaultTotal: 5,
     icon: <HelpCircle size={16} />,
     colorClass: "bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75]",
     barClass: "bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE]",
@@ -32,28 +26,44 @@ const QUESTION_TYPE_PROGRESS = [
   {
     id: "application",
     title: "Application Questions",
-    answered: 0,
-    total: 5,
-    percentage: 0,
-    status: "Pending",
+    defaultTotal: 5,
     icon: <Lightbulb size={16} />,
-    colorClass: "bg-gray-400",
-    barClass: "bg-gray-300",
+    colorClass: "bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75]",
+    barClass: "bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE]",
   },
   {
     id: "qna",
     title: "Q&A / Essay",
-    answered: 0,
-    total: 5,
-    percentage: 0,
-    status: "Pending",
+    defaultTotal: 5,
     icon: <FileQuestion size={16} />,
-    colorClass: "bg-gray-400",
-    barClass: "bg-gray-300",
+    colorClass: "bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75]",
+    barClass: "bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE]",
   },
 ];
 
-function StudySetQuestionProgressCard({ progressItems = QUESTION_TYPE_PROGRESS }) {
+function StudySetQuestionProgressCard({
+  completedSections = [],
+  questionCounts = {},
+}) {
+  const progressItems = QUESTION_TYPES.map((typeMeta) => {
+    const isCompleted =
+      completedSections.includes(typeMeta.id) ||
+      (typeMeta.id === "qna" && completedSections.includes("long"));
+
+    const total = questionCounts[typeMeta.id] || typeMeta.defaultTotal;
+    const answered = isCompleted ? total : 0;
+    const percentage = isCompleted ? 100 : 0;
+    const status = isCompleted ? "Completed" : "Pending";
+
+    return {
+      ...typeMeta,
+      answered,
+      total,
+      percentage,
+      status,
+    };
+  });
+
   return (
     <section className="rounded-2xl bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-[0_4px_25px_rgba(78,31,110,0.06)] hover:shadow-[0_8px_30px_rgba(78,31,110,0.09)] border border-gray-100/90 flex flex-col transition-all duration-300">
       <div className="flex items-center justify-between mb-5">
@@ -63,7 +73,7 @@ function StudySetQuestionProgressCard({ progressItems = QUESTION_TYPE_PROGRESS }
           </div>
           <div>
             <h2 className="text-xl font-extrabold text-[#3E3E75]">Question Progress</h2>
-            <p className="text-xs text-gray-500">Answered vs. Pending Questions</p>
+            <p className="text-xs text-gray-500">Answered vs. Pending Question Sets</p>
           </div>
         </div>
         <span className="bg-[#4E1F6E]/10 border border-[#4E1F6E]/20 text-[#4E1F6E] font-mono text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
@@ -96,8 +106,6 @@ function StudySetQuestionProgressCard({ progressItems = QUESTION_TYPE_PROGRESS }
                 className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shadow-2xs shrink-0 ml-2 ${
                   item.status === "Completed"
                     ? "bg-[#98E8DE]/35 border-[#98E8DE]/70 text-[#006B5F]"
-                    : item.status === "In Progress"
-                    ? "bg-[#4E1F6E]/10 border-[#4E1F6E]/20 text-[#4E1F6E]"
                     : "bg-gray-100 border-gray-200 text-gray-500"
                 }`}
               >
@@ -105,10 +113,12 @@ function StudySetQuestionProgressCard({ progressItems = QUESTION_TYPE_PROGRESS }
               </span>
             </div>
 
-            {/* Dynamic Gradient Progress Bar */}
+            {/* Dynamic Progress Bar */}
             <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden p-0.5 border border-gray-200 mt-2.5">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${item.barClass}`}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  item.status === "Completed" ? item.barClass : "bg-gray-200"
+                }`}
                 style={{ width: `${item.percentage}%` }}
               />
             </div>

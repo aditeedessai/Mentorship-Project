@@ -102,6 +102,28 @@ export async function generateStudySetSummary(studySetId) {
   });
 }
 
+/**
+ * Generate flashcards for a study set.
+ * POST /api/study-sets/{studySetId}/flashcards
+ */
+export async function generateStudySetFlashcards(studySetId) {
+  return request(`/api/study-sets/${studySetId}/flashcards`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Generate a contextual mnemonic for a study set.
+ * POST /api/study-sets/{studySetId}/mnemonics
+ */
+export async function generateStudySetMnemonic(studySetId, topic, style = "acronym") {
+  return request(`/api/study-sets/${studySetId}/mnemonics`, {
+    method: "POST",
+    body: JSON.stringify({ topic, style }),
+  });
+}
+
+
 
 // ── Documents ────────────────────────────────────────────────────────
 

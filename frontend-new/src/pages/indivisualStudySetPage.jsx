@@ -3,7 +3,10 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import {
   fetchStudySet,
   fetchStudySetDocuments,
+  fetchActiveAttempt,
   generateStudySetSummary,
+  generateStudySetFlashcards,
+  generateStudySetMnemonic,
 } from "../services/api";
 
 import StudySetHeroHeaderCard from "../components/study-set/StudySetHeroHeaderCard";
@@ -14,60 +17,10 @@ import StudySetMnemonicsCard from "../components/study-set/StudySetMnemonicsCard
 import StudySetDocumentsCard from "../components/study-set/StudySetDocumentsCard";
 import StudySetQuestionProgressCard from "../components/study-set/StudySetQuestionProgressCard";
 
-// TODO: Replace mock mnemonic generation with backend API integration.
-const MOCK_MNEMONICS = {
-  acronym: {
-    title: "Remember the OSI Layers",
-    mnemonic: "Please Do Not Throw Sausage Pizza Away",
-    breakdown: [
-      "P — Physical",
-      "D — Data Link",
-      "N — Network",
-      "T — Transport",
-      "S — Session",
-      "P — Presentation",
-      "A — Application",
-    ],
-  },
-  rhyme: {
-    title: "Remember the TCP Handshake",
-    mnemonic: "SYN goes first, SYN-ACK replies, ACK arrives — connection ties.",
-    breakdown: [
-      "SYN — Start the connection",
-      "SYN-ACK — Server acknowledges",
-      "ACK — Client confirms",
-    ],
-  },
-  story: {
-    title: "Remember the Process",
-    mnemonic:
-      "Imagine three friends knocking on a door: one knocks, one answers, and the first friend says 'Got it!'",
-    breakdown: [
-      "Knock → SYN",
-      "Answer → SYN-ACK",
-      "Got it → ACK",
-    ],
-  },
-  surprise: {
-    title: "Your Memory Trick",
-    mnemonic: "Please Do Not Throw Sausage Pizza Away!",
-    breakdown: [
-      "P — Physical",
-      "D — Data Link",
-      "N — Network",
-      "T — Transport",
-      "S — Session",
-      "P — Presentation",
-      "A — Application",
-    ],
-  },
-};
-
-const FLASHCARD_COUNT = 3;
-
 function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   const [studySet, setStudySet] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [completedSections, setCompletedSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -84,6 +37,9 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   const [copied, setCopied] = useState(false);
 
   // Flashcards state
+  const [flashcards, setFlashcards] = useState(null);
+  const [flashcardsLoading, setFlashcardsLoading] = useState(false);
+  const [flashcardsError, setFlashcardsError] = useState("");
   const [practiceMode, setPracticeMode] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -101,21 +57,30 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
       setMnemonicError("Please enter a concept or topic first.");
       return;
     }
+    if (!studySetId || mnemonicLoading) return;
 
-    setMnemonicError("");
-    setMnemonicLoading(true);
-
-    setTimeout(() => {
-      const selectedResult =
-        MOCK_MNEMONICS[mnemonicStyle] || MOCK_MNEMONICS.acronym;
-      setMnemonic(selectedResult);
+    try {
+      setMnemonicError("");
+      setMnemonicLoading(true);
+      const result = await generateStudySetMnemonic(
+        studySetId,
+        mnemonicTopic,
+        mnemonicStyle
+      );
+      setMnemonic(result);
+    } catch (err) {
+      console.error("Failed to generate mnemonic:", err);
+      setMnemonicError(
+        err.message || "Failed to generate mnemonic for this topic."
+      );
+    } finally {
       setMnemonicLoading(false);
-    }, 700);
+    }
   };
 
   const handleCopyMnemonic = () => {
     if (!mnemonic) return;
-    const textToCopy = `${mnemonic.title}\n\n"${mnemonic.mnemonic}"\n\nBreakdown:\n${mnemonic.breakdown.join("\n")}`;
+    const textToCopy = `${mnemonic.title}\n\n"${mnemonic.mnemonic}"\n\nBreakdown:\n${(mnemonic.breakdown || []).join("\n")}`;
     navigator.clipboard.writeText(textToCopy);
     setMnemonicCopied(true);
     setTimeout(() => setMnemonicCopied(false), 2000);
@@ -131,7 +96,13 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
     setSummary(null);
     setSummaryError("");
     setSummaryLoading(false);
+    setFlashcards(null);
+    setFlashcardsError("");
+    setFlashcardsLoading(false);
     setPracticeMode(false);
+    setMnemonic(null);
+    setMnemonicError("");
+    setCompletedSections([]);
 
     if (!studySetId) {
       setLoading(false);
@@ -160,6 +131,16 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
         const docsList = await fetchStudySetDocuments(studySetId);
         if (isMounted) {
           setDocuments(docsList || []);
+        }
+
+        // 3. Fetch active attempt for question section completion status
+        try {
+          const activeAtt = await fetchActiveAttempt(studySetId);
+          if (isMounted && activeAtt) {
+            setCompletedSections(activeAtt.completed_sections || []);
+          }
+        } catch (err) {
+          console.warn("Could not fetch active attempt for progress card:", err);
         }
       } catch (err) {
         console.error("Failed to load study set details/documents:", err);
@@ -198,6 +179,27 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
     }
   };
 
+  const handleGenerateFlashcards = async () => {
+    if (!studySetId || flashcardsLoading) return;
+
+    try {
+      setFlashcardsLoading(true);
+      setFlashcardsError("");
+      const result = await generateStudySetFlashcards(studySetId);
+      setFlashcards(result.flashcards || []);
+      setPracticeMode(true);
+      setCurrentCardIndex(0);
+      setIsFlipped(false);
+    } catch (err) {
+      console.error("Failed to generate flashcards:", err);
+      setFlashcardsError(
+        err.message || "Failed to generate flashcards for this study set."
+      );
+    } finally {
+      setFlashcardsLoading(false);
+    }
+  };
+
   const studySetName = studySet?.name || "Study Set";
 
   const handleCopySummary = () => {
@@ -225,8 +227,9 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   };
 
   const handleNextCard = () => {
+    if (!flashcards || flashcards.length === 0) return;
     setIsFlipped(false);
-    setCurrentCardIndex((prev) => (prev + 1) % FLASHCARD_COUNT);
+    setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
   };
 
   return (
@@ -288,11 +291,16 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
             {/* FLASHCARDS SECTION CARD */}
             <StudySetFlashcardsCard
               sectionRef={flashcardsRef}
+              flashcards={flashcards}
+              flashcardsLoading={flashcardsLoading}
+              flashcardsError={flashcardsError}
               practiceMode={practiceMode}
               setPracticeMode={setPracticeMode}
               currentCardIndex={currentCardIndex}
               isFlipped={isFlipped}
               studySetName={studySetName}
+              documentsCount={documents.length}
+              onGenerateFlashcards={handleGenerateFlashcards}
               onFlipCard={handleFlipCard}
               onNextCard={handleNextCard}
             />
@@ -323,7 +331,9 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
             />
 
             {/* QUESTION PROGRESS SECTION CARD */}
-            <StudySetQuestionProgressCard />
+            <StudySetQuestionProgressCard
+              completedSections={completedSections}
+            />
           </div>
         </div>
       </div>

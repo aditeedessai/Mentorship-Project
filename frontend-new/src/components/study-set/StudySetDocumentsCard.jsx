@@ -57,20 +57,27 @@ function StudySetDocumentsCard({ documents = [], loading = false }) {
 
         {!loading && documents.length > 0 && (
           <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-            {documents.map((doc) => {
-              const fileName = doc.filename || doc.name || "Study Document";
+            {documents.map((doc, index) => {
+              const fileName =
+                doc.file_name ||
+                doc.filename ||
+                doc.name ||
+                `Document ${index + 1}`;
               const extTag = getFileExtension(fileName);
               return (
                 <div
-                  key={doc.document_id || doc.id}
+                  key={doc.document_id || doc.id || index}
                   className="p-3.5 border border-gray-200/80 rounded-xl bg-white hover:border-[#4E1F6E] hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group flex items-center justify-between shadow-2xs"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#98E8DE]/40 via-[#98E8DE]/20 to-[#4E1F6E]/10 border border-[#98E8DE]/60 flex items-center justify-center text-[#4E1F6E] group-hover:scale-110 transition-transform shrink-0 shadow-2xs">
                       {getFileIcon(fileName)}
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="truncate text-sm font-bold text-[#3E3E75] group-hover:text-[#4E1F6E] transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <h4
+                        className="truncate text-sm font-bold text-[#3E3E75] group-hover:text-[#4E1F6E] transition-colors"
+                        title={fileName}
+                      >
                         {fileName}
                       </h4>
                       <p className="text-xs text-gray-500 mt-0.5 font-medium">

@@ -1,37 +1,25 @@
-import { Layers, ChevronRight, Play, RotateCw } from "lucide-react";
+import { Layers, ChevronRight, Play, RotateCw, Loader2, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 
 const FLASHCARDS_ILLUSTRATION_URL =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBRLn_TAXppwrrg_JVtLm7N45-XtfRArub02OTHvS-kvSMVIRh5_NUqrmtS_JCtHWqp8x0xIs7mVEDfTYQf7o4JisxMkkJJPT2CR_tIjIRqXPIrhh6TBG5c21UVGqXJs2dFZvzZ3WH-is2aK2eJHeX2DgSWa2WOqN-w_WdzFFtCay93wFHpAAVq73KJrVVtDwPTO4WGTHHfHBZxpKytQqwwlwEbeor1RVfEX6gF4ZimFukgQDR9kcvB";
 
-const MOCK_CARDS = [
-  {
-    term: "Mitochondria",
-    definition:
-      "The powerhouse of the cell, generating ATP through cellular respiration.",
-  },
-  {
-    term: "Plasma Membrane",
-    definition:
-      "A selective phospholipid bilayer that regulates the entry and exit of molecules.",
-  },
-  {
-    term: "Ribosomes",
-    definition:
-      "Molecular machines composed of RNA and proteins that synthesize proteins.",
-  },
-];
-
 function StudySetFlashcardsCard({
-  practiceMode,
+  flashcards = null,
+  flashcardsLoading = false,
+  flashcardsError = "",
+  practiceMode = false,
   setPracticeMode,
   currentCardIndex = 0,
   isFlipped = false,
   studySetName = "Study Set",
+  documentsCount = 0,
+  onGenerateFlashcards,
   onFlipCard,
   onNextCard,
   sectionRef,
 }) {
-  const currentCard = MOCK_CARDS[currentCardIndex] || MOCK_CARDS[0];
+  const cardList = flashcards || [];
+  const currentCard = cardList[currentCardIndex] || cardList[0];
 
   return (
     <section
@@ -49,7 +37,7 @@ function StudySetFlashcardsCard({
           </div>
         </div>
 
-        {practiceMode && (
+        {practiceMode && cardList.length > 0 && (
           <button
             type="button"
             onClick={() => setPracticeMode(false)}
@@ -61,8 +49,39 @@ function StudySetFlashcardsCard({
         )}
       </div>
 
-      {/* STATE A: DECK PREVIEW UI */}
-      {!practiceMode && (
+      {/* STATE 1: LOADING */}
+      {flashcardsLoading && (
+        <div className="flex-1 flex flex-col justify-center items-center p-12 border border-gray-200/80 rounded-2xl bg-gradient-to-br from-white via-gray-50/50 to-[#98E8DE]/10 text-center shadow-xs">
+          <Loader2 size={40} className="mb-3 animate-spin text-[#4E1F6E]" />
+          <p className="text-base font-bold text-[#3E3E75]">
+            Generating Study Set Flashcards...
+          </p>
+          <p className="mt-1 text-xs text-gray-500 max-w-sm">
+            AI is analyzing your study materials and generating active recall cards.
+          </p>
+        </div>
+      )}
+
+      {/* STATE 2: ERROR */}
+      {!flashcardsLoading && flashcardsError && (
+        <div className="flex-1 p-6 border border-red-200 rounded-2xl bg-red-50/60 text-center shadow-xs">
+          <AlertCircle size={32} className="mx-auto mb-2 text-red-500" />
+          <p className="text-sm font-bold text-red-700">
+            Failed to generate flashcards
+          </p>
+          <p className="mt-1 text-xs text-red-600 mb-4">{flashcardsError}</p>
+          <button
+            type="button"
+            onClick={onGenerateFlashcards}
+            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4.5 py-2.5 text-xs font-semibold text-white transition hover:bg-red-700 cursor-pointer shadow-xs"
+          >
+            <RefreshCw size={14} /> Try Again
+          </button>
+        </div>
+      )}
+
+      {/* STATE 3: PRE-GENERATED / UNGENERATED DECK PREVIEW */}
+      {!flashcardsLoading && !flashcardsError && (!flashcards || cardList.length === 0) && (
         <div className="flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border border-gray-200/80 rounded-2xl bg-gradient-to-br from-white via-gray-50/40 to-[#98E8DE]/15 shadow-xs">
           <div className="w-full lg:w-1/3 shrink-0">
             <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
@@ -82,7 +101,64 @@ function StudySetFlashcardsCard({
               Deck Preview
             </h3>
             <p className="text-xs text-gray-500 mb-4">
-              Master key terms with interactive study cards.
+              Master key terms with interactive AI flashcards.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-gradient-to-br from-white to-[#98E8DE]/15 p-4 rounded-xl border border-gray-100 shadow-2xs">
+                <p className="font-mono text-xs font-bold text-[#4E1F6E]">
+                  CARDS
+                </p>
+                <p className="text-2xl font-extrabold text-[#3E3E75]">0</p>
+              </div>
+              <div className="bg-gradient-to-br from-white to-[#98E8DE]/15 p-4 rounded-xl border border-gray-100 shadow-2xs">
+                <p className="font-mono text-xs font-bold text-[#006B5F]">
+                  CATEGORIES
+                </p>
+                <p className="text-2xl font-extrabold text-[#3E3E75]">0</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onGenerateFlashcards}
+              disabled={documentsCount === 0}
+              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75] hover:from-[#3E3E75] hover:to-[#4E1F6E] text-white rounded-xl px-6 py-3.5 font-semibold text-sm shadow-md hover:shadow-lg hover:shadow-[#4E1F6E]/20 hover:-translate-y-0.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles size={18} />
+              <span>Generate Flashcards</span>
+            </button>
+            {documentsCount === 0 && (
+              <p className="mt-2 text-[11px] text-gray-400 text-center">
+                Upload at least one document first to generate flashcards.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* STATE 4: GENERATED DECK PREVIEW (when flashcards exist but practiceMode is false) */}
+      {!flashcardsLoading && !flashcardsError && flashcards && cardList.length > 0 && !practiceMode && (
+        <div className="flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border border-gray-200/80 rounded-2xl bg-gradient-to-br from-white via-gray-50/40 to-[#98E8DE]/15 shadow-xs">
+          <div className="w-full lg:w-1/3 shrink-0">
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm group">
+              <img
+                src={FLASHCARDS_ILLUSTRATION_URL}
+                alt="Flashcards Preview"
+                className="w-full h-auto max-h-[180px] object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 text-left w-full">
+            <h3 className="text-xl font-extrabold text-[#3E3E75] mb-1">
+              Deck Preview
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">
+              {cardList.length} flashcards generated from your study material.
             </p>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -90,13 +166,13 @@ function StudySetFlashcardsCard({
                 <p className="font-mono text-xs font-bold text-[#4E1F6E]">
                   CARDS
                 </p>
-                <p className="text-2xl font-extrabold text-[#3E3E75]">42</p>
+                <p className="text-2xl font-extrabold text-[#3E3E75]">{cardList.length}</p>
               </div>
               <div className="bg-gradient-to-br from-white to-[#98E8DE]/15 p-4 rounded-xl border border-gray-100 shadow-2xs hover:scale-[1.02] transition-transform">
                 <p className="font-mono text-xs font-bold text-[#006B5F]">
                   CATEGORIES
                 </p>
-                <p className="text-2xl font-extrabold text-[#3E3E75]">3</p>
+                <p className="text-2xl font-extrabold text-[#3E3E75]">{Math.min(3, cardList.length)}</p>
               </div>
             </div>
 
@@ -106,7 +182,7 @@ function StudySetFlashcardsCard({
                   Mastery Progress
                 </span>
                 <span className="font-mono text-xs font-bold text-[#4E1F6E]">
-                  0/42
+                  0/{cardList.length} Cards Mastered
                 </span>
               </div>
               <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden p-0.5 border border-gray-200">
@@ -114,20 +190,31 @@ function StudySetFlashcardsCard({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setPracticeMode(true)}
-              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75] hover:from-[#3E3E75] hover:to-[#4E1F6E] text-white rounded-xl px-6 py-3.5 font-semibold text-sm shadow-md hover:shadow-lg hover:shadow-[#4E1F6E]/20 hover:-translate-y-0.5 transition-all cursor-pointer"
-            >
-              <Play size={18} />
-              <span>Start Practice</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPracticeMode(true)}
+                className="flex-1 flex items-center justify-center gap-2.5 bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75] hover:from-[#3E3E75] hover:to-[#4E1F6E] text-white rounded-xl px-6 py-3.5 font-semibold text-sm shadow-md hover:shadow-lg hover:shadow-[#4E1F6E]/20 hover:-translate-y-0.5 transition-all cursor-pointer"
+              >
+                <Play size={18} />
+                <span>Start Practice</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onGenerateFlashcards}
+                className="p-3.5 rounded-xl border border-gray-200 bg-white text-[#3E3E75] hover:bg-gray-100 transition-colors cursor-pointer shadow-2xs"
+                title="Regenerate Flashcards"
+              >
+                <RefreshCw size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* STATE B: INTERACTIVE PRACTICE MODE */}
-      {practiceMode && (
+      {/* STATE 5: INTERACTIVE PRACTICE MODE */}
+      {!flashcardsLoading && !flashcardsError && flashcards && cardList.length > 0 && practiceMode && currentCard && (
         <div className="flex-1 flex flex-col gap-6 p-6 border border-gray-200/80 rounded-2xl bg-gradient-to-br from-white via-gray-50/40 to-[#98E8DE]/15 shadow-xs">
           <div className="flex flex-col md:flex-row gap-6 items-center">
             {/* Interactive Flip Card */}
@@ -158,7 +245,7 @@ function StudySetFlashcardsCard({
                 >
                   <div className="bg-[#4E1F6E]/10 border border-[#4E1F6E]/20 text-[#4E1F6E] px-3.5 py-1 rounded-full font-mono text-[11px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5 shadow-2xs">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#4E1F6E] animate-pulse" />
-                    TERM ({currentCardIndex + 1}/{MOCK_CARDS.length})
+                    CARD ({currentCardIndex + 1}/{cardList.length})
                   </div>
                   <h3 className="text-2xl font-extrabold text-[#3E3E75] mb-6 tracking-tight">
                     {currentCard.term}
@@ -211,25 +298,39 @@ function StudySetFlashcardsCard({
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-1.5">
                   <span className="font-mono text-xs font-semibold text-gray-500">
-                    Mastery Progress
+                    Deck Progress
                   </span>
                   <span className="font-mono text-xs font-bold text-[#4E1F6E]">
-                    12/45 Cards Mastered
+                    {currentCardIndex + 1}/{cardList.length} Cards
                   </span>
                 </div>
                 <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden p-0.5 border border-gray-200">
-                  <div className="w-[27%] h-full bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE] rounded-full transition-all duration-500" />
+                  <div
+                    className="h-full bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE] rounded-full transition-all duration-500"
+                    style={{ width: `${((currentCardIndex + 1) / cardList.length) * 100}%` }}
+                  />
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={onNextCard}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75] text-white rounded-xl px-6 py-3.5 font-semibold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
-              >
-                <Play size={16} />
-                <span>Next Flashcard</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onNextCard}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75] text-white rounded-xl px-6 py-3.5 font-semibold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
+                >
+                  <Play size={16} />
+                  <span>Next Flashcard</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGenerateFlashcards}
+                  className="p-3.5 rounded-xl border border-gray-200 bg-white text-[#3E3E75] hover:bg-gray-100 transition-colors cursor-pointer shadow-2xs"
+                  title="Regenerate Flashcards"
+                >
+                  <RefreshCw size={16} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
