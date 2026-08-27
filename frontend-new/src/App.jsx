@@ -12,6 +12,7 @@ import ResultsPage from "./pages/ResultsPage";
 import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
+import SettingsPage from "./pages/SettingsPage";
 import Sidebar from "./components/Sidebar";
 
 import {
@@ -311,6 +312,11 @@ function App() {
               studySets.find((s) => s.study_set_id === selectedStudySetId)?.name
             }
           />
+        )}
+
+        {/* ================= SETTINGS ================= */}
+        {currentPage === "settings" && (
+          <SettingsPage user={user} />
         )}
 
         {/* ================= DASHBOARD ================= */}
