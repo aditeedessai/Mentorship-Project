@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
@@ -13,6 +14,12 @@ import ResultsPage from "./pages/ResultsPage";
 import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
+
+
+import LandingPage from "./pages/LandingPage";
+import AboutPage from "./pages/AboutPage";
+import SettingsPage from "./pages/SettingsPage";
+
 import Sidebar from "./components/Sidebar";
 
 import {
@@ -26,7 +33,8 @@ function App() {
   const location = useLocation();
 
   // ================= AUTH STATE =================
-  const [authPage, setAuthPage] = useState("login");
+  // Landing page is shown first when user is not authenticated
+  const [authPage, setAuthPage] = useState("landing");
   const [pendingEmail, setPendingEmail] = useState("");
   const [otpType, setOtpType] = useState("signup");
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
@@ -47,12 +55,14 @@ function App() {
 
   // ================= CENTRAL NAVIGATION HANDLER =================
   const handleNavigate = (page, state) => {
+    // When starting a new upload/create-study-set flow,
+    // make sure no previous study set remains selected.
     if (page === "upload") {
-      // When navigating to upload, start a fresh study set creation flow
       setSelectedStudySetId(null);
     } else if (state?.studySetId) {
       setSelectedStudySetId(state.studySetId);
     }
+
     setCurrentPage(page);
   };
 
@@ -85,6 +95,9 @@ function App() {
         setUser(null);
         setStudySets([]);
         setSelectedStudySetId(null);
+
+        // Return to landing page after logout
+        setAuthPage("landing");
       }
     });
 
@@ -121,14 +134,14 @@ function App() {
 
       await deleteStudySet(studySetId);
 
-      // Remove the deleted study set from the UI immediately
+      // Remove deleted study set immediately from UI
       setStudySets((prev) =>
         prev.filter(
           (studySet) => studySet.study_set_id !== studySetId
         )
       );
 
-      // If the deleted set was selected, clear the selection
+      // Clear selection if deleted study set was selected
       if (selectedStudySetId === studySetId) {
         setSelectedStudySetId(null);
       }
@@ -143,7 +156,7 @@ function App() {
     }
   };
 
-  // ================= PASSWORD RESET CHECK =================
+  // ================= PASSWORD RESET =================
   if (needsPasswordReset) {
     return (
       <ResetPasswordPage
@@ -155,18 +168,41 @@ function App() {
     );
   }
 
-  // ================= AUTH CHECK =================
+  // ================= PUBLIC / AUTH PAGES =================
   if (!user) {
+    // Landing Page — Shanallie's feature
+    if (authPage === "landing") {
+      return (
+        <LandingPage
+          onNavigate={setAuthPage}
+        />
+      );
+    }
+
+    // About Us — Shanallie's feature
+    if (authPage === "about") {
+      return (
+        <AboutPage
+          onNavigate={setAuthPage}
+        />
+      );
+    }
+
+    // Login
     if (authPage === "login") {
       return (
         <LoginPage
           onLogin={setUser}
           onSignUp={() => setAuthPage("signup")}
-          onForgotPassword={() => setAuthPage("forgot-password")}
+          onForgotPassword={() =>
+            setAuthPage("forgot-password")
+          }
+          onBack={() => setAuthPage("landing")}
         />
       );
     }
 
+    // Signup
     if (authPage === "signup") {
       return (
         <SignUpPage
@@ -176,10 +212,12 @@ function App() {
             setAuthPage("verify-otp");
           }}
           onLogin={() => setAuthPage("login")}
+          onBack={() => setAuthPage("landing")}
         />
       );
     }
 
+    // Forgot Password
     if (authPage === "forgot-password") {
       return (
         <ForgotPasswordPage
@@ -193,6 +231,7 @@ function App() {
       );
     }
 
+    // OTP Verification
     if (authPage === "verify-otp") {
       return (
         <VerifyOtpPage
@@ -201,6 +240,8 @@ function App() {
           onVerified={() => {
             if (otpType === "recovery") {
               setNeedsPasswordReset(true);
+            } else {
+              setAuthPage("login");
             }
           }}
           onBack={() => setAuthPage("login")}
@@ -224,9 +265,10 @@ function App() {
     return <QnAPage />;
   }
 
-  // ================= MAIN APP =================
+  // ================= MAIN AUTHENTICATED APP =================
   return (
     <div className="flex min-h-screen bg-[#F8FAFA]">
+
       {/* ================= SIDEBAR ================= */}
       <Sidebar
         onNavigate={handleNavigate}
@@ -236,13 +278,28 @@ function App() {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="ml-64 flex-1 overflow-y-auto p-8">
+
+        {/* ================= ABOUT US ================= */}
+        {currentPage === "about" && (
+          <AboutPage
+            onNavigate={handleNavigate}
+          />
+        )}
+
         {/* ================= UPLOAD ================= */}
         {currentPage === "upload" && (
           <UploadPage
+            studySetId={selectedStudySetId}
             onNavigate={handleNavigate}
             onStudySetCreated={(newStudySet) => {
-              setStudySets((prev) => [newStudySet, ...prev]);
-              setSelectedStudySetId(newStudySet.study_set_id);
+              setStudySets((prev) => [
+                newStudySet,
+                ...prev,
+              ]);
+
+              setSelectedStudySetId(
+                newStudySet.study_set_id
+              );
             }}
           />
         )}
@@ -258,7 +315,9 @@ function App() {
             }}
             onDeleteStudySet={handleDeleteStudySet}
             onContinueStudying={(studySetId) => {
-              handleNavigate("study-set", { studySetId });
+              handleNavigate("study-set", {
+                studySetId,
+              });
             }}
           />
         )}
@@ -285,14 +344,28 @@ function App() {
           <ConfigureSession
             studySetId={selectedStudySetId}
             studySetName={
-              studySets.find((s) => s.study_set_id === selectedStudySetId)?.name
+              studySets.find(
+                (s) =>
+                  s.study_set_id === selectedStudySetId
+              )?.name
             }
+          />
+        )}
+
+        {/* ================= SETTINGS ================= */}
+        {currentPage === "settings" && (
+          <SettingsPage
+            onNavigate={handleNavigate}
+            user={user}
           />
         )}
 
         {/* ================= DASHBOARD ================= */}
         {currentPage === "dashboard" && (
-          <DashboardPage user={user} onNavigate={handleNavigate} />
+          <DashboardPage
+            user={user}
+            onNavigate={handleNavigate}
+          />
         )}
       </main>
     </div>
