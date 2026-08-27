@@ -12,7 +12,7 @@ const getFileIcon = (fileName) => {
   return <FileText size={22} className="text-[#4E1F6E]" />;
 };
 
-function UploadPage({ onNavigate, onStudySetCreated }) {
+function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [studySetName, setStudySetName] = useState("");

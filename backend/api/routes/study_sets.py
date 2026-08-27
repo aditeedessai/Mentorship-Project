@@ -134,7 +134,6 @@ def generate_study_set_mnemonic(
             detail=f"Failed to generate mnemonic: {str(e)}"
         )
 
-
 @router.post(
     "",
     response_model=StudySetResponse,

@@ -123,8 +123,6 @@ export async function generateStudySetMnemonic(studySetId, topic, style = "acron
   });
 }
 
-
-
 // ── Documents ────────────────────────────────────────────────────────
 
 /**

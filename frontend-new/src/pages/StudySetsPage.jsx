@@ -160,7 +160,6 @@ function StudySetsPage({
           <p className="mt-2 text-sm text-[#3E3E75]/70">
             Create and manage your study sets.
           </p>
-
           <button
             onClick={onCreateClick}
             className="mt-5 flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
