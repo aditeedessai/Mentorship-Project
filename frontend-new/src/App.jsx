@@ -3,14 +3,13 @@ import { useLocation } from "react-router-dom";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
-import VerifyOtpPage from "./pages/VerifyOtpPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
 import StudySetsPage from "./pages/StudySetsPage";
 import ResultsPage from "./pages/ResultsPage";
 import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
+import LandingPage from "./pages/LandingPage";
+import AboutPage from "./pages/AboutPage";
 import Sidebar from "./components/Sidebar";
 
 import {
@@ -32,16 +31,14 @@ import {
 function App() {
   const location = useLocation();
 
-  // ================= AUTH STATE =================
-  const [authPage, setAuthPage] = useState("login");
-  const [pendingEmail, setPendingEmail] = useState("");
-  const [otpType, setOtpType] = useState("signup");
-  const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
+  // ================= AUTH / PUBLIC ROUTING STATE =================
+  // Starts on landing page when unauthenticated
+  const [authPage, setAuthPage] = useState("landing");
 
   // ================= USER STATE =================
   const [user, setUser] = useState(null);
 
-  // ================= PAGE STATE =================
+  // ================= APP PAGE STATE =================
   const [currentPage, setCurrentPage] = useState("dashboard");
 
   // ================= STUDY SET STATE =================
@@ -81,6 +78,7 @@ function App() {
         setUser(null);
         setStudySets([]);
         setSelectedStudySetId(null);
+        setAuthPage("landing");
       }
     });
 
@@ -165,29 +163,22 @@ function App() {
     }
   };
 
-  // ================= PASSWORD RESET CHECK =================
-  // Takes priority over the auth gate below: verifying a recovery OTP
-  // establishes a real Supabase session, but the user must set a new
-  // password before being allowed into the app.
-  if (needsPasswordReset) {
-    return (
-      <ResetPasswordPage
-        onComplete={() => {
-          setNeedsPasswordReset(false);
-          setAuthPage("login");
-        }}
-      />
-    );
-  }
-
-  // ================= AUTH CHECK =================
+  // ================= UNAUTHENTICATED PUBLIC PAGES =================
   if (!user) {
+    if (authPage === "landing") {
+      return <LandingPage onNavigate={setAuthPage} />;
+    }
+
+    if (authPage === "about") {
+      return <AboutPage onNavigate={setAuthPage} />;
+    }
+
     if (authPage === "login") {
       return (
         <LoginPage
           onLogin={setUser}
           onSignUp={() => setAuthPage("signup")}
-          onForgotPassword={() => setAuthPage("forgot-password")}
+          onBack={() => setAuthPage("landing")}
         />
       );
     }
@@ -195,43 +186,9 @@ function App() {
     if (authPage === "signup") {
       return (
         <SignUpPage
-          onSignUpSuccess={(email) => {
-            setPendingEmail(email);
-            setOtpType("signup");
-            setAuthPage("verify-otp");
-          }}
+          onSignUp={setUser}
           onLogin={() => setAuthPage("login")}
-        />
-      );
-    }
-
-    if (authPage === "forgot-password") {
-      return (
-        <ForgotPasswordPage
-          onCodeSent={(email) => {
-            setPendingEmail(email);
-            setOtpType("recovery");
-            setAuthPage("verify-otp");
-          }}
-          onBack={() => setAuthPage("login")}
-        />
-      );
-    }
-
-    if (authPage === "verify-otp") {
-      return (
-        <VerifyOtpPage
-          email={pendingEmail}
-          type={otpType}
-          onVerified={() => {
-            if (otpType === "recovery") {
-              setNeedsPasswordReset(true);
-            }
-            // For signup, the onAuthStateChange listener above picks up
-            // the new session and sets `user`, which moves the app past
-            // this auth gate into the dashboard automatically.
-          }}
-          onBack={() => setAuthPage("login")}
+          onBack={() => setAuthPage("landing")}
         />
       );
     }
@@ -252,7 +209,7 @@ function App() {
     return <QnAPage />;
   }
 
-  // ================= MAIN APP =================
+  // ================= MAIN AUTHENTICATED APP =================
   return (
     <div className="flex min-h-screen bg-[#F8FAFA]">
 
@@ -265,6 +222,11 @@ function App() {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="ml-64 flex-1 overflow-y-auto p-8">
+
+        {/* ================= ABOUT US (When clicked within app) ================= */}
+        {currentPage === "about" && (
+          <AboutPage onNavigate={setCurrentPage} />
+        )}
 
         {/* ================= UPLOAD ================= */}
         {currentPage === "upload" && (
@@ -320,7 +282,7 @@ function App() {
 
               <div>
                 <h1 className="text-3xl font-bold text-[#3E3E75]">
-                  Good morning, {user?.name || "Alex"}
+                  Good morning, {user?.name || "shanallie"}
                 </h1>
 
                 <p className="mt-2 text-sm text-gray-500">
@@ -334,7 +296,7 @@ function App() {
                   setStudySetsError("");
                   setCurrentPage("study-sets");
                 }}
-                className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
+                className="flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md cursor-pointer"
               >
                 <BookOpen size={18} />
                 Create Study Set
