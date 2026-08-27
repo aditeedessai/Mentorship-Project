@@ -9,10 +9,49 @@ from backend.api.schemas.study_set import (
     DeleteStudySetResponse,
     StudySetListResponse,
     StudySetResponse,
+    SummaryResponse,
 )
 from backend.services import study_service
+from backend.quiz_generation.summary_generator import generate_summary
 
 router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
+
+
+@router.post(
+    "/{study_set_id}/summary",
+    response_model=SummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate summary for a study set",
+    description="Generates an AI summary of all uploaded documents attached to the specified study set."
+)
+def generate_study_set_summary(
+    study_set_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> SummaryResponse:
+    try:
+        # Verify ownership
+        study_set = study_service.get_study_set(str(study_set_id), user_id=current_user.user_id)
+        if not study_set:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Study set with ID '{study_set_id}' not found"
+            )
+
+        summary_data = generate_summary(study_set_id=str(study_set_id))
+        return SummaryResponse(**summary_data)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate summary: {str(e)}"
+        )
+
 
 
 @router.post(

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, BookOpen } from "lucide-react";
 import { supabase } from "../services/supabase";
+import { hashPasswordClient } from "../services/crypto";
 
 function ResetPasswordPage({ onComplete }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,8 +25,23 @@ function ResetPasswordPage({ onComplete }) {
     setLoading(true);
 
     try {
+      // 1. Get the authenticated user from the active recovery session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user?.email) {
+        setError("Password reset session is invalid or has expired. Please request a new link.");
+        setLoading(false);
+        return;
+      }
+
+      const normalizedEmail = user.email.trim().toLowerCase();
+
+      // 2. Pre-hash the new password with the user's normalized email salt
+      const clientHashedPassword = await hashPasswordClient(password, normalizedEmail);
+
+      // 3. Update the password on Supabase
       const { data, error: updateError } = await supabase.auth.updateUser({
-        password,
+        password: clientHashedPassword,
       });
 
       if (updateError) {
@@ -46,31 +62,16 @@ function ResetPasswordPage({ onComplete }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F8FAFA] px-6">
-
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl lg:grid-cols-2">
-
         {/* ================= LEFT SECTION ================= */}
         <div className="hidden flex-col justify-between bg-[#4E1F6E] p-10 text-white lg:flex">
-
           <div>
-
             <div className="mb-8 flex items-center gap-3">
-
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]">
-
-                <BookOpen
-                  size={24}
-                  className="text-[#4E1F6E]"
-                />
-
+                <BookOpen size={24} className="text-[#4E1F6E]" />
               </div>
-
-              <span className="text-xl font-bold">
-                AI STUDY ENGINE
-              </span>
-
+              <span className="text-xl font-bold">AI STUDY ENGINE</span>
             </div>
-
 
             <h1 className="max-w-md text-4xl font-bold leading-tight">
               Set a new
@@ -78,69 +79,44 @@ function ResetPasswordPage({ onComplete }) {
               password.
             </h1>
 
-
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100">
               Choose a strong, new password to keep your account secure.
             </p>
-
           </div>
-
 
           <p className="text-xs text-purple-200">
             AI-powered personalized learning
           </p>
-
         </div>
-
 
         {/* ================= RIGHT SECTION ================= */}
         <div className="p-8 sm:p-12 lg:p-14">
-
           {/* Mobile Logo */}
           <div className="mb-7 flex items-center gap-3 lg:hidden">
-
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#98E8DE]">
-
-              <BookOpen
-                size={21}
-                className="text-[#4E1F6E]"
-              />
-
+              <BookOpen size={21} className="text-[#4E1F6E]" />
             </div>
-
-            <span className="font-bold text-[#4E1F6E]">
-              AI STUDY ENGINE
-            </span>
-
+            <span className="font-bold text-[#4E1F6E]">AI STUDY ENGINE</span>
           </div>
-
 
           {/* Heading */}
           <div className="mb-7">
-
             <h2 className="text-3xl font-bold text-[#3E3E75]">
               Create a new password
             </h2>
-
             <p className="mt-2 text-sm text-gray-500">
               Your identity is verified. Set a new password for your account.
             </p>
-
           </div>
-
 
           {/* ================= FORM ================= */}
           <form onSubmit={handleSubmit} className="space-y-5">
-
             {/* New Password */}
             <div>
-
               <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
                 New Password
               </label>
-
               <div className="relative">
-
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter a new password"
@@ -152,34 +128,23 @@ function ResetPasswordPage({ onComplete }) {
                              focus:border-[#45A9A9] focus:bg-white
                              focus:ring-2 focus:ring-[#98E8DE]/40"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
                              hover:text-[#4E1F6E]"
                 >
-                  {showPassword ? (
-                    <EyeOff size={19} />
-                  ) : (
-                    <Eye size={19} />
-                  )}
+                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                 </button>
-
               </div>
-
             </div>
-
 
             {/* Confirm Password */}
             <div>
-
               <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
                 Confirm New Password
               </label>
-
               <div className="relative">
-
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your new password"
@@ -191,26 +156,16 @@ function ResetPasswordPage({ onComplete }) {
                              focus:border-[#45A9A9] focus:bg-white
                              focus:ring-2 focus:ring-[#98E8DE]/40"
                 />
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
                              hover:text-[#4E1F6E]"
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff size={19} />
-                  ) : (
-                    <Eye size={19} />
-                  )}
+                  {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                 </button>
-
               </div>
-
             </div>
-
 
             {/* Error Banner */}
             {error && (
@@ -230,13 +185,9 @@ function ResetPasswordPage({ onComplete }) {
             >
               {loading ? "Updating..." : "Update Password"}
             </button>
-
           </form>
-
         </div>
-
       </div>
-
     </div>
   );
 }

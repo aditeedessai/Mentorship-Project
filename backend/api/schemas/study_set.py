@@ -58,3 +58,21 @@ class DeleteStudySetResponse(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SummaryResponse(BaseModel):
+    title: str = Field(
+        ...,
+        description="Short descriptive title for the study material summary"
+    )
+    overview_paragraphs: list[str] = Field(
+        default_factory=list,
+        description="Paragraphs summarizing the study material"
+    )
+    key_topics: list[str] = Field(
+        default_factory=list,
+        description="Key topics extracted from the study material"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+

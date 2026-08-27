@@ -76,6 +76,13 @@ export async function createStudySet(name) {
 }
 
 /**
+ * Fetch a single study set by ID.
+ * GET /api/study-sets/{studySetId}
+ */
+export async function fetchStudySet(studySetId) {
+  return request(`/api/study-sets/${studySetId}`);
+}
+/**
  * Delete a study set.
  * DELETE /api/study-sets/{studySetId}
  */
@@ -85,13 +92,56 @@ export async function deleteStudySet(studySetId) {
   });
 }
 
+/**
+ * Generate summary for a study set.
+ * POST /api/study-sets/{studySetId}/summary
+ */
+export async function generateStudySetSummary(studySetId) {
+  return request(`/api/study-sets/${studySetId}/summary`, {
+    method: "POST",
+  });
+}
+
+
 // ── Documents ────────────────────────────────────────────────────────
 
 /**
- * Upload a document file to a study set.
+ * Fetch documents for a specific study set.
+ * GET /api/study-sets/{studySetId}/documents
+ */
+export async function fetchStudySetDocuments(studySetId) {
+  const data = await request(`/api/study-sets/${studySetId}/documents`);
+  return data.documents || [];
+}
+
+/**
+ * Upload multiple document files to a study set in a single request.
+ * POST /api/study-sets/{studySetId}/documents
+ * @param {string} studySetId
+ * @param {File[]} files
+ */
+export async function uploadDocuments(studySetId, files) {
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  return request(`/api/study-sets/${studySetId}/documents`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+/**
+ * Upload a single document file or FormData to a study set.
  * POST /api/study-sets/{studySetId}/documents
  */
 export async function uploadDocument(studySetId, fileOrFormData) {
+  if (Array.isArray(fileOrFormData)) {
+    return uploadDocuments(studySetId, fileOrFormData);
+  }
+
   let body = fileOrFormData;
 
   if (fileOrFormData instanceof File) {

@@ -3,8 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
+import QuestionGenerationErrorCard from '../components/QuestionGenerationErrorCard'
 import { ListChecks, FileText, Lightbulb, BookOpen } from 'lucide-react'
 import { fetchQuestions, getOrCreateAttempt, generateQuestions, fetchStudySets } from '../services/api'
+import { classifyQuestionGenerationError } from '../utils/errorClassification'
 
 const questionTypes = [
   {
@@ -98,7 +100,7 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
       } catch (err) {
         console.error('Failed to load active attempt:', err)
         if (isMounted) {
-          setError('Failed to load active quiz attempt. Is the backend server running?')
+          setError(classifyQuestionGenerationError(err))
         }
       } finally {
         if (isMounted) {
@@ -181,12 +183,7 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
       })
     } catch (err) {
       console.error('Failed to start session:', err)
-      const msg = err.message || ''
-      if (msg.includes('No study material') || msg.includes('400')) {
-        setError('Please upload a document before starting a quiz.')
-      } else {
-        setError(msg || 'Failed to start session. Is the backend running?')
-      }
+      setError(classifyQuestionGenerationError(err))
     } finally {
       setLoading(false)
     }
@@ -215,11 +212,13 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
             </div>
           )}
 
-          {/* Error message */}
+          {/* Error message card */}
           {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-[13px] text-red-700">
-              {error}
-            </div>
+            <QuestionGenerationErrorCard
+              errorObj={classifyQuestionGenerationError(error)}
+              onRetry={handleStart}
+              isLoading={loading}
+            />
           )}
 
           {/* Question Type Cards */}
