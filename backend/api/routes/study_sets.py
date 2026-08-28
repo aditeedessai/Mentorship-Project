@@ -11,10 +11,13 @@ from backend.api.schemas.study_set import (
     MnemonicRequest,
     MnemonicResponse,
     StudySetListResponse,
+    StudySetProgressListResponse,
+    StudySetProgressResponse,
     StudySetResponse,
     SummaryResponse,
 )
 from backend.services import study_service
+from backend.services.evaluation_service import get_study_set_progress
 from backend.quiz_generation.summary_generator import generate_summary
 from backend.quiz_generation.flashcard_generator import generate_flashcards
 from backend.quiz_generation.mnemonic_generator import generate_mnemonic
@@ -174,6 +177,28 @@ def list_study_sets(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list study sets: {str(e)}"
+        )
+
+
+@router.get(
+    "/progress",
+    response_model=StudySetProgressListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get section-completion progress for all study sets",
+    description="Retrieves, for every study set owned by the authenticated user, how many of the 4 question-type sections (mcq, application, long, short) have at least one recorded evaluation."
+)
+def get_study_sets_progress(
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> StudySetProgressListResponse:
+    try:
+        progress_data = get_study_set_progress(user_id=current_user.user_id)
+        return StudySetProgressListResponse(
+            progress=[StudySetProgressResponse(**p) for p in progress_data]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get study set progress: {str(e)}"
         )
 
 

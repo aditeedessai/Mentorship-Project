@@ -19,13 +19,16 @@ from backend.database.attempt_repository import (
 
 from backend.database.evaluation_repository import (
     save_evaluation,
-    get_evaluations_with_question_details
+    get_evaluations_with_question_details,
+    get_evaluated_question_types_by_study_set
 )
 
 from backend.database.quiz_repository import (
     save_questions,
     get_question_by_id
 )
+
+from backend.database import study_set_repository
 
 from backend.answer_evaluation.grading import grade_for_percentage
 
@@ -586,6 +589,36 @@ def get_attempt_section_completion_status(attempt_id: str) -> dict:
         "remaining_sections": remaining_sections,
         "is_attempt_complete": is_attempt_complete,
     }
+
+
+def get_study_set_progress(user_id: str) -> list[dict]:
+    """
+    Returns, for every study set owned by the user, how many of the 4
+    mandatory sections (MANDATORY_SECTIONS) have at least one recorded
+    evaluation - the exact same "completed" rule
+    get_attempt_section_completion_status() uses per attempt, applied
+    here across every attempt ever taken under a study set (not just
+    whichever one is currently 'in_progress') so the dashboard can show
+    progress without creating or mutating any attempt.
+    """
+    study_sets = study_set_repository.list_study_sets(user_id=user_id)
+    eval_rows = get_evaluated_question_types_by_study_set(user_id)
+
+    completed_by_set = defaultdict(set)
+    for row in eval_rows:
+        raw_type = str(row.get("question_type") or "short").lower().strip()
+        q_type = raw_type if raw_type in MANDATORY_SECTIONS else "short"
+        completed_by_set[row["study_set_id"]].add(q_type)
+
+    return [
+        {
+            "study_set_id": study_set["study_set_id"],
+            "name": study_set["name"],
+            "sections_completed": len(completed_by_set.get(study_set["study_set_id"], set())),
+            "total_sections": len(MANDATORY_SECTIONS),
+        }
+        for study_set in study_sets
+    ]
 
 
 def get_attempt_performance_summary(attempt_id: str) -> dict:

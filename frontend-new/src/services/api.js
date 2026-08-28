@@ -65,6 +65,15 @@ export async function fetchStudySets() {
 }
 
 /**
+ * Fetch section-completion progress for all of the current user's study sets.
+ * GET /api/study-sets/progress
+ */
+export async function fetchStudySetProgress() {
+  const data = await request("/api/study-sets/progress");
+  return data.progress;
+}
+
+/**
  * Create a new study set.
  * POST /api/study-sets
  */
@@ -346,4 +355,91 @@ export async function fetchPerformance(attemptId) {
  */
 export async function fetchResults(attemptId) {
   return request(`/api/attempts/${attemptId}/results`);
+}
+
+// ── Tasks ────────────────────────────────────────────────────────────
+
+/**
+ * Fetch today's tasks for the current user.
+ * GET /api/tasks
+ */
+export async function fetchTodaysTasks() {
+  const data = await request("/api/tasks");
+  return data.tasks;
+}
+
+/**
+ * Create a new task.
+ * POST /api/tasks
+ */
+export async function createTask(name, priority, dueDate) {
+  const payload = { name };
+  if (priority) payload.priority = priority;
+  if (dueDate) payload.due_date = dueDate;
+
+  return request("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delete a task.
+ * DELETE /api/tasks/{taskId}
+ */
+export async function deleteTask(taskId) {
+  return request(`/api/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+}
+
+// ── Exams ────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the current user's exams, nearest first.
+ * GET /api/exams
+ */
+export async function fetchExams() {
+  const data = await request("/api/exams");
+  return data.exams;
+}
+
+/**
+ * Create a new exam.
+ * POST /api/exams
+ */
+export async function createExam(subject, examType, examDate, studySetId) {
+  const payload = {
+    subject,
+    exam_type: examType,
+    exam_date: examDate,
+  };
+  if (studySetId) payload.study_set_id = studySetId;
+
+  return request("/api/exams", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delete an exam.
+ * DELETE /api/exams/{examId}
+ */
+export async function deleteExam(examId) {
+  return request(`/api/exams/${examId}`, {
+    method: "DELETE",
+  });
+}
+
+// ── Activity ─────────────────────────────────────────────────────────
+
+/**
+ * Fetch the distinct days in a given month the user answered at least
+ * one question, across every study set and question type.
+ * GET /api/activity/studied-days?year=YYYY&month=MM
+ */
+export async function fetchStudiedDays(year, month) {
+  const data = await request(`/api/activity/studied-days?year=${year}&month=${month}`);
+  return data.studied_days;
 }

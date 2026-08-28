@@ -47,6 +47,36 @@ class StudySetListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class StudySetProgressResponse(BaseModel):
+    study_set_id: UUID = Field(
+        ...,
+        description="Unique identifier for the study set (UUID)"
+    )
+    name: str = Field(
+        ...,
+        description="Name of the study set"
+    )
+    sections_completed: int = Field(
+        ...,
+        description="Number of the 4 question-type sections (mcq, application, long, short) with at least one recorded evaluation"
+    )
+    total_sections: int = Field(
+        ...,
+        description="Total number of question-type sections (always 4)"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StudySetProgressListResponse(BaseModel):
+    progress: list[StudySetProgressResponse] = Field(
+        default_factory=list,
+        description="Per-study-set section-completion progress for the authenticated user"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DeleteStudySetResponse(BaseModel):
     message: str = Field(
         ...,

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { fetchStudiedDays } from "../../services/api";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -22,16 +23,32 @@ function ActivityCalendarCard() {
   const [viewedYear, setViewedYear] = useState(today.getFullYear());
   const [viewedMonth, setViewedMonth] = useState(today.getMonth());
 
-  // TODO: replace this placeholder with the real studied-dates query —
-  // distinct dates that have a completed or in_progress quiz_attempts row.
-  const studiedDays = useMemo(() => {
-    const isCurrentMonth =
-      viewedYear === today.getFullYear() && viewedMonth === today.getMonth();
-    if (!isCurrentMonth) return [];
+  const [studiedDays, setStudiedDays] = useState([]);
+  const [isLoadingDays, setIsLoadingDays] = useState(false);
 
-    return [today.getDate() - 2, today.getDate() - 5, today.getDate() - 9]
-      .filter((day) => day >= 1);
-  }, [viewedYear, viewedMonth, today]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStudiedDays() {
+      setIsLoadingDays(true);
+      try {
+        const days = await fetchStudiedDays(viewedYear, viewedMonth + 1);
+        if (!cancelled) setStudiedDays(days);
+      } catch {
+        // Fail quietly - just show no studied days highlighted rather than
+        // crashing the card over a transient fetch error.
+        if (!cancelled) setStudiedDays([]);
+      } finally {
+        if (!cancelled) setIsLoadingDays(false);
+      }
+    }
+
+    loadStudiedDays();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewedYear, viewedMonth]);
 
   const goToPrevMonth = () => {
     if (viewedMonth === 0) {
@@ -89,35 +106,43 @@ function ActivityCalendarCard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-1 text-center">
-        {WEEKDAY_LABELS.map((label) => (
-          <span key={label} className="text-[10px] font-semibold text-gray-400">
-            {label}
-          </span>
-        ))}
+      <div className="relative">
+        {isLoadingDays && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/60">
+            <Loader2 size={18} className="animate-spin text-[#4E1F6E]" />
+          </div>
+        )}
 
-        {cells.map((day, idx) => {
-          if (day === null) return <span key={`blank-${idx}`} />;
+        <div className="grid grid-cols-7 gap-y-1 text-center">
+          {WEEKDAY_LABELS.map((label) => (
+            <span key={label} className="text-[10px] font-semibold text-gray-400">
+              {label}
+            </span>
+          ))}
 
-          const isToday = isViewingCurrentMonth && day === today.getDate();
-          const isStudied = studiedDays.includes(day);
+          {cells.map((day, idx) => {
+            if (day === null) return <span key={`blank-${idx}`} />;
 
-          return (
-            <div key={day} className="flex items-center justify-center py-0.5">
-              <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
-                  isToday
-                    ? "bg-[#4E1F6E] text-white"
-                    : isStudied
-                    ? "bg-[#1D9E75] text-white"
-                    : "text-[#3E3E75]"
-                }`}
-              >
-                {day}
-              </span>
-            </div>
-          );
-        })}
+            const isToday = isViewingCurrentMonth && day === today.getDate();
+            const isStudied = studiedDays.includes(day);
+
+            return (
+              <div key={day} className="flex items-center justify-center py-0.5">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
+                    isToday
+                      ? "bg-[#4E1F6E] text-white"
+                      : isStudied
+                      ? "bg-[#1D9E75] text-white"
+                      : "text-[#3E3E75]"
+                  }`}
+                >
+                  {day}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-500">

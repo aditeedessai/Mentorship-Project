@@ -1,4 +1,6 @@
 import json
+from calendar import monthrange
+from datetime import date, timedelta
 
 from backend.database.database import get_connection
 
@@ -92,6 +94,70 @@ def get_evaluations_by_attempt(attempt_id: str):
             (attempt_id,),
         ).fetchall()
         return [_format_eval_dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
+def get_evaluated_question_types_by_study_set(user_id: str):
+    """
+    Return (study_set_id, question_type) for every evaluation recorded
+    across ALL of the user's quiz attempts - not just one attempt_id like
+    get_evaluations_with_question_details() does. Used to derive
+    per-study-set section completion for the dashboard progress card
+    (see evaluation_service.get_study_set_progress()), which needs to
+    know completion across every attempt ever taken under a study set,
+    not just whichever one is currently 'in_progress'.
+    """
+    connection = get_connection()
+    try:
+        rows = connection.execute(
+            """
+            SELECT qa.study_set_id AS study_set_id, q.question_type AS question_type
+            FROM evaluations e
+            JOIN quiz_attempts qa ON qa.attempt_id = e.attempt_id
+            LEFT JOIN questions q ON q.question_id = e.question_id
+            WHERE qa.user_id = ?
+            """,
+            (user_id,)
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
+def get_studied_dates(user_id: str, year: int, month: int) -> list[int]:
+    """
+    Return the distinct day-of-month numbers (1-31) within the given
+    year/month where the user answered at least one question, across
+    every study set and question type - for the Activity calendar card.
+
+    evaluations.created_at is when an answer was actually saved (set the
+    moment evaluate_and_save_attempt_answers() records it), so it's the
+    accurate source for "the date the user answered a question" -
+    quiz_attempts.created_at only marks when the attempt/session itself
+    started, not each individual answer.
+
+    Ownership is enforced via quiz_attempts.user_id (evaluations has no
+    user_id column of its own) - same join used by
+    get_evaluated_question_types_by_study_set().
+    """
+    connection = get_connection()
+    try:
+        month_start = date(year, month, 1)
+        days_in_month = monthrange(year, month)[1]
+        next_month_start = date(year, month, days_in_month) + timedelta(days=1)
+
+        rows = connection.execute(
+            """
+            SELECT DISTINCT EXTRACT(DAY FROM e.created_at)::int AS day
+            FROM evaluations e
+            JOIN quiz_attempts qa ON qa.attempt_id = e.attempt_id
+            WHERE qa.user_id = ? AND e.created_at >= ? AND e.created_at < ?
+            ORDER BY day
+            """,
+            (user_id, month_start.isoformat(), next_month_start.isoformat())
+        ).fetchall()
+        return [row["day"] for row in rows]
     finally:
         connection.close()
 

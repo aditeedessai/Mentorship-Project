@@ -2,12 +2,15 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
+    activity,
     attempts,
     documents,
+    exams,
     health,
     performance,
     questions,
     study_sets,
+    tasks,
 )
 
 app = FastAPI(
@@ -39,6 +42,9 @@ api_router.include_router(documents.router)
 api_router.include_router(questions.router)
 api_router.include_router(attempts.router)
 api_router.include_router(performance.router)
+api_router.include_router(tasks.router)
+api_router.include_router(exams.router)
+api_router.include_router(activity.router)
 
 # Mount API router to app
 app.include_router(api_router)

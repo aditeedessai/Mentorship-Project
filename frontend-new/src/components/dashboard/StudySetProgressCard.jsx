@@ -1,16 +1,29 @@
-import { Layers } from "lucide-react";
-
-const MOCK_STUDY_SET_PROGRESS = [
-  { studySetName: "Calculus II", sectionsCompleted: 4, totalSections: 4 },
-  { studySetName: "Physics 101", sectionsCompleted: 2, totalSections: 4 },
-  { studySetName: "Psychology Basics", sectionsCompleted: 1, totalSections: 4 },
-];
-
-// TODO: replace MOCK_STUDY_SET_PROGRESS with a real query that counts
-// completed quiz_attempts rows grouped by study set and question type
-// (MCQ, Application, Long Answer, Short Answer) to derive sectionsCompleted.
+import { useEffect, useState } from "react";
+import { Layers, Loader2, AlertCircle } from "lucide-react";
+import { fetchStudySetProgress } from "../../services/api";
 
 function StudySetProgressCard() {
+  const [progress, setProgress] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const loadProgress = async () => {
+    setIsLoading(true);
+    setLoadError("");
+    try {
+      const data = await fetchStudySetProgress();
+      setProgress(data);
+    } catch {
+      setLoadError("Couldn't load study set progress. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
   return (
     <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-center gap-2">
@@ -20,27 +33,46 @@ function StudySetProgressCard() {
         </h2>
       </div>
 
-      {MOCK_STUDY_SET_PROGRESS.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-1 items-center justify-center gap-2 py-6 text-sm text-gray-400">
+          <Loader2 size={16} className="animate-spin" />
+          Loading progress...
+        </div>
+      ) : loadError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
+          <div className="flex items-center gap-1.5 text-sm font-medium text-red-500">
+            <AlertCircle size={16} />
+            {loadError}
+          </div>
+          <button
+            type="button"
+            onClick={loadProgress}
+            className="text-xs font-semibold text-[#4E1F6E] underline underline-offset-2 hover:text-[#3E3E75]"
+          >
+            Retry
+          </button>
+        </div>
+      ) : progress.length === 0 ? (
         <p className="flex-1 py-6 text-center text-sm text-gray-400">
           No study sets yet.
         </p>
       ) : (
         <div className="flex-1 space-y-5">
-          {MOCK_STUDY_SET_PROGRESS.map((set) => {
-            const isComplete = set.sectionsCompleted >= set.totalSections;
+          {progress.map((set) => {
+            const isComplete = set.sections_completed >= set.total_sections;
             const percent = Math.min(
               100,
-              (set.sectionsCompleted / set.totalSections) * 100
+              (set.sections_completed / set.total_sections) * 100
             );
 
             return (
-              <div key={set.studySetName}>
+              <div key={set.study_set_id}>
                 <div className="mb-2 flex items-center justify-between">
                   <span className="truncate text-sm font-medium text-[#3E3E75]">
-                    {set.studySetName}
+                    {set.name}
                   </span>
                   <span className="shrink-0 text-xs font-semibold text-gray-500">
-                    {set.sectionsCompleted}/{set.totalSections} sections
+                    {set.sections_completed}/{set.total_sections} sections
                   </span>
                 </div>
 
