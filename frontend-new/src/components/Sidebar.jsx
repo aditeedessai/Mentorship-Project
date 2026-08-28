@@ -34,8 +34,8 @@ function Sidebar({ onNavigate, currentPage = "dashboard", user }) {
     <aside
       className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r transition-colors duration-500 backdrop-blur-2xl ${
         isDarkMode
-          ? "border-white/10 bg-[#17131F]/85 text-white shadow-[0_15px_50px_rgba(0,0,0,0.35)]"
-          : "border-white/80 bg-white/70 text-[#292530] shadow-[0_12px_45px_rgba(70,55,110,0.08)]"
+          ? "border-white/8 bg-[#13101A]/85 text-[#F3F0F8] shadow-[0_15px_50px_rgba(0,0,0,0.30)]"
+          : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_30px_rgba(128,100,199,0.04)]"
       }`}
     >
       {/* Logo */}

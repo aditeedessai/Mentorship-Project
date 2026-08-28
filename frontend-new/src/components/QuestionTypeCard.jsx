@@ -29,8 +29,8 @@ export default function QuestionTypeCard({ type, isSelected, isCompleted, onSele
             ? 'border-[#8064C7] bg-[#8064C7]/20 text-white shadow-[0_15px_35px_rgba(128,100,199,0.25)]'
             : 'border-[#8064C7] bg-white text-[#292530] shadow-[0_15px_35px_rgba(128,100,199,0.15)]'
           : isDarkMode
-          ? 'border-white/10 bg-[#17131F]/80 text-white hover:border-[#8064C7]/50 hover:bg-white/10'
-          : 'border-white/80 bg-white/60 text-[#292530] hover:border-[#8064C7]/40 hover:bg-white/80'
+          ? 'border-white/8 bg-[#14101D]/75 text-[#F3F0F8] hover:border-[#8064C7]/40 hover:bg-white/10'
+          : 'border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] hover:border-[#8064C7]/30 hover:bg-[#EBE4F6]'
       }`}
     >
       {/* Completed indicator badge */}

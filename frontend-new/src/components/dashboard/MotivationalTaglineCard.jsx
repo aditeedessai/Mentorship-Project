@@ -19,8 +19,8 @@ function MotivationalTaglineCard() {
     <div
       className={`flex flex-1 flex-col items-center justify-center rounded-3xl border p-6 text-center backdrop-blur-2xl transition-all duration-500 ${
         isDarkMode
-          ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-[#A78BFA]"
-          : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+          ? "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#A78BFA]"
+          : "border-[#8064C7]/15 bg-[#8064C7]/5 text-[#8064C7]"
       }`}
     >
       <p className="text-base font-bold tracking-tight">{tagline}</p>

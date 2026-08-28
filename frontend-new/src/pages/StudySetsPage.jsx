@@ -136,12 +136,12 @@ function StudySetsPage({
 
   return (
     <div>
-      {/* ================= GREETING BANNER ================= */}
+      {/* ================= HEADER ================= */}
       <div
         className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
         }`}
       >
         <div>
@@ -150,14 +150,14 @@ function StudySetsPage({
           </h1>
           <p
             className={`mt-2 text-sm font-medium ${
-              isDarkMode ? "text-white/60" : "text-[#706A78]"
+              isDarkMode ? "text-white/50" : "text-[#706A78]"
             }`}
           >
             Create and manage your study sets.
           </p>
           <button
             onClick={onCreateClick}
-            className="mt-6 flex items-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
+            className="mt-6 flex items-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3 text-xs font-bold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#7357B9]"
           >
             <BookOpen size={18} />
             Create Study Set
@@ -165,13 +165,13 @@ function StudySetsPage({
         </div>
 
         <div
-          className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
+          className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
             isDarkMode
               ? "border-white/10 bg-white/5 text-[#A78BFA]"
-              : "border-white/80 bg-white/80 text-[#8064C7] shadow-sm"
+              : "border-[#8064C7]/20 bg-white/60 text-[#8064C7] shadow-xs"
           }`}
         >
-          <BookCopy size={44} />
+          <BookCopy size={40} />
         </div>
       </div>
 
@@ -179,8 +179,8 @@ function StudySetsPage({
       <div
         className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}
       >
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -318,7 +318,7 @@ function StudySetsPage({
                     className={`rounded-2xl border p-4 transition-all duration-300 flex flex-col backdrop-blur-xl ${
                       isDarkMode
                         ? "border-white/10 bg-[#211D2B]/80 hover:border-[#8064C7]/50 hover:bg-[#252033]"
-                        : "border-white/80 bg-white/70 hover:border-[#8064C7]/40 hover:bg-white shadow-[0_10px_30px_rgba(70,55,110,0.05)]"
+                        : "border-[#8064C7]/20 bg-[#F5F1FC] hover:border-[#8064C7]/40 hover:bg-[#EDE6F8] shadow-[0_4px_20px_rgba(128,100,199,0.05)]"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">

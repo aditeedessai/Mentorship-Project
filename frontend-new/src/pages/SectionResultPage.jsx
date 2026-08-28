@@ -135,7 +135,9 @@ export default function SectionResultPage({ onNavigate }) {
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       {/* Top Banner with Section Score */}
       <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
-        isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/60 text-[#292530]"
+        isDarkMode
+          ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
       }`}>
         <div>
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
@@ -171,7 +173,9 @@ export default function SectionResultPage({ onNavigate }) {
 
           return (
             <div key={idx} className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-4 ${
-              isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/60 text-[#292530]"
+              isDarkMode
+                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+                : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
             }`}>
               <div className="flex justify-between items-start gap-4">
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8064C7] dark:text-[#A78BFA]">

@@ -146,8 +146,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       <div
         className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
         }`}
       >
         <div>
@@ -156,7 +156,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </h1>
           <p
             className={`mt-2 text-sm font-medium ${
-              isDarkMode ? "text-white/60" : "text-[#706A78]"
+              isDarkMode ? "text-white/50" : "text-[#706A78]"
             }`}
           >
             Upload your study materials and give your set a name to get started.
@@ -164,13 +164,13 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         </div>
 
         <div
-          className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
+          className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
             isDarkMode
               ? "border-white/10 bg-white/5 text-[#A78BFA]"
-              : "border-white/80 bg-white/80 text-[#8064C7] shadow-sm"
+              : "border-[#8064C7]/20 bg-white/60 text-[#8064C7] shadow-xs"
           }`}
         >
-          <Upload size={48} />
+          <Upload size={40} />
         </div>
       </div>
 
@@ -198,8 +198,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         <div
           className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 flex flex-col h-full ${
             isDarkMode
-              ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-              : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+              ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+              : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
           }`}
         >
           <div
@@ -314,8 +314,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         <div
           className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 flex flex-col justify-between h-full lg:col-span-1 ${
             isDarkMode
-              ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-              : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+              ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+              : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
           }`}
         >
           <div>

@@ -45,7 +45,9 @@ export default function QuizCenter({
       {/* Question Card - scrollable area */}
       <div className="flex-1 overflow-y-auto px-8 py-5 min-h-0">
         <div className={`rounded-3xl border p-7 backdrop-blur-2xl transition-all duration-300 ${
-          isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/70 text-[#292530]"
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           {/* Question Text */}
           <h2 className="text-xl font-extrabold leading-snug mb-5 tracking-tight">

@@ -19,13 +19,12 @@ const GlassCard = ({
       className={`
         border
         backdrop-blur-2xl
-        shadow-[0_18px_50px_rgba(0,0,0,0.10)]
         transition-colors
         duration-500
         ${
           isDarkMode
-            ? "border-white/10 bg-[#211D2B]/65 shadow-[0_20px_60px_rgba(0,0,0,0.30)]"
-            : "border-white/70 bg-white/50 shadow-[0_18px_50px_rgba(70,55,110,0.10)]"
+            ? "border-white/8 bg-[#14101D]/75 shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-white/80 shadow-[0_4px_25px_rgba(0,0,0,0.03)] text-[#1E1B24]"
         }
         ${className}
       `}
@@ -55,13 +54,13 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
           h-[350px]
           w-[350px]
           rounded-full
-          blur-[65px]
+          blur-[90px]
           transition-all
           duration-500
           ${
             isDarkMode
-              ? "bg-[#8B5CF6]/25"
-              : "bg-[#8064C7]/15"
+              ? "bg-[#8064C7]/12"
+              : "bg-[#8064C7]/6"
           }
         `}
       />
@@ -86,8 +85,8 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
           md:w-[340px]
           ${
             isDarkMode
-              ? "border-white/20 bg-[#F8F7FC] shadow-[0_25px_80px_rgba(0,0,0,0.45)]"
-              : "border-white/80 bg-white/80 shadow-[0_25px_70px_rgba(60,45,100,0.18)]"
+              ? "border-white/15 bg-[#17131F]/90 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+              : "border-black/5 bg-white/90 shadow-[0_12px_45px_rgba(0,0,0,0.06)]"
           }
         `}
       >
@@ -139,8 +138,8 @@ const JotLandingTest = ({
         duration-500
         ${
           isDarkMode
-            ? "bg-[#0E0B15] text-[#F5F2FA]"
-            : "bg-[#F6F3FC] text-[#292530]"
+            ? "bg-[#0B0910] text-[#F3F0F8]"
+            : "bg-[#F8F7FA] text-[#1E1B24]"
         }
       `}
     >
@@ -166,16 +165,16 @@ const JotLandingTest = ({
             absolute
             -left-40
             -top-40
-            h-[520px]
-            w-[520px]
+            h-[550px]
+            w-[550px]
             rounded-full
-            blur-[130px]
+            blur-[160px]
             transition-colors
             duration-700
             ${
               isDarkMode
-                ? "bg-[#6D45B8]/25"
-                : "bg-[#D9CEF5]/60"
+                ? "bg-[#8064C7]/8"
+                : "bg-[#8064C7]/4"
             }
           `}
         />
@@ -191,11 +190,11 @@ const JotLandingTest = ({
             h-[500px]
             w-[500px]
             rounded-full
-            blur-[130px]
+            blur-[160px]
             ${
               isDarkMode
-                ? "bg-[#8B5CF6]/15"
-                : "bg-[#E9DDF5]/70"
+                ? "bg-[#8064C7]/6"
+                : "bg-[#A78BFA]/5"
             }
           `}
         />
@@ -211,11 +210,11 @@ const JotLandingTest = ({
             h-[550px]
             w-[550px]
             rounded-full
-            blur-[130px]
+            blur-[160px]
             ${
               isDarkMode
-                ? "bg-[#5B3A94]/20"
-                : "bg-[#DDD4F5]/60"
+                ? "bg-[#6D45B8]/8"
+                : "bg-[#8064C7]/4"
             }
           `}
         />

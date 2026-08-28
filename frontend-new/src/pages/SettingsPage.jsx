@@ -118,14 +118,14 @@ const SettingsPage = ({
       {/* Header Banner */}
       <div className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 sm:flex-row sm:items-center backdrop-blur-2xl ${
         isDarkMode
-          ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-          : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+          ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
       }`}>
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
             Settings
           </h1>
-          <p className={`mt-2 text-sm ${isDarkMode ? "text-white/60" : "text-[#706A78]"}`}>
+          <p className={`mt-2 text-sm ${isDarkMode ? "text-white/50" : "text-[#706A78]"}`}>
             Manage your account and application preferences.
           </p>
         </div>
@@ -156,8 +156,8 @@ const SettingsPage = ({
         {/* PROFILE */}
         <section className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
@@ -212,8 +212,8 @@ const SettingsPage = ({
         {/* APPEARANCE */}
         <section className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
@@ -266,8 +266,8 @@ const SettingsPage = ({
         {/* SECURITY */}
         <section className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">

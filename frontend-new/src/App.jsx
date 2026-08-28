@@ -37,24 +37,24 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
   return (
     <div
       className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${
-        isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+        isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#E8E2F0] text-[#231B33]"
       }`}
     >
-      {/* Background Ambient Glow Orbs */}
+      {/* Subtle Background Ambient Glow Orbs */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div
-          className={`absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full blur-[130px] transition-colors duration-700 ${
-            isDarkMode ? "bg-[#6D45B8]/25" : "bg-[#D9CEF5]/60"
+          className={`absolute -left-40 -top-40 h-[550px] w-[550px] rounded-full blur-[160px] transition-colors duration-700 ${
+            isDarkMode ? "bg-[#8064C7]/8" : "bg-[#8064C7]/4"
           }`}
         />
         <div
-          className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[130px] ${
-            isDarkMode ? "bg-[#8B5CF6]/15" : "bg-[#E9DDF5]/70"
+          className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[160px] ${
+            isDarkMode ? "bg-[#8064C7]/6" : "bg-[#A78BFA]/5"
           }`}
         />
         <div
-          className={`absolute bottom-[-250px] left-[20%] h-[550px] w-[550px] rounded-full blur-[130px] ${
-            isDarkMode ? "bg-[#5B3A94]/20" : "bg-[#DDD4F5]/60"
+          className={`absolute bottom-[-250px] left-[20%] h-[550px] w-[550px] rounded-full blur-[160px] ${
+            isDarkMode ? "bg-[#6D45B8]/8" : "bg-[#8064C7]/4"
           }`}
         />
       </div>

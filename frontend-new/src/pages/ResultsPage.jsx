@@ -486,8 +486,8 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       {sectionsList.length > 0 && (
         <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-4 ${
           isDarkMode
-            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
-            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black tracking-tight">Section-Wise Breakdown</h2>
@@ -682,7 +682,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       {/* 5. Key Strengths & Areas for Improvement */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-3 ${
-          isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/60 text-[#292530]"
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           <div className="flex items-center gap-2 text-emerald-400">
             <TrendingUp size={18} />
@@ -704,7 +706,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
         </div>
 
         <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-3 ${
-          isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/60 text-[#292530]"
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
         }`}>
           <div className="flex items-center gap-2 text-[#8064C7] dark:text-[#A78BFA]">
             <Target size={18} />
@@ -728,7 +732,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
       {/* 6. Navigation Controls */}
       <div className={`rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-4 ${
-        isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/60 text-[#292530]"
+        isDarkMode
+          ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
       }`}>
         {isAttemptComplete ? (
           <>
