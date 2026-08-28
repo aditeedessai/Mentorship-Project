@@ -30,7 +30,7 @@ export default function QuestionTypeCard({ type, isSelected, isCompleted, onSele
             : 'border-[#8064C7] bg-white text-[#292530] shadow-[0_15px_35px_rgba(128,100,199,0.15)]'
           : isDarkMode
           ? 'border-white/8 bg-[#14101D]/75 text-[#F3F0F8] hover:border-[#8064C7]/40 hover:bg-white/10'
-          : 'border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] hover:border-[#8064C7]/30 hover:bg-[#EBE4F6]'
+          : 'border-black/5 bg-[#F8F8FC]/95 text-[#231B33] hover:border-[#8064C7]/30 hover:bg-white'
       }`}
     >
       {/* Completed indicator badge */}

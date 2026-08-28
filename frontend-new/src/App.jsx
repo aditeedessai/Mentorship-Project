@@ -37,7 +37,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
   return (
     <div
       className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${
-        isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#E8E2F0] text-[#231B33]"
+        isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
       }`}
     >
       {/* Subtle Background Ambient Glow Orbs */}

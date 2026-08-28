@@ -35,7 +35,7 @@ function Sidebar({ onNavigate, currentPage = "dashboard", user }) {
       className={`fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r transition-colors duration-500 backdrop-blur-2xl ${
         isDarkMode
           ? "border-white/8 bg-[#13101A]/85 text-[#F3F0F8] shadow-[0_15px_50px_rgba(0,0,0,0.30)]"
-          : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_30px_rgba(128,100,199,0.04)]"
+          : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_30px_rgba(0,0,0,0.03)]"
       }`}
     >
       {/* Logo */}

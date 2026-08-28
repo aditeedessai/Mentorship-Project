@@ -82,7 +82,7 @@ function ActivityCalendarCard() {
       className={`flex flex-1 flex-col rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
         isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-          : "border-[#8064C7]/15 bg-[#F0ECF8]/95 text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.05)]"
+          : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
       <h2 className="mb-4 text-xl font-black tracking-tight">Activity</h2>
