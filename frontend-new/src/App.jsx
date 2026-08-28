@@ -25,6 +25,7 @@ import Sidebar from "./components/Sidebar";
 import {
   fetchStudySets,
   deleteStudySet,
+  deleteAllStudySets,
 } from "./services/api";
 
 import { supabase } from "./services/supabase";
@@ -38,6 +39,7 @@ function App() {
   const [pendingEmail, setPendingEmail] = useState("");
   const [otpType, setOtpType] = useState("signup");
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
+  const [settingsNotice, setSettingsNotice] = useState("");
 
   // ================= USER STATE =================
   const [user, setUser] = useState(null);
@@ -156,6 +158,31 @@ function App() {
     }
   };
 
+  // ================= DELETE ALL STUDY SETS =================
+  // Owned here (not called directly from SettingsPage) so the shared
+  // `studySets` state driving StudySetsPage stays in sync - otherwise
+  // Settings' own success message would be right, but StudySetsPage
+  // would keep rendering whatever was fetched at mount, since it never
+  // fetches its own data.
+  const handleDeleteAllStudySets = async () => {
+    try {
+      setStudySetsError("");
+
+      await deleteAllStudySets();
+
+      setStudySets([]);
+      setSelectedStudySetId(null);
+    } catch (error) {
+      console.error("Failed to delete all study sets:", error);
+
+      setStudySetsError(
+        "Failed to delete all study sets. Please try again."
+      );
+
+      throw error;
+    }
+  };
+
   // ================= PASSWORD RESET =================
   if (needsPasswordReset) {
     return (
@@ -265,6 +292,34 @@ function App() {
     return <QnAPage />;
   }
 
+  // ================= CHANGE PASSWORD (from Settings, while logged in) =================
+  // Reuses the exact same OTP-verification and set-new-password screens as
+  // the logged-out forgot-password flow, full-page like the quiz pages
+  // above - VerifyOtpPage/ResetPasswordPage assume the whole viewport
+  // (min-h-screen, no sidebar), so these render outside the sidebar layout
+  // rather than nested inside <main>.
+  if (currentPage === "change-password-otp" && user) {
+    return (
+      <VerifyOtpPage
+        email={user.email}
+        type="recovery"
+        onVerified={() => handleNavigate("change-password-new")}
+        onBack={() => handleNavigate("settings")}
+      />
+    );
+  }
+
+  if (currentPage === "change-password-new" && user) {
+    return (
+      <ResetPasswordPage
+        onComplete={() => {
+          setSettingsNotice("Your password has been changed successfully.");
+          handleNavigate("settings");
+        }}
+      />
+    );
+  }
+
   // ================= MAIN AUTHENTICATED APP =================
   return (
     <div className="flex min-h-screen bg-[#F8FAFA]">
@@ -357,6 +412,9 @@ function App() {
           <SettingsPage
             onNavigate={handleNavigate}
             user={user}
+            notice={settingsNotice}
+            onDismissNotice={() => setSettingsNotice("")}
+            onDeleteAllStudySets={handleDeleteAllStudySets}
           />
         )}
 

@@ -271,4 +271,30 @@ def get_active_attempt_by_study_set(study_set_id: str, user_id: str = None) -> d
 
         return _format_attempt_dict(row)
     finally:
+        connection.close()
+
+
+def delete_attempts_for_user(user_id: str) -> int:
+    """
+    Delete every quiz attempt owned by a user - and, via evaluations'
+    own `attempt_id references quiz_attempts(attempt_id) on delete
+    cascade`, every evaluation recorded under those attempts too.
+
+    Used by the account-deletion flow (see
+    account_service.delete_own_account()'s docstring): unlike
+    study_sets/tasks/exams, quiz_attempts has no FK of its own to
+    auth.users(id), and its study_set_id column uses ON DELETE SET NULL
+    rather than CASCADE - so deleting a user's auth account and their
+    study_sets does NOT clean up their quiz_attempts on its own. This
+    has to happen explicitly. Returns the number of attempts deleted.
+    """
+    connection = get_connection()
+    try:
+        cursor = connection.execute(
+            "DELETE FROM quiz_attempts WHERE user_id = ?",
+            (user_id,)
+        )
+        connection.commit()
+        return cursor.rowcount
+    finally:
         connection.close()

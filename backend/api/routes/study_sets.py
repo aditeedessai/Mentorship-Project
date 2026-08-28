@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.study_set import (
     CreateStudySetRequest,
+    DeleteAllStudySetsResponse,
     DeleteStudySetResponse,
     FlashcardsResponse,
     MnemonicRequest,
@@ -199,6 +200,29 @@ def get_study_sets_progress(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get study set progress: {str(e)}"
+        )
+
+
+@router.delete(
+    "/all",
+    response_model=DeleteAllStudySetsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Delete all study sets",
+    description="Permanently deletes every study set owned by the authenticated user."
+)
+def delete_all_study_sets(
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> DeleteAllStudySetsResponse:
+    try:
+        deleted_count = study_service.delete_all_study_sets(current_user.user_id)
+        return DeleteAllStudySetsResponse(
+            message="All study sets deleted successfully",
+            deleted_count=deleted_count
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete all study sets: {str(e)}"
         )
 
 

@@ -90,6 +90,19 @@ class DeleteStudySetResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DeleteAllStudySetsResponse(BaseModel):
+    message: str = Field(
+        ...,
+        description="Confirmation message for bulk study set deletion"
+    )
+    deleted_count: int = Field(
+        ...,
+        description="Number of study sets deleted"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SummaryResponse(BaseModel):
     title: str = Field(
         ...,

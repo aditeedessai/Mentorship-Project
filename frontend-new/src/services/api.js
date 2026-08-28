@@ -102,6 +102,16 @@ export async function deleteStudySet(studySetId) {
 }
 
 /**
+ * Delete every study set owned by the current user.
+ * DELETE /api/study-sets/all
+ */
+export async function deleteAllStudySets() {
+  return request("/api/study-sets/all", {
+    method: "DELETE",
+  });
+}
+
+/**
  * Generate summary for a study set.
  * POST /api/study-sets/{studySetId}/summary
  */
@@ -442,4 +452,16 @@ export async function deleteExam(examId) {
 export async function fetchStudiedDays(year, month) {
   const data = await request(`/api/activity/studied-days?year=${year}&month=${month}`);
   return data.studied_days;
+}
+
+// ── Account ──────────────────────────────────────────────────────────
+
+/**
+ * Permanently delete the current user's account and all associated data.
+ * DELETE /api/account
+ */
+export async function deleteAccount() {
+  return request("/api/account", {
+    method: "DELETE",
+  });
 }

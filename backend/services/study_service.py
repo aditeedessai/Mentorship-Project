@@ -28,6 +28,10 @@ def delete_study_set(study_set_id: str, user_id: str | None = None) -> bool:
     return study_set_repository.delete_study_set(study_set_id, user_id=user_id)
 
 
+def delete_all_study_sets(user_id: str) -> int:
+    return study_set_repository.delete_all_study_sets(user_id)
+
+
 # Only these file formats are allowed
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 

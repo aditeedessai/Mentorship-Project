@@ -145,6 +145,34 @@ def delete_study_set(study_set_id: str, user_id: str = None) -> bool:
         connection.close()
 
 
+def delete_all_study_sets(user_id: str) -> int:
+    """
+    Delete every study set owned by a user - same ownership-enforced
+    approach as delete_study_set(), just without a specific study_set_id
+    filter. `user_id` is required (unlike the optional user_id on
+    list_study_sets()/get_study_set()/delete_study_set(), which support
+    an unscoped "admin" mode for legitimate internal use) - there is no
+    legitimate reason to ever run this unscoped, and doing so would wipe
+    every user's study sets at once, so it's not offered as an option
+    here.
+
+    Documents/document_chunks/questions/question_sources under each
+    study set cascade-delete automatically via their own FK definitions,
+    exactly as they do for a single delete_study_set() call. Returns the
+    number of study sets deleted.
+    """
+    connection = get_connection()
+    try:
+        cursor = connection.execute(
+            "DELETE FROM study_sets WHERE user_id = ?",
+            (user_id,)
+        )
+        connection.commit()
+        return cursor.rowcount
+    finally:
+        connection.close()
+
+
 def update_study_set_timestamp(study_set_id: str):
     """
     Update the updated_at timestamp of a study set.
