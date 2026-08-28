@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
@@ -15,7 +16,7 @@ import ConfigureSession from "./pages/ConfigureSession";
 import MCQPage from "./pages/MCQPage";
 import QnAPage from "./pages/QnAPage";
 
-
+import JotLandingTest from "./pages/JotLandingTest";
 import LandingPage from "./pages/LandingPage";
 import AboutPage from "./pages/AboutPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -30,11 +31,50 @@ import {
 
 import { supabase } from "./services/supabase";
 
-function App() {
+function MainAppLayout({ children, onNavigate, currentPage, user }) {
+  const { isDarkMode } = useTheme();
+
+  return (
+    <div
+      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${
+        isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+      }`}
+    >
+      {/* Background Ambient Glow Orbs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div
+          className={`absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full blur-[130px] transition-colors duration-700 ${
+            isDarkMode ? "bg-[#6D45B8]/25" : "bg-[#D9CEF5]/60"
+          }`}
+        />
+        <div
+          className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[130px] ${
+            isDarkMode ? "bg-[#8B5CF6]/15" : "bg-[#E9DDF5]/70"
+          }`}
+        />
+        <div
+          className={`absolute bottom-[-250px] left-[20%] h-[550px] w-[550px] rounded-full blur-[130px] ${
+            isDarkMode ? "bg-[#5B3A94]/20" : "bg-[#DDD4F5]/60"
+          }`}
+        />
+      </div>
+
+      <div className="flex min-h-screen">
+        <Sidebar
+          onNavigate={onNavigate}
+          currentPage={currentPage}
+          user={user}
+        />
+        <main className="ml-64 flex-1 overflow-y-auto p-8">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+function AppContent() {
   const location = useLocation();
 
   // ================= AUTH STATE =================
-  // Landing page is shown first when user is not authenticated
   const [authPage, setAuthPage] = useState("landing");
   const [pendingEmail, setPendingEmail] = useState("");
   const [otpType, setOtpType] = useState("signup");
@@ -57,8 +97,6 @@ function App() {
 
   // ================= CENTRAL NAVIGATION HANDLER =================
   const handleNavigate = (page, state) => {
-    // When starting a new upload/create-study-set flow,
-    // make sure no previous study set remains selected.
     if (page === "upload") {
       setSelectedStudySetId(null);
     } else if (state?.studySetId) {
@@ -97,8 +135,6 @@ function App() {
         setUser(null);
         setStudySets([]);
         setSelectedStudySetId(null);
-
-        // Return to landing page after logout
         setAuthPage("landing");
       }
     });
@@ -136,14 +172,12 @@ function App() {
 
       await deleteStudySet(studySetId);
 
-      // Remove deleted study set immediately from UI
       setStudySets((prev) =>
         prev.filter(
           (studySet) => studySet.study_set_id !== studySetId
         )
       );
 
-      // Clear selection if deleted study set was selected
       if (selectedStudySetId === studySetId) {
         setSelectedStudySetId(null);
       }
@@ -159,11 +193,6 @@ function App() {
   };
 
   // ================= DELETE ALL STUDY SETS =================
-  // Owned here (not called directly from SettingsPage) so the shared
-  // `studySets` state driving StudySetsPage stays in sync - otherwise
-  // Settings' own success message would be right, but StudySetsPage
-  // would keep rendering whatever was fetched at mount, since it never
-  // fetches its own data.
   const handleDeleteAllStudySets = async () => {
     try {
       setStudySetsError("");
@@ -196,17 +225,23 @@ function App() {
   }
 
   // ================= PUBLIC / AUTH PAGES =================
-  if (!user) {
-    // Landing Page — Shanallie's feature
-    if (authPage === "landing") {
-      return (
-        <LandingPage
-          onNavigate={setAuthPage}
-        />
-      );
-    }
+  // 1. Jot Landing Page ALWAYS opens first when launching the app
+  if (authPage === "landing") {
+    return (
+      <JotLandingTest
+        onNavigate={(page) => {
+          if (page === "login" && user) {
+            setAuthPage("app");
+          } else {
+            setAuthPage(page);
+          }
+        }}
+      />
+    );
+  }
 
-    // About Us — Shanallie's feature
+  if (!user || authPage !== "app") {
+    // About Us
     if (authPage === "about") {
       return (
         <AboutPage
@@ -219,7 +254,10 @@ function App() {
     if (authPage === "login") {
       return (
         <LoginPage
-          onLogin={setUser}
+          onLogin={(userData) => {
+            setUser(userData);
+            setAuthPage("app");
+          }}
           onSignUp={() => setAuthPage("signup")}
           onForgotPassword={() =>
             setAuthPage("forgot-password")
@@ -292,12 +330,6 @@ function App() {
     return <QnAPage />;
   }
 
-  // ================= CHANGE PASSWORD (from Settings, while logged in) =================
-  // Reuses the exact same OTP-verification and set-new-password screens as
-  // the logged-out forgot-password flow, full-page like the quiz pages
-  // above - VerifyOtpPage/ResetPasswordPage assume the whole viewport
-  // (min-h-screen, no sidebar), so these render outside the sidebar layout
-  // rather than nested inside <main>.
   if (currentPage === "change-password-otp" && user) {
     return (
       <VerifyOtpPage
@@ -322,112 +354,110 @@ function App() {
 
   // ================= MAIN AUTHENTICATED APP =================
   return (
-    <div className="flex min-h-screen bg-[#F8FAFA]">
+    <MainAppLayout
+      onNavigate={handleNavigate}
+      currentPage={currentPage}
+      user={user}
+    >
+      {/* ================= ABOUT US ================= */}
+      {currentPage === "about" && (
+        <AboutPage
+          onNavigate={handleNavigate}
+        />
+      )}
 
-      {/* ================= SIDEBAR ================= */}
-      <Sidebar
-        onNavigate={handleNavigate}
-        currentPage={currentPage}
-        user={user}
-      />
+      {/* ================= UPLOAD ================= */}
+      {currentPage === "upload" && (
+        <UploadPage
+          studySetId={selectedStudySetId}
+          onNavigate={handleNavigate}
+          onStudySetCreated={(newStudySet) => {
+            setStudySets((prev) => [
+              newStudySet,
+              ...prev,
+            ]);
 
-      {/* ================= MAIN CONTENT ================= */}
-      <main className="ml-64 flex-1 overflow-y-auto p-8">
+            setSelectedStudySetId(
+              newStudySet.study_set_id
+            );
+          }}
+        />
+      )}
 
-        {/* ================= ABOUT US ================= */}
-        {currentPage === "about" && (
-          <AboutPage
+      {/* ================= STUDY SETS ================= */}
+      {currentPage === "study-sets" && (
+        <StudySetsPage
+          studySets={studySets}
+          studySetsLoading={studySetsLoading}
+          studySetsError={studySetsError}
+          onCreateClick={() => {
+            handleNavigate("upload");
+          }}
+          onDeleteStudySet={handleDeleteStudySet}
+          onContinueStudying={(studySetId) => {
+            handleNavigate("study-set", {
+              studySetId,
+            });
+          }}
+        />
+      )}
+
+      {/* ================= INDIVIDUAL STUDY SET ================= */}
+      {currentPage === "study-set" && (
+        <IndivisualStudySetPage
+          studySetId={selectedStudySetId}
+          studySets={studySets}
+          onNavigate={handleNavigate}
+        />
+      )}
+
+      {/* ================= RESULTS / PROGRESS ================= */}
+      {(currentPage === "results" ||
+        currentPage === "progress") && (
+          <ResultsPage
             onNavigate={handleNavigate}
           />
         )}
 
-        {/* ================= UPLOAD ================= */}
-        {currentPage === "upload" && (
-          <UploadPage
-            studySetId={selectedStudySetId}
-            onNavigate={handleNavigate}
-            onStudySetCreated={(newStudySet) => {
-              setStudySets((prev) => [
-                newStudySet,
-                ...prev,
-              ]);
+      {/* ================= QUIZ CONFIGURATION ================= */}
+      {currentPage === "quiz" && (
+        <ConfigureSession
+          studySetId={selectedStudySetId}
+          studySetName={
+            studySets.find(
+              (s) =>
+                s.study_set_id === selectedStudySetId
+            )?.name
+          }
+        />
+      )}
 
-              setSelectedStudySetId(
-                newStudySet.study_set_id
-              );
-            }}
-          />
-        )}
+      {/* ================= SETTINGS ================= */}
+      {currentPage === "settings" && (
+        <SettingsPage
+          onNavigate={handleNavigate}
+          user={user}
+          notice={settingsNotice}
+          onDismissNotice={() => setSettingsNotice("")}
+          onDeleteAllStudySets={handleDeleteAllStudySets}
+        />
+      )}
 
-        {/* ================= STUDY SETS ================= */}
-        {currentPage === "study-sets" && (
-          <StudySetsPage
-            studySets={studySets}
-            studySetsLoading={studySetsLoading}
-            studySetsError={studySetsError}
-            onCreateClick={() => {
-              handleNavigate("upload");
-            }}
-            onDeleteStudySet={handleDeleteStudySet}
-            onContinueStudying={(studySetId) => {
-              handleNavigate("study-set", {
-                studySetId,
-              });
-            }}
-          />
-        )}
-
-        {/* ================= INDIVIDUAL STUDY SET ================= */}
-        {currentPage === "study-set" && (
-          <IndivisualStudySetPage
-            studySetId={selectedStudySetId}
-            studySets={studySets}
-            onNavigate={handleNavigate}
-          />
-        )}
-
-        {/* ================= RESULTS / PROGRESS ================= */}
-        {(currentPage === "results" ||
-          currentPage === "progress") && (
-            <ResultsPage
-              onNavigate={handleNavigate}
-            />
-          )}
-
-        {/* ================= QUIZ CONFIGURATION ================= */}
-        {currentPage === "quiz" && (
-          <ConfigureSession
-            studySetId={selectedStudySetId}
-            studySetName={
-              studySets.find(
-                (s) =>
-                  s.study_set_id === selectedStudySetId
-              )?.name
-            }
-          />
-        )}
-
-        {/* ================= SETTINGS ================= */}
-        {currentPage === "settings" && (
-          <SettingsPage
-            onNavigate={handleNavigate}
-            user={user}
-            notice={settingsNotice}
-            onDismissNotice={() => setSettingsNotice("")}
-            onDeleteAllStudySets={handleDeleteAllStudySets}
-          />
-        )}
-
-        {/* ================= DASHBOARD ================= */}
-        {currentPage === "dashboard" && (
-          <DashboardPage
-            user={user}
-            onNavigate={handleNavigate}
-          />
-        )}
-      </main>
-    </div>
+      {/* ================= DASHBOARD ================= */}
+      {currentPage === "dashboard" && (
+        <DashboardPage
+          user={user}
+          onNavigate={handleNavigate}
+        />
+      )}
+    </MainAppLayout>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}

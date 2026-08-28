@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Clock, Star, MoreVertical, Sparkles } from 'lucide-react'
+import { useTheme } from '../../context/ThemeContext'
 
 export default function QuizHeader({ remainingSeconds, isBookmarked, onToggleBookmark, onAbort }) {
+  const { isDarkMode } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -22,62 +24,70 @@ export default function QuizHeader({ remainingSeconds, isBookmarked, onToggleBoo
   }, [menuOpen])
 
   return (
-    <header className="flex items-center justify-between h-[52px] px-5 bg-white border-b border-[#E5E5E5] flex-shrink-0 z-10">
+    <header className={`flex items-center justify-between h-14 px-6 border-b backdrop-blur-2xl transition-colors duration-300 z-10 ${
+      isDarkMode ? "border-white/10 bg-[#17131F]/90 text-white" : "border-gray-200/80 bg-white/80 text-[#292530]"
+    }`}>
       {/* Brand */}
       <div className="flex items-center gap-2.5">
-        <div className="w-[26px] h-[26px] rounded-full bg-gradient-to-br from-[#54207A] to-[#68CECC] flex items-center justify-center">
-          <Sparkles className="w-[13px] h-[13px] text-white" strokeWidth={2.2} />
+        <div className="w-8 h-8 rounded-xl bg-[#8064C7] flex items-center justify-center shadow-md">
+          <Sparkles className="w-4 h-4 text-white" strokeWidth={2.2} />
         </div>
-        <span className="text-[15px] font-bold text-[#1a1145]">AI Study Engine</span>
+        <span className="text-base font-black tracking-tight">Jot<span className="text-[#8064C7]">.</span></span>
       </div>
 
       {/* Right controls */}
       <div className="flex items-center gap-3">
         {/* Timer */}
-        <div className="flex items-center gap-1.5 h-[27px] px-3 rounded-full bg-[#EFFAF8] text-[#438887]">
-          <Clock className="w-[13px] h-[13px]" strokeWidth={2.2} />
-          <span className="text-[12px] font-medium tracking-wide">
-            {formatTime(remainingSeconds)} remaining
-          </span>
+        <div className={`flex items-center gap-1.5 h-8 px-3.5 rounded-full font-mono text-xs font-bold ${
+          isDarkMode ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
+        }`}>
+          <Clock className="w-3.5 h-3.5" strokeWidth={2.2} />
+          <span>{formatTime(remainingSeconds)} remaining</span>
         </div>
 
         {/* Bookmark */}
         <button
           type="button"
           onClick={onToggleBookmark}
-          className="p-1.5 rounded-md hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+          className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+            isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-gray-200 bg-white hover:bg-gray-50"
+          }`}
           aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
         >
           <Star
-            className={`w-[18px] h-[18px] ${isBookmarked ? 'fill-[#F5A623] text-[#F5A623]' : 'text-[#999999]'}`}
+            className={`w-4 h-4 ${isBookmarked ? 'fill-amber-400 text-amber-400' : isDarkMode ? 'text-white/40' : 'text-gray-400'}`}
             strokeWidth={1.8}
           />
         </button>
 
-        {/* Divider */}
-        <div className="w-px h-5 bg-[#E0E0E0]" />
+        <div className={`w-px h-5 ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
 
         {/* Menu */}
         <div className="relative" ref={menuRef}>
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+            className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+              isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white/70" : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+            }`}
             aria-label="More options"
             aria-expanded={menuOpen}
           >
-            <MoreVertical className="w-[18px] h-[18px] text-[#666666]" strokeWidth={2} />
+            <MoreVertical className="w-4 h-4" strokeWidth={2} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-[#E5E5E5] py-1 z-50">
-              <button className="w-full text-left px-4 py-2.5 text-[13px] text-[#333] hover:bg-gray-50 transition-colors cursor-pointer">
+            <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-1.5 z-50 backdrop-blur-2xl ${
+              isDarkMode ? "border-white/10 bg-[#17131F] text-white" : "border-gray-200 bg-white text-[#292530]"
+            }`}>
+              <button className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
+              }`}>
                 Quiz Instructions
               </button>
-              <button className="w-full text-left px-4 py-2.5 text-[13px] text-[#333] hover:bg-gray-50 transition-colors cursor-pointer">
+              <button className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
+              }`}>
                 Keyboard Shortcuts
-              </button>
-              <button className="w-full text-left px-4 py-2.5 text-[13px] text-[#333] hover:bg-gray-50 transition-colors cursor-pointer">
-                Exit Fullscreen
               </button>
             </div>
           )}
@@ -87,13 +97,14 @@ export default function QuizHeader({ remainingSeconds, isBookmarked, onToggleBoo
         <button
           type="button"
           onClick={onAbort}
-          className="flex items-center gap-1.5 h-[32px] px-3.5 rounded-[7px] border border-[#D9BABA] text-[#8D5555] text-[12.5px] font-medium bg-white hover:bg-[#FFF5F5] transition-colors duration-150 cursor-pointer"
+          className="flex items-center gap-1.5 h-8 px-3.5 rounded-xl border border-red-500/30 text-red-400 text-xs font-bold bg-red-500/10 hover:bg-red-500/20 transition-all cursor-pointer"
           aria-label="Abort quiz"
         >
-          <Clock className="w-[13px] h-[13px]" strokeWidth={2} />
+          <Clock className="w-3.5 h-3.5" strokeWidth={2} />
           Abort Quiz
         </button>
       </div>
     </header>
   )
 }
+

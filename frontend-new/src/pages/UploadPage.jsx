@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { Sparkles, X, FileCheck, Presentation, FileText, Upload } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import { createStudySet, uploadDocuments } from "../services/api";
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".pptx"];
 
 const getFileIcon = (fileName) => {
   const ext = "." + fileName.toLowerCase().split(".").pop();
-  if (ext === ".pdf") return <FileText size={22} className="text-[#4E1F6E]" />;
-  if (ext === ".docx") return <FileCheck size={22} className="text-[#4E1F6E]" />;
-  if (ext === ".pptx") return <Presentation size={22} className="text-[#4E1F6E]" />;
-  return <FileText size={22} className="text-[#4E1F6E]" />;
+  if (ext === ".pdf") return <FileText size={22} className="text-[#8064C7]" />;
+  if (ext === ".docx") return <FileCheck size={22} className="text-[#8064C7]" />;
+  if (ext === ".pptx") return <Presentation size={22} className="text-[#8064C7]" />;
+  return <FileText size={22} className="text-[#8064C7]" />;
 };
 
 function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
+  const { isDarkMode } = useTheme();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [studySetName, setStudySetName] = useState("");
@@ -22,7 +24,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
 
-  // ================= PROCESS INCOMING FILES =================
   const processIncomingFiles = (incomingFileList) => {
     const incoming = Array.from(incomingFileList || []);
     if (incoming.length === 0) return;
@@ -59,7 +60,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     }
   };
 
-  // ================= SELECT FILES =================
   const handleFileChange = (event) => {
     if (event.target.files && event.target.files.length > 0) {
       processIncomingFiles(event.target.files);
@@ -67,7 +67,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     }
   };
 
-  // ================= DRAG & DROP =================
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
@@ -77,14 +76,12 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     }
   };
 
-  // ================= REMOVE SPECIFIC FILE =================
   const removeFile = (indexToRemove) => {
     setSelectedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
     setUploadError("");
     setUploadSuccess("");
   };
 
-  // ================= CREATE STUDY SET & UPLOAD DOCUMENTS =================
   const handleCreateAndUpload = async () => {
     if (selectedFiles.length === 0) {
       setUploadError("Please select at least one document file.");
@@ -103,13 +100,11 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       setUploadError("");
       setUploadSuccess("");
 
-      // 1. Create Study Set via API
       setStatusMessage("Creating study set...");
       newSet = await createStudySet(studySetName.trim());
 
       const newStudySetId = newSet.study_set_id;
 
-      // 2. Upload Documents to newly created study set via API
       const fileCount = selectedFiles.length;
       setStatusMessage(
         `Uploading and processing ${fileCount} document${fileCount > 1 ? "s" : ""}...`
@@ -117,7 +112,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       await uploadDocuments(newStudySetId, selectedFiles);
 
-      // 3. Clear state & notify parent
       setSelectedFiles([]);
       setStudySetName("");
 
@@ -125,7 +119,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         onStudySetCreated(newSet);
       }
 
-      // 4. Navigate directly to the newly created study set page
       if (onNavigate) {
         onNavigate("study-set", { studySetId: newStudySetId });
       }
@@ -148,27 +141,43 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFA]">
+    <div>
       {/* ================= HEADER ================= */}
-      <div className="mb-8 flex flex-col items-start justify-between gap-6 rounded-2xl bg-[#98E8DE]/25 p-8 sm:flex-row sm:items-center">
+      <div
+        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
+          isDarkMode
+            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+        }`}
+      >
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-[#4E1F6E]">
+          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
             Create Study Set
           </h1>
-          <p className="mt-2 text-sm text-[#3E3E75]/70">
+          <p
+            className={`mt-2 text-sm font-medium ${
+              isDarkMode ? "text-white/60" : "text-[#706A78]"
+            }`}
+          >
             Upload your study materials and give your set a name to get started.
           </p>
         </div>
 
-        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/60">
-          <Upload size={44} className="text-[#4E1F6E]" />
+        <div
+          className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
+            isDarkMode
+              ? "border-white/10 bg-white/5 text-[#A78BFA]"
+              : "border-white/80 bg-white/80 text-[#8064C7] shadow-sm"
+          }`}
+        >
+          <Upload size={48} />
         </div>
       </div>
 
       {/* ================= SUCCESS MESSAGE ================= */}
       {uploadSuccess && (
-        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4">
-          <p className="text-sm font-medium text-green-700">
+        <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <p className="text-sm font-semibold text-emerald-400">
             {uploadSuccess}
           </p>
         </div>
@@ -176,8 +185,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= ERROR MESSAGE ================= */}
       {uploadError && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
-          <p className="text-sm font-medium text-red-600">
+        <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
+          <p className="text-sm font-semibold text-red-400">
             {uploadError}
           </p>
         </div>
@@ -185,8 +194,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= MAIN UPLOAD AREA ================= */}
       <div className="grid gap-6 lg:grid-cols-3 items-stretch">
-        {/* ================= TOP LEFT (2 COLS): UPLOAD CARD ================= */}
-        <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 lg:col-span-2 flex flex-col h-full">
+        {/* ================= UPLOAD CARD ================= */}
+        <div
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 flex flex-col h-full ${
+            isDarkMode
+              ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+              : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+          }`}
+        >
           <div
             onDragOver={(event) => {
               event.preventDefault();
@@ -196,27 +211,27 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             onDrop={handleDrop}
             className={`flex flex-1 min-h-[300px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 sm:p-8 text-center transition-all duration-300 ${
               isDragging
-                ? "border-[#4E1F6E] bg-[#98E8DE]/20"
-                : "border-gray-200 bg-gray-50 hover:border-[#98E8DE] hover:bg-[#98E8DE]/10"
+                ? "border-[#8064C7] bg-[#8064C7]/15"
+                : isDarkMode
+                ? "border-white/10 bg-white/5 hover:border-[#8064C7]/50 hover:bg-white/10"
+                : "border-gray-200 bg-white/50 hover:border-[#8064C7]/40 hover:bg-white/80"
             }`}
           >
             {selectedFiles.length === 0 ? (
               <>
-                {/* Upload Icon */}
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#98E8DE]/40">
-                  <Upload size={30} className="text-[#4E1F6E]" />
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                  <Upload size={30} />
                 </div>
 
-                <h2 className="text-xl font-semibold text-[#3E3E75]">
+                <h2 className="text-xl font-black tracking-tight">
                   Drop your files here
                 </h2>
 
-                <p className="mt-2 max-w-md text-sm text-gray-500">
+                <p className={`mt-2 max-w-md text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
                   Drag and drop your study materials here, or browse your computer to select files.
                 </p>
 
-                {/* Browse Files */}
-                <label className="mt-5 cursor-pointer rounded-xl bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md">
+                <label className="mt-6 cursor-pointer rounded-xl bg-[#8064C7] px-7 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
                   Browse Files
                   <input
                     type="file"
@@ -227,20 +242,21 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   />
                 </label>
 
-                <p className="mt-4 text-xs text-gray-400">
-                  Maximum file size: 20 MB
+                <p className={`mt-4 text-xs ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
+                  Maximum file size: 20 MB (.pdf, .docx, .pptx)
                 </p>
               </>
             ) : (
-              /* ================= SELECTED FILES LIST ================= */
               <div className="w-full max-w-lg my-auto">
-                <div className="rounded-2xl border border-[#98E8DE] bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
-                    <p className="text-sm font-semibold text-[#3E3E75]">
+                <div className={`rounded-2xl border p-5 shadow-sm backdrop-blur-xl ${
+                  isDarkMode ? "border-white/10 bg-[#211D2B]/90" : "border-white/80 bg-white/85"
+                }`}>
+                  <div className="mb-4 flex items-center justify-between border-b border-inherit pb-3">
+                    <p className="text-sm font-bold">
                       Selected Files ({selectedFiles.length})
                     </p>
 
-                    <label className="cursor-pointer text-xs font-semibold text-[#4E1F6E] transition hover:underline">
+                    <label className="cursor-pointer text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] transition hover:underline">
                       + Add more files
                       <input
                         type="file"
@@ -256,18 +272,22 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     {selectedFiles.map((file, index) => (
                       <div
                         key={`${file.name}-${file.size}-${index}`}
-                        className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 transition hover:border-[#98E8DE]"
+                        className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                          isDarkMode
+                            ? "border-white/5 bg-white/5 hover:border-white/10"
+                            : "border-gray-100 bg-white/70 hover:border-purple-200"
+                        }`}
                       >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
                           {getFileIcon(file.name)}
                         </div>
 
                         <div className="flex-1 text-left min-w-0">
-                          <p className="truncate text-sm font-semibold text-[#3E3E75]">
+                          <p className="truncate text-sm font-bold">
                             {file.name}
                           </p>
 
-                          <p className="mt-0.5 text-xs text-gray-500">
+                          <p className={`mt-0.5 text-xs ${isDarkMode ? "text-white/40" : "text-gray-500"}`}>
                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                           </p>
                         </div>
@@ -276,7 +296,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                           type="button"
                           onClick={() => removeFile(index)}
                           disabled={uploading}
-                          className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-200 hover:text-red-500 disabled:opacity-50"
+                          className="rounded-lg p-1.5 opacity-60 transition hover:opacity-100 hover:text-red-400 disabled:opacity-50"
                           title="Remove file"
                         >
                           <X size={16} />
@@ -290,14 +310,20 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
         </div>
 
-        {/* ================= TOP RIGHT (1 COL): STUDY SET NAME & ACTIONS ================= */}
-        <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 flex flex-col justify-between h-full lg:col-span-1">
+        {/* ================= STUDY SET NAME & ACTIONS ================= */}
+        <div
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 flex flex-col justify-between h-full lg:col-span-1 ${
+            isDarkMode
+              ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+              : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+          }`}
+        >
           <div>
-            <h2 className="text-xl font-semibold text-[#3E3E75]">
+            <h2 className="text-xl font-black tracking-tight">
               Study Set Name
             </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className={`mt-1 text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
               Give your new study set a name to organize your learning materials.
             </p>
 
@@ -314,21 +340,25 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   handleCreateAndUpload();
                 }
               }}
-              className="mt-4 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-[#3E3E75] outline-none transition focus:border-[#45A9A9] focus:ring-2 focus:ring-[#98E8DE]/40"
+              className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
+                isDarkMode
+                  ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
+                  : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
+              }`}
             />
           </div>
 
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-8 flex flex-col gap-3">
             <button
               type="button"
               onClick={handleCreateAndUpload}
               disabled={uploading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#4E1F6E] px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload size={17} />
               {uploading
                 ? (statusMessage || "Creating...")
-                : "Create Study Set"}
+                : "Create Study Set →"}
             </button>
 
             <button
@@ -337,7 +367,11 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 onNavigate?.("study-sets");
               }}
               disabled={uploading}
-              className="w-full rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50 text-center"
+              className={`w-full rounded-xl border px-5 py-2.5 text-sm font-semibold transition text-center ${
+                isDarkMode
+                  ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                  : "border-gray-200 bg-white/70 text-gray-600 hover:bg-white"
+              } disabled:opacity-50`}
             >
               Cancel
             </button>
@@ -345,60 +379,70 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         </div>
       </div>
 
-      {/* ================= BOTTOM ROW: SUPPORTED FORMATS ================= */}
-      <div className="mt-6 rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100">
-        <h2 className="text-base sm:text-lg font-semibold text-[#3E3E75]">
+      {/* ================= SUPPORTED FORMATS ================= */}
+      <div
+        className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+          isDarkMode
+            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+        }`}
+      >
+        <h2 className="text-base sm:text-lg font-black tracking-tight">
           Supported Formats
         </h2>
 
-        <p className="mt-0.5 text-xs sm:text-sm text-gray-500">
+        <p className={`mt-0.5 text-xs sm:text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
           Upload your study materials in any of these formats.
         </p>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* ================= PDF ================= */}
-          <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 sm:p-3.5 transition hover:bg-[#98E8DE]/20 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
-              <FileText size={19} className="text-[#4E1F6E]" />
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+          }`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+              <FileText size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-[#3E3E75] truncate">PDF</p>
-              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Notes & textbooks</p>
+              <p className="text-xs sm:text-sm font-bold truncate">PDF</p>
+              <p className={`text-[11px] sm:text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Notes & textbooks</p>
             </div>
           </div>
 
-          {/* ================= DOCX ================= */}
-          <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 sm:p-3.5 transition hover:bg-[#98E8DE]/20 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
-              <FileCheck size={19} className="text-[#4E1F6E]" />
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+          }`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+              <FileCheck size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-[#3E3E75] truncate">DOCX</p>
-              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Documents & notes</p>
+              <p className="text-xs sm:text-sm font-bold truncate">DOCX</p>
+              <p className={`text-[11px] sm:text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Documents & notes</p>
             </div>
           </div>
 
-          {/* ================= PPTX ================= */}
-          <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 sm:p-3.5 transition hover:bg-[#98E8DE]/20 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#98E8DE]/40">
-              <Presentation size={19} className="text-[#4E1F6E]" />
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+          }`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+              <Presentation size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
             </div>
 
             <div className="min-w-0">
-              <p className="text-xs sm:text-sm font-semibold text-[#3E3E75] truncate">PPTX</p>
-              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Presentations</p>
+              <p className="text-xs sm:text-sm font-bold truncate">PPTX</p>
+              <p className={`text-[11px] sm:text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Presentations</p>
             </div>
           </div>
         </div>
 
-        {/* ================= AI INFORMATION ================= */}
-        <div className="mt-4 rounded-xl bg-[#98E8DE]/20 p-3.5">
+        <div className={`mt-5 rounded-2xl border p-4 ${
+          isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+        }`}>
           <div className="flex gap-2.5 items-start">
-            <Sparkles size={16} className="mt-0.5 shrink-0 text-[#4E1F6E]" />
-            <p className="text-xs leading-relaxed text-[#3E3E75]">
-              Your material will be analyzed by AI to create summaries, quizzes, flashcards, and personalized study recommendations.
+            <Sparkles size={18} className="mt-0.5 shrink-0" />
+            <p className="text-xs font-semibold leading-relaxed">
+              Your material will be analyzed by Jojo to create summaries, quizzes, flashcards, and personalized study recommendations.
             </p>
           </div>
         </div>
@@ -407,4 +451,4 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   );
 }
 
-export default UploadPage;
+export default UploadPage;

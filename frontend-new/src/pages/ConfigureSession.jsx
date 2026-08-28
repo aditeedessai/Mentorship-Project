@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
 import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
@@ -46,6 +47,7 @@ const questionTypes = [
 const toFrontendTypeId = (bType) => (bType === 'short' ? 'short-answer' : bType)
 
 export default function ConfigureSession({ studySetId: propStudySetId, studySetName: propStudySetName }) {
+  const { isDarkMode } = useTheme()
   const [selectedType, setSelectedType] = useState('mcq')
   const [questionCount, setQuestionCount] = useState(20)
   const [attempt, setAttempt] = useState(null)
@@ -193,21 +195,21 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
     <div className="flex flex-col h-full">
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="px-[48px] pt-[40px]">
+        <div className="px-8 pt-8">
           <ModuleBadge text={studySetName ? `Study Set: ${studySetName}` : 'Study Set'} />
 
-          <h1 className="mt-[18px] text-[32px] font-bold text-[#171717] leading-[1.1] tracking-[-0.01em]">
+          <h1 className="mt-4 text-3xl font-black tracking-tight leading-none">
             Configure Session
           </h1>
 
-          <p className="mt-[14px] text-[13.5px] leading-[1.55] text-[#4A4A4A] max-w-[600px]">
+          <p className={`mt-3 text-sm leading-relaxed max-w-[600px] ${isDarkMode ? 'text-white/60' : 'text-[#706A78]'}`}>
             Select the question formats you'd like to tackle in this study block. AI Study Engine will generate a
             tailored set based on your recent mastery levels.
           </p>
 
           {/* Attempt status notice when loading or completed */}
           {isAttemptComplete && (
-            <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-[13px] text-emerald-800 font-medium flex items-center justify-between">
+            <div className="mt-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 font-bold flex items-center justify-between">
               <span>All 4 section types in this quiz attempt are completed!</span>
             </div>
           )}
@@ -222,7 +224,7 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
           )}
 
           {/* Question Type Cards */}
-          <div className="mt-[28px] flex gap-[17px]">
+          <div className="mt-7 flex flex-wrap gap-4">
             {questionTypes.map((type) => {
               const isCompleted = completedFrontendSections.includes(type.id)
               return (

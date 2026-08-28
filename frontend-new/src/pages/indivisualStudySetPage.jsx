@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, AlertCircle } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import {
   fetchStudySet,
   fetchStudySetDocuments,
@@ -18,25 +19,23 @@ import StudySetDocumentsCard from "../components/study-set/StudySetDocumentsCard
 import StudySetQuestionProgressCard from "../components/study-set/StudySetQuestionProgressCard";
 
 function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
+  const { isDarkMode } = useTheme();
   const [studySet, setStudySet] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [completedSections, setCompletedSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Section navigation refs & active tab state
   const summaryRef = useRef(null);
   const flashcardsRef = useRef(null);
   const mnemonicsRef = useRef(null);
   const [activeTab, setActiveTab] = useState("summary");
 
-  // Summary state
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Flashcards state
   const [flashcards, setFlashcards] = useState(null);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
   const [flashcardsError, setFlashcardsError] = useState("");
@@ -44,7 +43,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Contextual Mnemonic Creator State
   const [mnemonicTopic, setMnemonicTopic] = useState("");
   const [mnemonicStyle, setMnemonicStyle] = useState("acronym");
   const [mnemonic, setMnemonic] = useState(null);
@@ -116,7 +114,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
         setLoading(true);
         setError("");
 
-        // 1. Find or fetch study set details
         const foundSet = studySets.find((s) => s.study_set_id === studySetId);
         if (foundSet) {
           setStudySet(foundSet);
@@ -127,13 +124,11 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
           }
         }
 
-        // 2. Fetch documents belonging to this study set
         const docsList = await fetchStudySetDocuments(studySetId);
         if (isMounted) {
           setDocuments(docsList || []);
         }
 
-        // 3. Fetch active attempt for question section completion status
         try {
           const activeAtt = await fetchActiveAttempt(studySetId);
           if (isMounted && activeAtt) {
@@ -233,13 +228,17 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen text-[#3E3E75] pb-12">
+    <div className="pb-12">
       {/* Top Back Navigation Bar */}
       <header className="mb-6 flex items-center justify-between">
         <button
           type="button"
           onClick={() => onNavigate?.("study-sets")}
-          className="group inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-gray-200/80 hover:border-[#4E1F6E]/40 hover:bg-[#98E8DE]/20 px-4 py-2 rounded-full text-xs font-semibold text-[#4E1F6E] transition-all shadow-xs hover:shadow-sm cursor-pointer"
+          className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-all backdrop-blur-xl ${
+            isDarkMode
+              ? "border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10"
+              : "border-white/80 bg-white/70 text-[#8064C7] hover:bg-white shadow-sm"
+          }`}
         >
           <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
           <span>Back to Study Sets</span>
@@ -248,7 +247,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
 
       {/* Main Layout Container */}
       <div className="max-w-[1280px] mx-auto space-y-6">
-        {/* Hero Header Card */}
         <StudySetHeroHeaderCard
           studySetName={studySetName}
           studySetId={studySetId}
@@ -256,17 +254,15 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
         />
 
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50/90 p-4 text-sm text-red-600 shadow-xs flex items-center gap-3">
-            <AlertCircle size={20} className="shrink-0 text-red-500" />
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm font-semibold text-red-400 flex items-center gap-3">
+            <AlertCircle size={20} className="shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column (8 cols): Summary, Flashcards, & Mnemonics */}
           <div className="lg:col-span-8 flex flex-col gap-6">
-            {/* Quick Section Navigation Pills */}
             <StudySetTabNav
               activeTab={activeTab}
               setActiveTab={setActiveTab}
@@ -275,7 +271,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
               mnemonicsRef={mnemonicsRef}
             />
 
-            {/* SUMMARY SECTION CARD */}
             <StudySetSummaryCard
               sectionRef={summaryRef}
               summary={summary}
@@ -288,7 +283,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
               onCopySummary={handleCopySummary}
             />
 
-            {/* FLASHCARDS SECTION CARD */}
             <StudySetFlashcardsCard
               sectionRef={flashcardsRef}
               flashcards={flashcards}
@@ -305,7 +299,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
               onNextCard={handleNextCard}
             />
 
-            {/* MNEMONICS SECTION CARD */}
             <StudySetMnemonicsCard
               sectionRef={mnemonicsRef}
               mnemonicTopic={mnemonicTopic}
@@ -322,15 +315,12 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
             />
           </div>
 
-          {/* Right Column (4 cols): Documents & Question Progress */}
           <div className="lg:col-span-4 flex flex-col gap-6">
-            {/* DOCUMENTS SECTION CARD */}
             <StudySetDocumentsCard
               documents={documents}
               loading={loading}
             />
 
-            {/* QUESTION PROGRESS SECTION CARD */}
             <StudySetQuestionProgressCard
               completedSections={completedSections}
             />
@@ -342,3 +332,4 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
 }
 
 export default IndivisualStudySetPage;
+

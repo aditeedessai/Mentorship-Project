@@ -9,6 +9,7 @@ import {
   X,
   BookCopy,
 } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import {
   fetchStudySetDocuments,
@@ -23,19 +24,14 @@ function StudySetsPage({
   onDeleteStudySet,
   onContinueStudying,
 }) {
-  // ─── Delete modal state ──────────────────────────────────────────
-  const [deleteTarget, setDeleteTarget] = useState(null); // study set object
+  const { isDarkMode } = useTheme();
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
 
-  // ─── Search state ───────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
-
-  // ─── Dynamic per-card data ───────────────────────────────────────
-  // Maps: studySetId → { docCount, hasProgress, loaded }
   const [cardMeta, setCardMeta] = useState({});
 
-  // Fetch document counts and active attempt info for each study set
   const loadCardMeta = useCallback(async (sets) => {
     const results = {};
     await Promise.allSettled(
@@ -69,36 +65,28 @@ function StudySetsPage({
     }
   }, [studySets, loadCardMeta]);
 
-  // ─── Priority badge logic ───────────────────────────────────────
   const getPriority = (docCount) => {
-    if (docCount >= 11) return { label: "High", color: "bg-red-100 text-red-700" };
-    if (docCount >= 6) return { label: "Mid", color: "bg-gray-100 text-gray-600" };
-    return { label: "Low", color: "bg-green-100 text-green-700" };
+    if (docCount >= 11) return { label: "High", color: isDarkMode ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-red-100 text-red-700" };
+    if (docCount >= 6) return { label: "Mid", color: isDarkMode ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-100 text-amber-700" };
+    return { label: "Low", color: isDarkMode ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-emerald-100 text-emerald-700" };
   };
 
-  // ─── Progress % derivation ──────────────────────────────────────
   const getProgress = (id) => {
     const meta = cardMeta[id];
     if (!meta || !meta.loaded) return 0;
     if (meta.hasProgress) {
-      // Derive a reasonable progress estimate from doc count
-      // Since we don't have actual quiz score data at card level,
-      // show a modest progress for sets with active attempts
       return meta.docCount > 0 ? Math.min(meta.docCount * 10, 75) : 0;
     }
     return 0;
   };
 
-  // ─── CTA label ──────────────────────────────────────────────────
   const getCtaLabel = (id) => {
     const meta = cardMeta[id];
     if (meta && meta.hasProgress) return "Continue";
     return "Start";
   };
 
-  // ─── Description fallback ───────────────────────────────────────
   const getDescription = (studySet) => {
-    // Backend doesn't provide descriptions — use sensible fallbacks
     const meta = cardMeta[studySet.study_set_id];
     if (meta && meta.docCount > 0) {
       return `${meta.docCount} study material${meta.docCount > 1 ? "s" : ""}`;
@@ -106,14 +94,12 @@ function StudySetsPage({
     return "Study materials";
   };
 
-  // ─── Date formatting ───────────────────────────────────────────
   const formatDate = (dateStr) => {
     if (!dateStr) return "Recently";
     const d = new Date(dateStr);
     return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
   };
 
-  // ─── Delete handlers ───────────────────────────────────────────
   const handleDeleteClick = (studySet) => {
     setDeleteError(null);
     setDeleteTarget(studySet);
@@ -140,7 +126,6 @@ function StudySetsPage({
     }
   };
 
-  // ─── Filtered study sets ───────────────────────────────────────
   const filteredStudySets = studySets.filter((studySet) => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;
@@ -151,61 +136,85 @@ function StudySetsPage({
 
   return (
     <div>
-      {/* ═══════════════════ GREETING BANNER ═══════════════════ */}
-      <div className="mb-8 flex flex-col items-start justify-between gap-6 rounded-2xl bg-[#98E8DE]/25 p-8 sm:flex-row sm:items-center">
+      {/* ================= GREETING BANNER ================= */}
+      <div
+        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
+          isDarkMode
+            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+        }`}
+      >
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-[#4E1F6E]">
+          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
             Study Sets
           </h1>
-          <p className="mt-2 text-sm text-[#3E3E75]/70">
+          <p
+            className={`mt-2 text-sm font-medium ${
+              isDarkMode ? "text-white/60" : "text-[#706A78]"
+            }`}
+          >
             Create and manage your study sets.
           </p>
           <button
             onClick={onCreateClick}
-            className="mt-5 flex items-center gap-2 rounded-lg bg-[#4E1F6E] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
+            className="mt-6 flex items-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
           >
             <BookOpen size={18} />
             Create Study Set
           </button>
         </div>
 
-        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/60">
-          <BookCopy size={44} className="text-[#4E1F6E]" />
+        <div
+          className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
+            isDarkMode
+              ? "border-white/10 bg-white/5 text-[#A78BFA]"
+              : "border-white/80 bg-white/80 text-[#8064C7] shadow-sm"
+          }`}
+        >
+          <BookCopy size={44} />
         </div>
       </div>
 
-      {/* ═══════════════════ STUDY SETS CONTAINER ═══════════════════ */}
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
-        {/* Container header */}
+      {/* ================= STUDY SETS CONTAINER ================= */}
+      <div
+        className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+          isDarkMode
+            ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+            : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+        }`}
+      >
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-[#4A148C]">
+            <h2 className="text-lg sm:text-xl font-black tracking-tight">
               Your Study Sets
             </h2>
-            <p className="mt-0.5 text-[13px] text-gray-400">
+            <p className={`mt-0.5 text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
               Continue learning from your uploaded materials.
             </p>
           </div>
 
-          {/* Search Bar */}
           {!studySetsLoading && studySets.length > 0 && (
             <div className="relative w-full sm:w-64 md:w-72">
               <Search
-                size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none"
               />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search study sets..."
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/70 pl-9 pr-8 py-2 text-xs text-[#3E3E75] placeholder-gray-400 transition focus:border-[#4E1F6E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#4E1F6E]"
+                className={`w-full rounded-xl border pl-10 pr-9 py-2.5 text-xs outline-none transition-all ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
+                    : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
+                }`}
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -215,74 +224,76 @@ function StudySetsPage({
           )}
         </div>
 
-        {/* Loading */}
         {studySetsLoading && (
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="rounded-xl border border-gray-100 bg-gray-50 px-3.5 py-3 animate-pulse"
+                className={`rounded-2xl border p-4 animate-pulse ${
+                  isDarkMode ? "border-white/5 bg-white/5" : "border-gray-100 bg-white/50"
+                }`}
               >
                 <div className="flex justify-between mb-3">
-                  <div className="h-6 w-14 rounded bg-gray-200" />
-                  <div className="h-5 w-12 rounded bg-gray-200" />
+                  <div className="h-6 w-14 rounded-lg bg-current opacity-10" />
+                  <div className="h-5 w-12 rounded-lg bg-current opacity-10" />
                 </div>
-                <div className="h-5 w-3/4 rounded bg-gray-200 mb-1.5" />
-                <div className="h-3 w-1/2 rounded bg-gray-200 mb-4" />
-                <div className="h-2 w-full rounded-full bg-gray-200 mb-4" />
-                <div className="h-4 w-1/3 rounded bg-gray-200" />
+                <div className="h-5 w-3/4 rounded-lg bg-current opacity-10 mb-2" />
+                <div className="h-3 w-1/2 rounded-lg bg-current opacity-10 mb-4" />
+                <div className="h-2 w-full rounded-full bg-current opacity-10 mb-4" />
+                <div className="h-4 w-1/3 rounded-lg bg-current opacity-10" />
               </div>
             ))}
           </div>
         )}
 
-        {/* Error */}
         {studySetsError && (
-          <p className="text-sm text-red-500">{studySetsError}</p>
+          <p className="text-sm font-semibold text-red-400">{studySetsError}</p>
         )}
 
-        {/* Empty state */}
         {!studySetsLoading &&
           !studySetsError &&
           studySets.length === 0 && (
-            <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
+            <div className={`rounded-2xl border border-dashed py-12 text-center ${
+              isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200 bg-white/50"
+            }`}>
               <BookOpen
-                size={32}
-                className="mx-auto mb-3 text-gray-300"
+                size={36}
+                className="mx-auto mb-3 opacity-30"
               />
-              <p className="text-sm font-medium text-[#3E3E75]">
+              <p className="text-sm font-bold">
                 No study sets yet
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className={`mt-1 text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                 Create your first study set to get started.
               </p>
               <button
                 onClick={onCreateClick}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#4E1F6E] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#3E3E75]"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4]"
               >
-                <Plus size={14} />
+                <Plus size={15} />
                 Create Study Set
               </button>
             </div>
           )}
 
-        {/* ═══════════════════ CARD GRID & NO MATCHES STATE ═══════════════════ */}
         {!studySetsLoading &&
           !studySetsError &&
           studySets.length > 0 &&
           filteredStudySets.length === 0 && (
-            <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center">
-              <Search size={28} className="mx-auto mb-2 text-gray-300" />
-              <p className="text-sm font-medium text-[#3E3E75]">
+            <div className={`rounded-2xl border border-dashed py-10 text-center ${
+              isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200 bg-white/50"
+            }`}>
+              <Search size={30} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-bold">
                 No study sets matching "{searchQuery}"
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className={`mt-1 text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                 Try searching with a different term.
               </p>
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="mt-3 text-xs font-semibold text-[#4E1F6E] hover:underline"
+                className="mt-3 text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] hover:underline"
               >
                 Clear search
               </button>
@@ -304,26 +315,24 @@ function StudySetsPage({
                 return (
                   <div
                     key={id}
-                    className="rounded-xl border border-[#4E1F6E]/20 bg-white px-3.5 pt-3 pb-3.5 transition-all duration-200 hover:shadow-md hover:border-[#4E1F6E]/40 flex flex-col"
+                    className={`rounded-2xl border p-4 transition-all duration-300 flex flex-col backdrop-blur-xl ${
+                      isDarkMode
+                        ? "border-white/10 bg-[#211D2B]/80 hover:border-[#8064C7]/50 hover:bg-[#252033]"
+                        : "border-white/80 bg-white/70 hover:border-[#8064C7]/40 hover:bg-white shadow-[0_10px_30px_rgba(70,55,110,0.05)]"
+                    }`}
                   >
-                    {/* ── Top metadata row ── */}
-                    <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1.5">
-                        <div className="flex items-center gap-1 rounded bg-gray-50 border border-gray-100 px-2 py-1">
-                          <FileText
-                            size={13}
-                            className="text-[#4E1F6E]"
-                          />
-                          <span className="text-[12px] font-semibold text-[#3E3E75]">
-                            {docCount}
-                          </span>
+                        <div className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-bold ${
+                          isDarkMode ? "border-white/10 bg-white/5 text-[#A78BFA]" : "border-purple-100 bg-[#8064C7]/10 text-[#8064C7]"
+                        }`}>
+                          <FileText size={13} />
+                          <span>{docCount}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${priority.color}`}
-                        >
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${priority.color}`}>
                           {priority.label}
                         </span>
                         <button
@@ -332,61 +341,53 @@ function StudySetsPage({
                           disabled={Boolean(deletingId)}
                           title="Delete study set"
                           aria-label={`Delete ${studySet.name}`}
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg opacity-40 transition-opacity hover:opacity-100 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
 
-                    {/* ── Title ── */}
-                    <h3 className="text-lg font-bold text-[#3E3E75] leading-snug line-clamp-2 min-h-[44px] mt-1.5">
+                    <h3 className="text-lg font-black leading-snug line-clamp-2 min-h-[44px] mt-1 tracking-tight">
                       {studySet.name}
                     </h3>
 
-                    {/* ── Description ── */}
-                    <p className="text-xs text-gray-400 mb-3">
+                    <p className={`text-xs mb-4 ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                       {getDescription(studySet)}
                     </p>
 
-                    {/* ── Progress section ── */}
                     <div className="mt-auto">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-semibold text-[#44DDC1]">
+                        <span className="text-xs font-bold text-[#8064C7] dark:text-[#A78BFA]">
                           Progress
                         </span>
-                        <span className="text-xs font-semibold text-[#3E3E75]">
+                        <span className="text-xs font-bold">
                           {progress}%
                         </span>
                       </div>
-                      <div className="h-[5px] w-full rounded-full bg-gray-100 overflow-hidden">
+                      <div className={`h-2 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                         <div
-                          className="h-full rounded-full bg-[#44DDC1] transition-all duration-500"
+                          className="h-full rounded-full bg-[#8064C7] transition-all duration-500"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
 
-                      {/* ── Footer ── */}
-                      <div className="flex items-end justify-between mt-3">
-                        <div className="text-[11px] text-gray-400 leading-tight">
+                      <div className="flex items-end justify-between mt-4">
+                        <div className="text-[11px] opacity-60 leading-tight">
                           <span className="block">Created</span>
-                          <span className="block font-medium text-gray-500">
+                          <span className="block font-bold">
                             {formatDate(studySet.created_at)}
                           </span>
                         </div>
 
                         <button
                           onClick={() => onContinueStudying(id)}
-                          className="flex items-center gap-0.5 text-[13px] font-bold text-[#4E1F6E] transition hover:text-[#3E3E75] group"
+                          className="flex items-center gap-1 text-xs font-black text-[#8064C7] dark:text-[#A78BFA] transition hover:text-[#8B6DD4] group"
                         >
-                          <span className="leading-tight text-left">
-                            {ctaLabel}
-                            <br />
-                            Studying
-                          </span>
+                          <span>{ctaLabel} Studying</span>
                           <ArrowRight
                             size={15}
-                            className="shrink-0 transition-transform group-hover:translate-x-0.5"
+                            className="shrink-0 transition-transform group-hover:translate-x-1"
                           />
                         </button>
                       </div>
@@ -398,7 +399,6 @@ function StudySetsPage({
           )}
       </div>
 
-      {/* ═══════════════════ DELETE MODAL ═══════════════════ */}
       <DeleteConfirmModal
         isOpen={Boolean(deleteTarget)}
         title="Delete study set?"
@@ -415,4 +415,4 @@ function StudySetsPage({
   );
 }
 
-export default StudySetsPage;
+export default StudySetsPage;

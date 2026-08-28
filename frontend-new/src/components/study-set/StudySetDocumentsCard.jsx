@@ -7,6 +7,7 @@ import {
   File,
   FolderOpen,
 } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 
 const getFileExtension = (fileName) => {
   if (!fileName) return "DOC";
@@ -15,54 +16,68 @@ const getFileExtension = (fileName) => {
 };
 
 const getFileIcon = (fileName) => {
-  if (!fileName) return <File size={22} className="text-[#4E1F6E]" />;
+  if (!fileName) return <File size={22} className="text-[#8064C7]" />;
   const ext = "." + fileName.toLowerCase().split(".").pop();
-  if (ext === ".pdf") return <FileText size={22} className="text-[#4E1F6E]" />;
-  if (ext === ".docx" || ext === ".doc") return <FileCheck size={22} className="text-[#4E1F6E]" />;
-  if (ext === ".pptx" || ext === ".ppt") return <Presentation size={22} className="text-[#4E1F6E]" />;
-  if (ext === ".xlsx" || ext === ".csv") return <FileSpreadsheet size={22} className="text-[#4E1F6E]" />;
-  return <FileText size={22} className="text-[#4E1F6E]" />;
+  if (ext === ".pdf") return <FileText size={22} className="text-[#8064C7]" />;
+  if (ext === ".docx" || ext === ".doc") return <FileCheck size={22} className="text-[#8064C7]" />;
+  if (ext === ".pptx" || ext === ".ppt") return <Presentation size={22} className="text-[#8064C7]" />;
+  if (ext === ".xlsx" || ext === ".csv") return <FileSpreadsheet size={22} className="text-[#8064C7]" />;
+  return <FileText size={22} className="text-[#8064C7]" />;
 };
 
 function StudySetDocumentsCard({ documents = [], loading = false }) {
+  const { isDarkMode } = useTheme();
+
   return (
-    <section className="rounded-2xl bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-[0_4px_25px_rgba(78,31,110,0.06)] hover:shadow-[0_8px_30px_rgba(78,31,110,0.09)] border border-gray-100/90 flex flex-col transition-all duration-300">
+    <section
+      className={`rounded-3xl border p-6 sm:p-7 backdrop-blur-2xl transition-all duration-500 flex flex-col ${
+        isDarkMode
+          ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
+          : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
+      }`}
+    >
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="bg-gradient-to-br from-[#98E8DE]/40 via-[#98E8DE]/20 to-[#4E1F6E]/10 border border-[#98E8DE]/60 text-[#4E1F6E] p-2.5 rounded-xl shadow-2xs shrink-0">
+          <div className="bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] p-2.5 rounded-2xl shrink-0">
             <FolderOpen size={20} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-extrabold text-[#3E3E75] leading-tight truncate">
+            <h2 className="text-lg font-black leading-tight truncate">
               Uploaded Documents
             </h2>
-            <p className="text-xs text-gray-500 truncate">
+            <p className={`text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
               Source files for this set
             </p>
           </div>
         </div>
-        <span className="shrink-0 whitespace-nowrap bg-[#98E8DE]/35 border border-[#98E8DE]/70 text-[#4E1F6E] font-mono text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
+        <span className={`shrink-0 whitespace-nowrap font-mono text-xs font-bold px-3 py-1 rounded-full ${
+          isDarkMode ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
+        }`}>
           {documents.length} File{documents.length === 1 ? "" : "s"}
         </span>
       </div>
 
-      <div className="flex flex-col gap-3 p-5 border border-gray-200/80 rounded-2xl bg-gradient-to-br from-white via-gray-50/40 to-[#98E8DE]/15 shadow-xs relative overflow-hidden transition-all duration-300">
+      <div className={`flex flex-col gap-3 p-5 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
+        isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
+      }`}>
         {loading && (
           <div className="py-8 text-center">
-            <Loader2 size={30} className="mx-auto mb-2 animate-spin text-[#4E1F6E]" />
-            <p className="text-xs font-semibold text-gray-500">
+            <Loader2 size={30} className="mx-auto mb-2 animate-spin text-[#8064C7]" />
+            <p className={`text-xs font-bold ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
               Loading documents...
             </p>
           </div>
         )}
 
         {!loading && documents.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center bg-white/80">
-            <FileText size={32} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-sm font-bold text-[#3E3E75]">
+          <div className={`rounded-2xl border border-dashed p-6 text-center ${
+            isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200 bg-white/80"
+          }`}>
+            <FileText size={32} className="mx-auto mb-2 opacity-30" />
+            <p className="text-sm font-bold">
               No documents attached
             </p>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className={`mt-1 text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
               Upload study material to generate questions for this set.
             </p>
           </div>
@@ -80,20 +95,24 @@ function StudySetDocumentsCard({ documents = [], loading = false }) {
               return (
                 <div
                   key={doc.document_id || doc.id || index}
-                  className="p-3.5 border border-gray-200/80 rounded-xl bg-white hover:border-[#4E1F6E] hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group flex items-center justify-between shadow-2xs"
+                  className={`p-3.5 border rounded-2xl transition-all cursor-pointer group flex items-center justify-between backdrop-blur-xl ${
+                    isDarkMode
+                      ? "border-white/5 bg-white/5 hover:border-white/20 hover:bg-white/10"
+                      : "border-gray-200/80 bg-white hover:border-[#8064C7] hover:shadow-md"
+                  }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#98E8DE]/40 via-[#98E8DE]/20 to-[#4E1F6E]/10 border border-[#98E8DE]/60 flex items-center justify-center text-[#4E1F6E] group-hover:scale-110 transition-transform shrink-0 shadow-2xs">
+                    <div className="w-11 h-11 rounded-xl bg-[#8064C7]/15 flex items-center justify-center text-[#8064C7] dark:text-[#A78BFA] group-hover:scale-110 transition-transform shrink-0">
                       {getFileIcon(fileName)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4
-                        className="truncate text-sm font-bold text-[#3E3E75] group-hover:text-[#4E1F6E] transition-colors"
+                        className="truncate text-sm font-bold group-hover:text-[#8064C7] dark:group-hover:text-[#A78BFA] transition-colors"
                         title={fileName}
                       >
                         {fileName}
                       </h4>
-                      <p className="text-xs text-gray-500 mt-0.5 font-medium">
+                      <p className={`text-xs mt-0.5 font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                         {doc.created_at
                           ? new Date(doc.created_at).toLocaleDateString()
                           : "Uploaded material"}
@@ -101,7 +120,9 @@ function StudySetDocumentsCard({ documents = [], loading = false }) {
                     </div>
                   </div>
 
-                  <span className="font-mono text-[10px] font-bold text-[#4E1F6E] bg-[#4E1F6E]/10 px-2.5 py-1 rounded-md ml-2 shrink-0 border border-[#4E1F6E]/20 shadow-2xs">
+                  <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded-lg ml-2 shrink-0 border ${
+                    isDarkMode ? "bg-[#8064C7]/20 border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border-[#8064C7]/20 text-[#8064C7]"
+                  }`}>
                     {extTag}
                   </span>
                 </div>
@@ -115,3 +136,4 @@ function StudySetDocumentsCard({ documents = [], loading = false }) {
 }
 
 export default StudySetDocumentsCard;
+

@@ -1,21 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AlertTriangle, Loader2, X } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 
-/**
- * Reusable Confirmation Modal for Destructive Actions
- *
- * @param {Object} props
- * @param {boolean} props.isOpen - Whether the modal is visible
- * @param {string} props.title - Modal title (default: "Delete Study Set?")
- * @param {string} props.itemName - Name of the item to be deleted
- * @param {string} props.warningText - Secondary warning (default: "This action cannot be undone.")
- * @param {string} props.confirmText - Label for confirm button (default: "Delete")
- * @param {string} props.cancelText - Label for cancel button (default: "Cancel")
- * @param {boolean} props.isLoading - Whether the delete action is processing
- * @param {string|null} props.error - Error message if delete failed
- * @param {Function} props.onConfirm - Callback when user clicks confirm
- * @param {Function} props.onCancel - Callback when user clicks cancel / closes modal
- */
 export default function DeleteConfirmModal({
   isOpen,
   title = "Delete Study Set?",
@@ -28,11 +14,11 @@ export default function DeleteConfirmModal({
   onConfirm,
   onCancel,
 }) {
+  const { isDarkMode } = useTheme();
   const cancelRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Set focus on Cancel button for safety and keyboard accessibility
       cancelRef.current?.focus();
 
       const handleKeyDown = (e) => {
@@ -50,73 +36,74 @@ export default function DeleteConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Semi-transparent backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={() => {
           if (!isLoading) onCancel();
         }}
         aria-hidden="true"
       />
 
-      {/* Modal Dialog Card */}
       <div
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-gray-100 z-10 transition-all"
+        className={`relative w-full max-w-md rounded-3xl p-6 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
+          isDarkMode
+            ? "border-white/10 bg-[#17131F] text-white"
+            : "border-white/80 bg-white text-[#292530]"
+        }`}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-modal-title"
         aria-describedby="delete-modal-desc"
       >
-        {/* Close button */}
         <button
           type="button"
           onClick={onCancel}
           disabled={isLoading}
-          className="absolute top-4 right-4 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`absolute top-5 right-5 rounded-xl p-1.5 transition disabled:opacity-50 ${
+            isDarkMode ? "hover:bg-white/10 text-white/60" : "hover:bg-gray-100 text-gray-400"
+          }`}
           aria-label="Close dialog"
         >
           <X size={18} />
         </button>
 
-        {/* Warning Header */}
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500">
+          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-red-500/20 text-red-400">
             <AlertTriangle size={22} aria-hidden="true" />
           </div>
-          <h2 id="delete-modal-title" className="text-xl font-bold text-[#3E3E75]">
+          <h2 id="delete-modal-title" className="text-xl font-black tracking-tight">
             {title}
           </h2>
         </div>
 
-        {/* Description & Warning */}
-        <div id="delete-modal-desc" className="mb-5 space-y-1.5 text-sm text-gray-600">
+        <div id="delete-modal-desc" className="mb-5 space-y-1.5 text-xs font-semibold">
           <p className="leading-relaxed">
             Are you sure you want to delete{" "}
-            <span className="font-semibold text-[#3E3E75] break-words">
+            <span className="font-bold text-[#8064C7] dark:text-[#A78BFA] break-words">
               "{itemName}"
             </span>
             ?
           </p>
           {warningText && (
-            <p className="text-xs font-medium text-gray-500">{warningText}</p>
+            <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>{warningText}</p>
           )}
         </div>
 
-        {/* Error state */}
         {error && (
-          <div className="mb-4 rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-600">
+          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-bold text-red-400">
             {error}
           </div>
         )}
 
-        {/* Modal Buttons */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             ref={cancelRef}
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#98E8DE] disabled:cursor-not-allowed disabled:opacity-50"
+            className={`rounded-xl border px-5 py-2.5 text-xs font-bold transition ${
+              isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white" : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+            }`}
           >
             {cancelText}
           </button>
@@ -125,7 +112,7 @@ export default function DeleteConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition disabled:opacity-50"
           >
             {isLoading ? (
               <>
@@ -141,3 +128,4 @@ export default function DeleteConfirmModal({
     </div>
   );
 }
+
