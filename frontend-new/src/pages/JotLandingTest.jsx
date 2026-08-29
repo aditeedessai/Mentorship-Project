@@ -2,6 +2,7 @@ import React from "react";
 import { useTheme } from "../context/ThemeContext";
 import jojoImage from "../assets/jojo.png";
 import jojoDarkImage from "../assets/jojo-dark.jpg";
+import JotFooter from "../components/JotFooter";
 
 /* =========================================================
    GLASS CARD
@@ -13,7 +14,9 @@ const GlassCard = ({
   isDarkMode: propDarkMode,
 }) => {
   const { isDarkMode: themeDarkMode } = useTheme();
-  const isDarkMode = propDarkMode !== undefined ? propDarkMode : themeDarkMode;
+
+  const isDarkMode =
+    propDarkMode !== undefined ? propDarkMode : themeDarkMode;
 
   return (
     <div
@@ -35,20 +38,19 @@ const GlassCard = ({
   );
 };
 
-
 /* =========================================================
    JOJO MASCOT
 ========================================================= */
 
 const Jojo = ({ isDarkMode: propDarkMode }) => {
   const { isDarkMode: themeDarkMode } = useTheme();
-  const isDarkMode = propDarkMode !== undefined ? propDarkMode : themeDarkMode;
+
+  const isDarkMode =
+    propDarkMode !== undefined ? propDarkMode : themeDarkMode;
 
   return (
     <div className="relative flex items-center justify-center">
-
       {/* Glow */}
-
       <div
         className={`
           absolute
@@ -66,8 +68,7 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
         `}
       />
 
-      {/* Circular mascot container */}
-
+      {/* Mascot container */}
       <div
         className={`
           relative
@@ -91,24 +92,15 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
           }
         `}
       >
-
         <img
           src={isDarkMode ? jojoDarkImage : jojoImage}
           alt="Jojo - JOT study buddy"
-          className="
-            h-full
-            w-full
-            object-contain
-            p-5
-          "
+          className="h-full w-full object-contain p-5"
         />
-
       </div>
-
     </div>
   );
 };
-
 
 /* =========================================================
    LANDING PAGE
@@ -119,8 +111,17 @@ const JotLandingTest = ({
   isDarkMode: propDarkMode,
   onToggleDarkMode,
 }) => {
-  const { isDarkMode: themeDarkMode, toggleDarkMode } = useTheme();
-  const isDarkMode = propDarkMode !== undefined ? propDarkMode : themeDarkMode;
+  const {
+    isDarkMode: themeDarkMode,
+    toggleDarkMode,
+  } = useTheme();
+
+  const isDarkMode =
+    propDarkMode !== undefined ? propDarkMode : themeDarkMode;
+
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
 
   const handleStart = () => {
     if (onNavigate) {
@@ -128,6 +129,11 @@ const JotLandingTest = ({
     }
   };
 
+  const handleAbout = () => {
+    if (onNavigate) {
+      onNavigate("about");
+    }
+  };
 
   return (
     <div
@@ -144,7 +150,6 @@ const JotLandingTest = ({
         }
       `}
     >
-
       {/* =====================================================
           BACKGROUND
       ===================================================== */}
@@ -158,9 +163,7 @@ const JotLandingTest = ({
           overflow-hidden
         "
       >
-
         {/* Top-left glow */}
-
         <div
           className={`
             absolute
@@ -180,9 +183,7 @@ const JotLandingTest = ({
           `}
         />
 
-
         {/* Right glow */}
-
         <div
           className={`
             absolute
@@ -200,9 +201,7 @@ const JotLandingTest = ({
           `}
         />
 
-
         {/* Bottom glow */}
-
         <div
           className={`
             absolute
@@ -219,9 +218,7 @@ const JotLandingTest = ({
             }
           `}
         />
-
       </div>
-
 
       {/* =====================================================
           NAVBAR
@@ -253,11 +250,8 @@ const JotLandingTest = ({
           }
         `}
       >
-
         {/* Logo */}
-
         <div className="flex items-center gap-3">
-
           <div
             className={`
               text-3xl
@@ -271,11 +265,8 @@ const JotLandingTest = ({
             `}
           >
             Jot
-            <span className="text-[#8064C7]">
-              .
-            </span>
+            <span className="text-[#8064C7]">.</span>
           </div>
-
 
           <span
             className="
@@ -294,17 +285,14 @@ const JotLandingTest = ({
           >
             your study buddy
           </span>
-
         </div>
 
-
         {/* Navigation */}
-
         <div
           className={`
             hidden
             items-center
-            gap-8
+            gap-7
             text-sm
             font-semibold
             md:flex
@@ -315,7 +303,6 @@ const JotLandingTest = ({
             }
           `}
         >
-
           <a
             href="#home"
             className="transition hover:text-[#A78BFA]"
@@ -337,20 +324,30 @@ const JotLandingTest = ({
             Meet Jojo
           </a>
 
+          <button
+            type="button"
+            onClick={handleAbout}
+            className="
+              cursor-pointer
+              transition
+              hover:text-[#A78BFA]
+            "
+          >
+            About Us
+          </button>
         </div>
 
-
         {/* Right side */}
-
-        <div className="flex items-center gap-3">
-
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Dark / Light toggle */}
           <button
+            type="button"
             onClick={onToggleDarkMode || toggleDarkMode}
             className={`
               flex
               h-11
               w-11
+              cursor-pointer
               items-center
               justify-center
               rounded-xl
@@ -358,7 +355,6 @@ const JotLandingTest = ({
               text-lg
               transition
               duration-300
-              cursor-pointer
               ${
                 isDarkMode
                   ? "border-white/10 bg-white/10 hover:bg-white/15"
@@ -372,8 +368,11 @@ const JotLandingTest = ({
 
           {/* Log In */}
           <button
+            type="button"
             onClick={handleStart}
             className={`
+              hidden
+              cursor-pointer
               rounded-xl
               px-4
               py-2.5
@@ -381,10 +380,10 @@ const JotLandingTest = ({
               font-bold
               transition
               duration-300
-              cursor-pointer
+              sm:block
               ${
                 isDarkMode
-                  ? "text-white/80 hover:text-white hover:bg-white/10"
+                  ? "text-white/80 hover:bg-white/10 hover:text-white"
                   : "text-[#292530] hover:bg-black/5"
               }
             `}
@@ -394,18 +393,20 @@ const JotLandingTest = ({
 
           {/* Get Started */}
           <button
+            type="button"
             onClick={handleStart}
             className={`
+              cursor-pointer
               rounded-xl
-              px-5
+              px-4
               py-2.5
               text-sm
               font-bold
               shadow-lg
               transition
               duration-300
-              cursor-pointer
               hover:-translate-y-0.5
+              sm:px-5
               ${
                 isDarkMode
                   ? "bg-white text-[#241E2C] hover:bg-purple-50"
@@ -415,11 +416,8 @@ const JotLandingTest = ({
           >
             Get Started →
           </button>
-
         </div>
-
       </nav>
-
 
       {/* =====================================================
           HERO
@@ -436,7 +434,6 @@ const JotLandingTest = ({
           lg:px-16
         "
       >
-
         <div
           className="
             mx-auto
@@ -449,15 +446,8 @@ const JotLandingTest = ({
             lg:grid-cols-[0.9fr_1.1fr]
           "
         >
-
-          {/* =================================================
-              LEFT SIDE
-          ================================================= */}
-
+          {/* LEFT SIDE */}
           <div className="relative z-20">
-
-            {/* Badge */}
-
             <div
               className={`
                 mb-7
@@ -478,7 +468,6 @@ const JotLandingTest = ({
                 }
               `}
             >
-
               <span
                 className="
                   h-2.5
@@ -490,11 +479,7 @@ const JotLandingTest = ({
               />
 
               Meet your AI study buddy
-
             </div>
-
-
-            {/* Heading */}
 
             <h1
               className={`
@@ -512,11 +497,8 @@ const JotLandingTest = ({
                 }
               `}
             >
-
               Study
-
               <br />
-
               <span
                 className="
                   bg-gradient-to-r
@@ -529,15 +511,9 @@ const JotLandingTest = ({
               >
                 without
               </span>
-
               <br />
-
               the chaos.
-
             </h1>
-
-
-            {/* Decorative line */}
 
             <div
               className="
@@ -549,9 +525,6 @@ const JotLandingTest = ({
                 bg-[#8B5CF6]/50
               "
             />
-
-
-            {/* Description */}
 
             <p
               className={`
@@ -572,14 +545,12 @@ const JotLandingTest = ({
               flashcards and quick revision material.
             </p>
 
-
-            {/* Buttons */}
-
             <div className="mt-9 flex flex-wrap gap-4">
-
               <button
+                type="button"
                 onClick={handleStart}
                 className="
+                  cursor-pointer
                   rounded-xl
                   bg-[#8064C7]
                   px-8
@@ -595,7 +566,6 @@ const JotLandingTest = ({
               >
                 Start Jotting ✏️
               </button>
-
 
               <a
                 href="#how"
@@ -616,11 +586,7 @@ const JotLandingTest = ({
               >
                 See how it works
               </a>
-
             </div>
-
-
-            {/* Tagline */}
 
             <div
               className={`
@@ -636,32 +602,13 @@ const JotLandingTest = ({
                 }
               `}
             >
-
-              <span className="text-lg">
-                ✨
-              </span>
-
+              <span className="text-lg">✨</span>
               Jot it. Organise it. Top it.
-
             </div>
-
           </div>
 
-
-          {/* =================================================
-              RIGHT HERO
-          ================================================= */}
-
-          <div
-            className="
-              relative
-              h-[680px]
-              w-full
-            "
-          >
-
-            {/* Large background circle */}
-
+          {/* RIGHT HERO */}
+          <div className="relative h-[680px] w-full">
             <div
               className={`
                 absolute
@@ -684,11 +631,7 @@ const JotLandingTest = ({
               `}
             />
 
-
-            {/* =================================================
-                STUDY NOTES
-            ================================================= */}
-
+            {/* STUDY NOTES */}
             <GlassCard
               isDarkMode={isDarkMode}
               className="
@@ -703,7 +646,6 @@ const JotLandingTest = ({
                 md:w-[285px]
               "
             >
-
               <div
                 className={`
                   rounded-[22px]
@@ -715,11 +657,8 @@ const JotLandingTest = ({
                   }
                 `}
               >
-
                 <div className="flex items-start justify-between">
-
                   <div>
-
                     <p
                       className={`
                         font-mono
@@ -750,9 +689,7 @@ const JotLandingTest = ({
                     >
                       Operating Systems
                     </h3>
-
                   </div>
-
 
                   <span
                     className="
@@ -767,9 +704,7 @@ const JotLandingTest = ({
                   >
                     PDF
                   </span>
-
                 </div>
-
 
                 <div
                   className={`
@@ -783,11 +718,7 @@ const JotLandingTest = ({
                   `}
                 />
 
-
-                {/* Lines */}
-
                 <div className="space-y-2">
-
                   <div
                     className={`
                       h-2
@@ -839,11 +770,7 @@ const JotLandingTest = ({
                       }
                     `}
                   />
-
                 </div>
-
-
-                {/* Generated */}
 
                 <div
                   className={`
@@ -857,14 +784,7 @@ const JotLandingTest = ({
                     }
                   `}
                 >
-
-                  <p
-                    className="
-                      text-[9px]
-                      font-bold
-                      text-[#A78BFA]
-                    "
-                  >
+                  <p className="text-[9px] font-bold text-[#A78BFA]">
                     ✨ JOT GENERATED
                   </p>
 
@@ -884,18 +804,11 @@ const JotLandingTest = ({
                     use more memory than physically
                     available.
                   </p>
-
                 </div>
-
               </div>
-
             </GlassCard>
 
-
-            {/* =================================================
-                SUMMARY
-            ================================================= */}
-
+            {/* SUMMARY */}
             <GlassCard
               isDarkMode={isDarkMode}
               className="
@@ -908,15 +821,10 @@ const JotLandingTest = ({
                 py-4
               "
             >
-
               <div className="flex items-center gap-3">
-
-                <span className="text-xl">
-                  ✨
-                </span>
+                <span className="text-xl">✨</span>
 
                 <div>
-
                   <p
                     className={`
                       text-[10px]
@@ -943,19 +851,11 @@ const JotLandingTest = ({
                   >
                     Smart Summary
                   </p>
-
                 </div>
-
               </div>
-
             </GlassCard>
 
-
-            {/* =================================================
-                JOJO
-                BELOW SUMMARY
-            ================================================= */}
-
+            {/* JOJO */}
             <div
               className="
                 absolute
@@ -969,16 +869,10 @@ const JotLandingTest = ({
                 justify-center
               "
             >
-
               <Jojo isDarkMode={isDarkMode} />
-
             </div>
 
-
-            {/* =================================================
-                JOJO MESSAGE
-            ================================================= */}
-
+            {/* JOJO MESSAGE */}
             <GlassCard
               isDarkMode={isDarkMode}
               className="
@@ -991,15 +885,10 @@ const JotLandingTest = ({
                 py-4
               "
             >
-
               <div className="flex items-start gap-3">
-
-                <span className="text-xl">
-                  ✏️
-                </span>
+                <span className="text-xl">✏️</span>
 
                 <div>
-
                   <p
                     className={`
                       text-sm
@@ -1027,18 +916,11 @@ const JotLandingTest = ({
                   >
                     Give me your notes!
                   </p>
-
                 </div>
-
               </div>
-
             </GlassCard>
 
-
-            {/* =================================================
-                QUIZ
-            ================================================= */}
-
+            {/* QUIZ */}
             <GlassCard
               isDarkMode={isDarkMode}
               className="
@@ -1051,12 +933,8 @@ const JotLandingTest = ({
                 py-3
               "
             >
-
               <div className="flex items-center gap-2">
-
-                <span className="text-lg">
-                  🧠
-                </span>
+                <span className="text-lg">🧠</span>
 
                 <span
                   className={`
@@ -1071,16 +949,10 @@ const JotLandingTest = ({
                 >
                   Quiz
                 </span>
-
               </div>
-
             </GlassCard>
 
-
-            {/* =================================================
-                FLASHCARDS
-            ================================================= */}
-
+            {/* FLASHCARDS */}
             <GlassCard
               isDarkMode={isDarkMode}
               className="
@@ -1094,12 +966,8 @@ const JotLandingTest = ({
                 py-3
               "
             >
-
               <div className="flex items-center gap-2">
-
-                <span className="text-lg">
-                  🃏
-                </span>
+                <span className="text-lg">🃏</span>
 
                 <span
                   className={`
@@ -1114,82 +982,39 @@ const JotLandingTest = ({
                 >
                   Flashcards
                 </span>
-
               </div>
-
             </GlassCard>
-
           </div>
-
         </div>
-
       </section>
-
 
       {/* =====================================================
           BEFORE / AFTER
       ===================================================== */}
 
-      <section
-        className="
-          px-6
-          py-28
-          md:px-12
-          lg:px-16
-        "
-      >
-
+      <section className="px-6 py-28 md:px-12 lg:px-16">
         <div className="mx-auto max-w-6xl">
-
           <div className="mx-auto mb-16 max-w-3xl text-center">
-
-            <p
-              className="
-                font-mono
-                text-xs
-                font-bold
-                uppercase
-                tracking-[0.3em]
-                text-[#A78BFA]
-              "
-            >
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[#A78BFA]">
               The JOT difference
             </p>
 
-            <h2
-              className={`
-                mt-5
-                text-5xl
-                font-black
-                leading-tight
-                tracking-tight
-                md:text-6xl
-              `}
-            >
+            <h2 className="mt-5 text-5xl font-black leading-tight tracking-tight md:text-6xl">
               From messy notes
-
               <br />
-
               <span className="text-[#A78BFA]">
                 to study-ready.
               </span>
-
             </h2>
-
           </div>
 
-
           <div className="grid gap-7 md:grid-cols-2">
-
             {/* BEFORE */}
-
             <GlassCard
               isDarkMode={isDarkMode}
               className="rounded-[32px] p-8"
             >
-
               <div className="flex items-center justify-between">
-
                 <span
                   className={`
                     font-mono
@@ -1206,20 +1031,14 @@ const JotLandingTest = ({
                   BEFORE JOT
                 </span>
 
-                <span className="text-3xl">
-                  😵‍💫
-                </span>
-
+                <span className="text-3xl">😵‍💫</span>
               </div>
-
 
               <h3 className="mt-6 text-3xl font-black">
                 "Where do I even start?"
               </h3>
 
-
               <div className="mt-8 space-y-3">
-
                 {[
                   "📄 238-page PDF",
                   "📊 47 lecture slides",
@@ -1242,14 +1061,10 @@ const JotLandingTest = ({
                     {item}
                   </div>
                 ))}
-
               </div>
-
             </GlassCard>
 
-
             {/* AFTER */}
-
             <div
               className={`
                 rounded-[32px]
@@ -1263,27 +1078,19 @@ const JotLandingTest = ({
                 }
               `}
             >
-
               <div className="flex items-center justify-between">
-
                 <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[#A78BFA]">
                   AFTER JOT
                 </span>
 
-                <span className="text-3xl">
-                  ✨
-                </span>
-
+                <span className="text-3xl">✨</span>
               </div>
-
 
               <h3 className="mt-6 text-3xl font-black">
                 "Okay. I got this."
               </h3>
 
-
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
-
                 {[
                   ["✨", "Smart Summary"],
                   ["🧠", "Practice Quiz"],
@@ -1303,28 +1110,18 @@ const JotLandingTest = ({
                       }
                     `}
                   >
-
-                    <span className="text-2xl">
-                      {icon}
-                    </span>
+                    <span className="text-2xl">{icon}</span>
 
                     <p className="mt-3 font-bold">
                       {title}
                     </p>
-
                   </div>
                 ))}
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
-
 
       {/* =====================================================
           HOW IT WORKS
@@ -1332,16 +1129,9 @@ const JotLandingTest = ({
 
       <section
         id="how"
-        className="
-          px-6
-          py-28
-          md:px-12
-          lg:px-16
-        "
+        className="px-6 py-28 md:px-12 lg:px-16"
       >
-
         <div className="mx-auto max-w-6xl">
-
           <div
             className={`
               relative
@@ -1359,7 +1149,6 @@ const JotLandingTest = ({
               }
             `}
           >
-
             <div
               className="
                 absolute
@@ -1373,69 +1162,45 @@ const JotLandingTest = ({
               "
             />
 
-
             <div className="relative">
-
-              <p
-                className="
-                  font-mono
-                  text-xs
-                  uppercase
-                  tracking-[0.3em]
-                  text-purple-300
-                "
-              >
+              <p className="font-mono text-xs uppercase tracking-[0.3em] text-purple-300">
                 How JOT works
               </p>
 
-
-              <h2
-                className="
-                  mt-5
-                  max-w-xl
-                  text-5xl
-                  font-black
-                  leading-tight
-                  text-white
-                  md:text-6xl
-                "
-              >
+              <h2 className="mt-5 max-w-xl text-5xl font-black leading-tight text-white md:text-6xl">
                 Three steps.
-
                 <br />
-
                 <span className="text-purple-300">
                   Zero chaos.
                 </span>
               </h2>
 
-
-              <div
-                className="
-                  mt-16
-                  grid
-                  gap-10
-                  md:grid-cols-3
-                "
-              >
-
+              <div className="mt-16 grid gap-10 md:grid-cols-3">
                 {[
-                  ["01", "📄", "Drop", "Upload your PDF, PPT or study material."],
-                  ["02", "✏️", "Jot", "Jojo organises your material into useful study content."],
-                  ["03", "🎯", "Learn", "Practice, revise and feel ready for your exam."],
+                  [
+                    "01",
+                    "📄",
+                    "Drop",
+                    "Upload your PDF, PPT or study material.",
+                  ],
+                  [
+                    "02",
+                    "✏️",
+                    "Jot",
+                    "Jojo organises your material into useful study content.",
+                  ],
+                  [
+                    "03",
+                    "🎯",
+                    "Learn",
+                    "Practice, revise and feel ready for your exam.",
+                  ],
                 ].map(([number, icon, title, text]) => (
-
                   <div
                     key={number}
-                    className="
-                      border-t
-                      border-white/15
-                      pt-6
-                    "
+                    className="border-t border-white/15 pt-6"
                   >
-
                     <div className="flex justify-between">
-
                       <span className="font-mono text-sm text-purple-300">
                         {number}
                       </span>
@@ -1443,31 +1208,22 @@ const JotLandingTest = ({
                       <span className="text-2xl">
                         {icon}
                       </span>
-
                     </div>
 
-                    <h3 className="mt-6 text-3xl font-black">
+                    <h3 className="mt-6 text-3xl font-black text-white">
                       {title}
                     </h3>
 
                     <p className="mt-4 leading-7 text-white/50">
                       {text}
                     </p>
-
                   </div>
-
                 ))}
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
-
 
       {/* =====================================================
           MEET JOJO
@@ -1475,80 +1231,25 @@ const JotLandingTest = ({
 
       <section
         id="jojo"
-        className="
-          px-6
-          py-28
-          md:px-12
-          lg:px-16
-        "
+        className="px-6 py-28 md:px-12 lg:px-16"
       >
-
-        <div
-          className="
-            mx-auto
-            grid
-            max-w-6xl
-            items-center
-            gap-14
-            md:grid-cols-2
-          "
-        >
-
-          {/* Jojo */}
-
-          <div
-            className="
-              flex
-              min-h-[450px]
-              items-center
-              justify-center
-            "
-          >
-
+        <div className="mx-auto grid max-w-6xl items-center gap-14 md:grid-cols-2">
+          <div className="flex min-h-[450px] items-center justify-center">
             <Jojo isDarkMode={isDarkMode} />
-
           </div>
 
-
-          {/* Text */}
-
           <div>
-
-            <p
-              className="
-                font-mono
-                text-xs
-                font-bold
-                uppercase
-                tracking-[0.3em]
-                text-[#A78BFA]
-              "
-            >
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-[#A78BFA]">
               Meet your study buddy
             </p>
 
-
-            <h2
-              className="
-                mt-6
-                text-5xl
-                font-black
-                leading-tight
-                tracking-tight
-                md:text-6xl
-              "
-            >
-
+            <h2 className="mt-6 text-5xl font-black leading-tight tracking-tight md:text-6xl">
               Meet
-
               <br />
-
               <span className="text-[#A78BFA]">
                 Jojo.
               </span>
-
             </h2>
-
 
             <p
               className={`
@@ -1567,7 +1268,6 @@ const JotLandingTest = ({
               overwhelming and a little more fun.
             </p>
 
-
             <p
               className={`
                 mt-5
@@ -1585,18 +1285,11 @@ const JotLandingTest = ({
               and revision material.
             </p>
 
-
             <GlassCard
               isDarkMode={isDarkMode}
-              className="
-                mt-8
-                rounded-2xl
-                p-5
-              "
+              className="mt-8 rounded-2xl p-5"
             >
-
               <div className="flex items-center gap-4">
-
                 <div
                   className="
                     flex
@@ -1613,7 +1306,6 @@ const JotLandingTest = ({
                 </div>
 
                 <div>
-
                   <p className="font-bold">
                     Jot it. Organise it. Top it.
                   </p>
@@ -1631,33 +1323,18 @@ const JotLandingTest = ({
                   >
                     Your study material, made simpler.
                   </p>
-
                 </div>
-
               </div>
-
             </GlassCard>
-
           </div>
-
         </div>
-
       </section>
-
 
       {/* =====================================================
           FINAL CTA
       ===================================================== */}
 
-      <section
-        className="
-          px-6
-          pb-28
-          md:px-12
-          lg:px-16
-        "
-      >
-
+      <section className="px-6 pb-28 md:px-12 lg:px-16">
         <div
           className="
             relative
@@ -1677,7 +1354,6 @@ const JotLandingTest = ({
             md:px-20
           "
         >
-
           <div
             className="
               absolute
@@ -1704,52 +1380,26 @@ const JotLandingTest = ({
             "
           />
 
-
           <div className="relative">
-
-            <p
-              className="
-                font-mono
-                text-xs
-                uppercase
-                tracking-[0.3em]
-                text-white/60
-              "
-            >
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-white/60">
               Your notes are waiting
             </p>
 
-
-            <h2
-              className="
-                mt-5
-                text-5xl
-                font-black
-                md:text-7xl
-              "
-            >
+            <h2 className="mt-5 text-5xl font-black md:text-7xl">
               Ready to JOT?
             </h2>
 
-
-            <p
-              className="
-                mx-auto
-                mt-6
-                max-w-xl
-                text-lg
-                text-white/75
-              "
-            >
+            <p className="mx-auto mt-6 max-w-xl text-lg text-white/75">
               Turn those endless PDFs into something
               you can actually study.
             </p>
 
-
             <button
+              type="button"
               onClick={handleStart}
               className="
                 mt-10
+                cursor-pointer
                 rounded-xl
                 bg-white
                 px-9
@@ -1764,93 +1414,15 @@ const JotLandingTest = ({
             >
               Start Jotting ✏️
             </button>
-
           </div>
-
         </div>
-
       </section>
 
-
       {/* =====================================================
-          FOOTER
+          SHARED FOOTER
       ===================================================== */}
 
-      <footer
-        className={`
-          border-t
-          px-6
-          py-8
-          transition-colors
-          duration-500
-          md:px-12
-          lg:px-16
-          ${
-            isDarkMode
-              ? "border-white/10"
-              : "border-black/10"
-          }
-        `}
-      >
-
-        <div
-          className="
-            mx-auto
-            flex
-            max-w-6xl
-            flex-col
-            items-center
-            justify-between
-            gap-4
-            md:flex-row
-          "
-        >
-
-          <div
-            className="
-              text-2xl
-              font-black
-              tracking-[-0.08em]
-            "
-          >
-            Jot
-            <span className="text-[#8064C7]">
-              .
-            </span>
-          </div>
-
-
-          <p
-            className={`
-              text-sm
-              ${
-                isDarkMode
-                  ? "text-white/35"
-                  : "text-gray-500"
-              }
-            `}
-          >
-            Jot it. Organise it. Top it.
-          </p>
-
-
-          <p
-            className={`
-              text-xs
-              ${
-                isDarkMode
-                  ? "text-white/25"
-                  : "text-gray-400"
-              }
-            `}
-          >
-            © 2026 JOT
-          </p>
-
-        </div>
-
-      </footer>
-
+      <JotFooter />
     </div>
   );
 };

@@ -1,4 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 const ThemeContext = createContext({
   isDarkMode: false,
@@ -9,14 +14,25 @@ const ThemeContext = createContext({
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("jot_theme");
+
     if (saved !== null) {
       return saved === "dark";
     }
-    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    return (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
   });
 
   useEffect(() => {
-    localStorage.setItem("jot_theme", isDarkMode ? "dark" : "light");
+    // Save theme so every page uses the same setting
+    localStorage.setItem(
+      "jot_theme",
+      isDarkMode ? "dark" : "light"
+    );
+
+    // Keep the HTML element in sync
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
     } else {
@@ -28,12 +44,18 @@ export const ThemeProvider = ({ children }) => {
     setIsDarkMode((prev) => !prev);
   };
 
-  const setDarkMode = (val) => {
-    setIsDarkMode(Boolean(val));
+  const setDarkMode = (value) => {
+    setIsDarkMode(Boolean(value));
   };
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, setDarkMode }}>
+    <ThemeContext.Provider
+      value={{
+        isDarkMode,
+        toggleDarkMode,
+        setDarkMode,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
