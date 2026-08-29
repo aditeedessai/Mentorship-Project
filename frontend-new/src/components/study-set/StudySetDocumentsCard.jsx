@@ -51,7 +51,7 @@ function StudySetDocumentsCard({ documents = [], loading = false }) {
           </div>
         </div>
         <span className={`shrink-0 whitespace-nowrap font-mono text-xs font-bold px-3 py-1 rounded-full ${
-          isDarkMode ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
+          isDarkMode ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-300" : "bg-emerald-100 border border-emerald-200 text-emerald-700"
         }`}>
           {documents.length} File{documents.length === 1 ? "" : "s"}
         </span>
@@ -120,11 +120,20 @@ function StudySetDocumentsCard({ documents = [], loading = false }) {
                     </div>
                   </div>
 
-                  <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded-lg ml-2 shrink-0 border ${
-                    isDarkMode ? "bg-[#8064C7]/20 border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border-[#8064C7]/20 text-[#8064C7]"
-                  }`}>
-                    {extTag}
-                  </span>
+                  <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      isDarkMode
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      Ready
+                    </span>
+                    <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded-lg border ${
+                      isDarkMode ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-300" : "bg-emerald-100 border-emerald-200 text-emerald-700"
+                    }`}>
+                      {extTag}
+                    </span>
+                  </div>
                 </div>
               );
             })}

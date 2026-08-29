@@ -5,12 +5,17 @@ export default function QuestionNavigator({ questionCount, currentQuestion, ques
   const { isDarkMode } = useTheme()
 
   const getStatusClass = (num) => {
-    if (num === currentQuestion) {
+    const status = questionStatuses[num] || 'unvisited'
+    const isCurrent = num === currentQuestion
+
+    if (isCurrent && status === 'attempted') {
+      return "border-2 border-[#8064C7] dark:border-[#A78BFA] bg-emerald-500 text-white font-black shadow-md ring-2 ring-emerald-500/30"
+    }
+    if (isCurrent) {
       return "border-2 border-[#8064C7] bg-[#8064C7]/20 text-[#8064C7] dark:text-[#A78BFA] font-black"
     }
-    const status = questionStatuses[num] || 'unvisited'
     if (status === 'attempted') {
-      return "bg-[#8064C7] text-white font-bold shadow-sm"
+      return "bg-emerald-500 text-white font-bold shadow-sm"
     }
     if (status === 'skipped') {
       return "border-2 border-amber-400 text-amber-400 bg-amber-400/10 font-bold"
@@ -57,7 +62,7 @@ export default function QuestionNavigator({ questionCount, currentQuestion, ques
         </div>
         <div className="space-y-2.5 text-xs font-bold">
           <div className="flex items-center gap-2.5">
-            <div className="w-3.5 h-3.5 rounded-md bg-[#8064C7]" />
+            <div className="w-3.5 h-3.5 rounded-md bg-emerald-500" />
             <span className={isDarkMode ? "text-white/70" : "text-gray-600"}>Attempted</span>
           </div>
           <div className="flex items-center gap-2.5">

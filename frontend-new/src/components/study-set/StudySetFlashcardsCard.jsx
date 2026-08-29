@@ -49,8 +49,8 @@ function StudySetFlashcardsCard({
             onClick={() => setPracticeMode(false)}
             className={`text-xs font-bold transition-all flex items-center gap-1 border px-3.5 py-1.5 rounded-full ${
               isDarkMode
-                ? "border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10"
-                : "border-[#8064C7]/30 bg-[#8064C7]/10 text-[#8064C7] hover:bg-[#8064C7]/20"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
             }`}
           >
             <span>View Study Deck</span>

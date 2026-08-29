@@ -350,15 +350,23 @@ const SettingsPage = ({
         </section>
 
         {/* DANGER ZONE */}
-        <section className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 backdrop-blur-2xl space-y-4">
+        <section className={`rounded-3xl border p-6 backdrop-blur-2xl space-y-4 transition-all duration-300 ${
+          isDarkMode
+            ? "border-red-500/30 bg-red-500/10"
+            : "border-red-200/80 bg-red-50/30 shadow-[0_4px_25px_rgba(239,68,68,0.02)]"
+        }`}>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/20 text-red-400">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+              isDarkMode ? "bg-red-500/20 text-red-400" : "bg-red-100/80 text-red-500"
+            }`}>
               <Trash2 size={20} />
             </div>
 
             <div>
-              <h2 className="font-black text-red-400 tracking-tight">Danger Zone</h2>
-              <p className="text-xs text-red-300/70 font-semibold">
+              <h2 className={`font-black tracking-tight ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
+                Danger Zone
+              </h2>
+              <p className={`text-xs font-semibold ${isDarkMode ? "text-red-300/70" : "text-red-600/60"}`}>
                 These actions cannot be easily undone
               </p>
             </div>
@@ -375,41 +383,53 @@ const SettingsPage = ({
             <button
               type="button"
               onClick={() => openConfirm("all-study-sets")}
-              className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-left transition hover:bg-red-500/20 cursor-pointer"
+              className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition cursor-pointer ${
+                isDarkMode
+                  ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
+                  : "border-red-200/60 bg-white/80 hover:bg-red-50/80 shadow-xs"
+              }`}
             >
               <div>
-                <p className="text-xs font-bold text-red-400">
+                <p className={`text-xs font-bold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                   Delete all study sets
                 </p>
-                <p className="mt-0.5 text-[11px] text-red-300/70">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-red-300/70" : "text-gray-500"}`}>
                   Permanently remove all your study sets
                 </p>
               </div>
 
-              <Trash2 size={17} className="text-red-400" />
+              <Trash2 size={17} className={isDarkMode ? "text-red-400" : "text-red-500"} />
             </button>
 
             <button
               type="button"
               onClick={() => openConfirm("account")}
-              className="flex w-full items-center justify-between rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-left transition hover:bg-red-500/20 cursor-pointer"
+              className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition cursor-pointer ${
+                isDarkMode
+                  ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
+                  : "border-red-200/60 bg-white/80 hover:bg-red-50/80 shadow-xs"
+              }`}
             >
               <div>
-                <p className="text-xs font-bold text-red-400">
+                <p className={`text-xs font-bold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                   Delete account
                 </p>
-                <p className="mt-0.5 text-[11px] text-red-300/70">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-red-300/70" : "text-gray-500"}`}>
                   Permanently delete your account and data
                 </p>
               </div>
 
-              <Trash2 size={17} className="text-red-400" />
+              <Trash2 size={17} className={isDarkMode ? "text-red-400" : "text-red-500"} />
             </button>
 
             <button
               type="button"
               onClick={() => supabase.auth.signOut()}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400 transition hover:bg-red-500/20 cursor-pointer"
+              className={`flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition cursor-pointer ${
+                isDarkMode
+                  ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  : "border-red-200 bg-red-50/70 text-red-600 hover:bg-red-100/70 shadow-xs"
+              }`}
             >
               <LogOut size={17} />
               Log Out

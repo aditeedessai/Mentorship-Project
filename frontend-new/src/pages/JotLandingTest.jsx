@@ -1,6 +1,7 @@
 import React from "react";
 import { useTheme } from "../context/ThemeContext";
 import jojoImage from "../assets/jojo.png";
+import jojoDarkImage from "../assets/jojo-dark.jpg";
 
 /* =========================================================
    GLASS CARD
@@ -92,7 +93,7 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
       >
 
         <img
-          src={jojoImage}
+          src={isDarkMode ? jojoDarkImage : jojoImage}
           alt="Jojo - JOT study buddy"
           className="
             h-full

@@ -49,7 +49,6 @@ const toFrontendTypeId = (bType) => (bType === 'short' ? 'short-answer' : bType)
 export default function ConfigureSession({ studySetId: propStudySetId, studySetName: propStudySetName }) {
   const { isDarkMode } = useTheme()
   const [selectedType, setSelectedType] = useState('mcq')
-  const [questionCount, setQuestionCount] = useState(20)
   const [attempt, setAttempt] = useState(null)
   const [loadingAttempt, setLoadingAttempt] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -170,15 +169,12 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
         throw new Error(`No ${selected.title} questions could be generated for this study set.`)
       }
 
-      // 3. Determine actual question count
-      const actualCount = Math.min(questionCount, questions.length)
-
-      // 4. Navigate to the quiz page reusing the SAME attempt_id (NO createAttempt call)
+      // 3. Navigate to the quiz page reusing the SAME attempt_id (NO createAttempt call)
       navigate(selected.route, {
         state: {
-          questionCount: actualCount,
+          questionCount: questions.length,
           questionType: selectedType,
-          questions: questions.slice(0, actualCount),
+          questions: questions,
           attemptId: currentAttempt.attempt_id,
           studySetId,
         },
@@ -243,8 +239,6 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
 
       {/* Bottom Action Bar */}
       <SessionActionBar
-        questionCount={questionCount}
-        onQuestionCountChange={setQuestionCount}
         onStart={handleStart}
         loading={loading || loadingAttempt}
       />

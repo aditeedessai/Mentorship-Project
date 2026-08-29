@@ -361,16 +361,27 @@ function UpcomingExamsCard({ onSeeAll }) {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold">
-                        {exam.subject}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-sm font-bold">
+                          {exam.subject}
+                        </p>
+                        {exam.study_set_id && (
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                            isDarkMode
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            Set Linked
+                          </span>
+                        )}
+                      </div>
                       <p className={`truncate text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                         {exam.exam_type} • {getDaysLabel(exam.exam_date)}
                       </p>
                     </div>
 
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="text-xs font-bold text-[#8064C7] dark:text-[#A78BFA]">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatExamDate(exam.exam_date)}
                       </span>
                       <button
@@ -396,8 +407,8 @@ function UpcomingExamsCard({ onSeeAll }) {
             onClick={onSeeAll}
             className={`rounded-full border px-5 py-2 text-xs font-bold transition-all ${
               isDarkMode
-                ? "border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10"
-                : "border-[#8064C7]/30 bg-[#8064C7]/10 text-[#8064C7] hover:bg-[#8064C7]/20"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
             }`}
           >
             See all

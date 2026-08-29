@@ -324,11 +324,20 @@ function StudySetsPage({
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1.5">
                         <div className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-xs font-bold ${
-                          isDarkMode ? "border-white/10 bg-white/5 text-[#A78BFA]" : "border-purple-100 bg-[#8064C7]/10 text-[#8064C7]"
+                          isDarkMode ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-emerald-200 bg-emerald-50 text-emerald-700"
                         }`}>
                           <FileText size={13} />
                           <span>{docCount}</span>
                         </div>
+                        {docCount > 0 && (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            isDarkMode
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            Ready
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">
@@ -358,16 +367,18 @@ function StudySetsPage({
 
                     <div className="mt-auto">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold text-[#8064C7] dark:text-[#A78BFA]">
+                        <span className={`text-xs font-bold ${progress >= 75 ? "text-emerald-500 dark:text-emerald-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                           Progress
                         </span>
-                        <span className="text-xs font-bold">
+                        <span className={`text-xs font-bold ${progress >= 75 ? "text-emerald-500 dark:text-emerald-400" : ""}`}>
                           {progress}%
                         </span>
                       </div>
                       <div className={`h-2 w-full rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                         <div
-                          className="h-full rounded-full bg-[#8064C7] transition-all duration-500"
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            progress >= 75 ? "bg-emerald-500" : "bg-emerald-500/80"
+                          }`}
                           style={{ width: `${progress}%` }}
                         />
                       </div>

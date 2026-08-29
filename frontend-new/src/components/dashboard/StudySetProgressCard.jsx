@@ -76,9 +76,20 @@ function StudySetProgressCard() {
             return (
               <div key={set.study_set_id}>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="truncate text-sm font-bold">
-                    {set.name}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="truncate text-sm font-bold">
+                      {set.name}
+                    </span>
+                    {isComplete && (
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                        isDarkMode
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          : "bg-emerald-100 text-emerald-700"
+                      }`}>
+                        Done
+                      </span>
+                    )}
+                  </div>
                   <span className={`shrink-0 text-xs font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                     {set.sections_completed}/{set.total_sections} sections
                   </span>

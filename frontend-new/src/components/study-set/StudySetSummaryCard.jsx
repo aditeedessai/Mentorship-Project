@@ -107,7 +107,7 @@ function StudySetSummaryCard({
           </div>
           <div className="flex-1 text-left w-full">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider mb-2.5 ${
-              isDarkMode ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
+              isDarkMode ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-300" : "bg-emerald-100 border border-emerald-200 text-emerald-700"
             }`}>
               <Sparkles size={13} />
               AI SYNTHESIS

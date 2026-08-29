@@ -25,6 +25,15 @@ function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
               <BookOpen size={14} />
               STUDY SET
             </span>
+
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+              isDarkMode
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                : "bg-emerald-100 text-emerald-700"
+            }`}>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Active
+            </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">
             {studySetName}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, ArrowUp } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import {
   fetchStudySet,
@@ -30,6 +30,40 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   const flashcardsRef = useRef(null);
   const mnemonicsRef = useRef(null);
   const [activeTab, setActiveTab] = useState("summary");
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const mainEl = document.querySelector("main");
+      const currentScroll = Math.max(
+        mainEl ? mainEl.scrollTop : 0,
+        window.scrollY || 0,
+        document.documentElement?.scrollTop || 0
+      );
+      setShowBackToTop(currentScroll > 120);
+    };
+
+    document.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("scroll", handleScroll);
+
+    handleScroll();
+
+    return () => {
+      document.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const scrollToTop = () => {
+    const mainEl = document.querySelector("main");
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (document.documentElement) {
+      document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -327,6 +361,25 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* Floating Back to Top Button */}
+      <button
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        title="Back to top"
+        className={`fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-2xl border backdrop-blur-xl transition-all duration-300 cursor-pointer ${
+          showBackToTop
+            ? "translate-y-0 opacity-100 scale-100 shadow-xl"
+            : "translate-y-10 opacity-0 scale-90 pointer-events-none"
+        } ${
+          isDarkMode
+            ? "border-white/20 bg-[#8064C7] hover:bg-[#8B6DD4] text-white shadow-[0_10px_30px_rgba(128,100,199,0.4)]"
+            : "border-[#8064C7]/20 bg-[#8064C7] hover:bg-[#7357B9] text-white shadow-[0_10px_30px_rgba(128,100,199,0.35)]"
+        }`}
+      >
+        <ArrowUp size={22} />
+      </button>
     </div>
   );
 }
