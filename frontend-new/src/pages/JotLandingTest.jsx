@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { Menu, X } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import jojoImage from "../assets/jojo.png";
 import jojoDarkImage from "../assets/jojo-dark.jpg";
@@ -116,8 +117,20 @@ const JotLandingTest = ({
     toggleDarkMode,
   } = useTheme();
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const isDarkMode =
     propDarkMode !== undefined ? propDarkMode : themeDarkMode;
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+    const mainElement = document.querySelector("main");
+    if (mainElement) {
+      mainElement.scrollTop = 0;
+    }
+  }, []);
+
+
 
   /* =======================================================
      NAVIGATION
@@ -228,33 +241,37 @@ const JotLandingTest = ({
         className={`
           fixed
           left-1/2
-          top-4
+          top-3
+          sm:top-4
           z-50
           flex
-          w-[92%]
+          w-[95%]
           max-w-6xl
           -translate-x-1/2
           items-center
           justify-between
           rounded-2xl
           border
-          px-5
-          py-4
+          px-3.5
+          sm:px-5
+          py-2.5
+          sm:py-3.5
           backdrop-blur-2xl
           transition-all
           duration-500
           ${
             isDarkMode
-              ? "border-white/10 bg-[#17131F]/70 shadow-[0_15px_50px_rgba(0,0,0,0.35)]"
-              : "border-white/80 bg-white/55 shadow-[0_12px_45px_rgba(70,55,110,0.10)]"
+              ? "border-white/10 bg-[#17131F]/80 shadow-[0_15px_50px_rgba(0,0,0,0.35)]"
+              : "border-white/80 bg-white/70 shadow-[0_12px_45px_rgba(70,55,110,0.10)]"
           }
         `}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div
             className={`
-              text-3xl
+              text-2xl
+              sm:text-3xl
               font-black
               tracking-[-0.08em]
               ${
@@ -273,8 +290,8 @@ const JotLandingTest = ({
               hidden
               rounded-full
               bg-[#8064C7]/10
-              px-3
-              py-1
+              px-2.5
+              py-0.5
               text-[10px]
               font-bold
               uppercase
@@ -287,13 +304,15 @@ const JotLandingTest = ({
           </span>
         </div>
 
-        {/* Navigation */}
+        {/* Desktop Navigation */}
         <div
           className={`
             hidden
             items-center
-            gap-7
-            text-sm
+            gap-5
+            lg:gap-7
+            text-xs
+            lg:text-sm
             font-semibold
             md:flex
             ${
@@ -330,29 +349,31 @@ const JotLandingTest = ({
             className="
               cursor-pointer
               transition
-              hover:text-[#A78BFA]
-            "
+              hover:text-[#A78BFA]"
           >
             About Us
           </button>
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Dark / Light toggle */}
           <button
             type="button"
             onClick={onToggleDarkMode || toggleDarkMode}
             className={`
               flex
-              h-11
-              w-11
+              h-9
+              w-9
+              sm:h-11
+              sm:w-11
               cursor-pointer
               items-center
               justify-center
               rounded-xl
               border
-              text-lg
+              text-base
+              sm:text-lg
               transition
               duration-300
               ${
@@ -374,13 +395,16 @@ const JotLandingTest = ({
               hidden
               cursor-pointer
               rounded-xl
-              px-4
-              py-2.5
-              text-sm
+              px-3.5
+              py-2
+              sm:px-4
+              sm:py-2.5
+              text-xs
+              sm:text-sm
               font-bold
               transition
               duration-300
-              sm:block
+              md:block
               ${
                 isDarkMode
                   ? "text-white/80 hover:bg-white/10 hover:text-white"
@@ -398,15 +422,17 @@ const JotLandingTest = ({
             className={`
               cursor-pointer
               rounded-xl
-              px-4
-              py-2.5
-              text-sm
+              px-3
+              py-2
+              sm:px-5
+              sm:py-2.5
+              text-xs
+              sm:text-sm
               font-bold
               shadow-lg
               transition
               duration-300
               hover:-translate-y-0.5
-              sm:px-5
               ${
                 isDarkMode
                   ? "bg-white text-[#241E2C] hover:bg-purple-50"
@@ -416,7 +442,123 @@ const JotLandingTest = ({
           >
             Get Started →
           </button>
+
+          {/* Mobile Hamburger Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className={`
+              flex
+              h-9
+              w-9
+              sm:h-11
+              sm:w-11
+              items-center
+              justify-center
+              rounded-xl
+              border
+              transition
+              duration-300
+              md:hidden
+              ${
+                isDarkMode
+                  ? "border-white/10 bg-white/10 text-white hover:bg-white/20"
+                  : "border-gray-200 bg-white text-[#292530] hover:bg-gray-50"
+              }
+            `}
+            aria-label="Toggle mobile menu"
+          >
+            {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isMobileMenuOpen && (
+          <div
+            className={`
+              absolute
+              top-full
+              left-0
+              right-0
+              mt-2
+              flex
+              flex-col
+              gap-2
+              rounded-2xl
+              border
+              p-4
+              backdrop-blur-2xl
+              shadow-2xl
+              md:hidden
+              transition-all
+              duration-300
+              ${
+                isDarkMode
+                  ? "border-white/15 bg-[#14101D]/95 text-white shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                  : "border-white/90 bg-white/95 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.15)]"
+              }
+            `}
+          >
+            <a
+              href="#home"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+              }`}
+            >
+              Home
+            </a>
+            <a
+              href="#how"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+              }`}
+            >
+              How it works
+            </a>
+            <a
+              href="#jojo"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
+                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+              }`}
+            >
+              Meet Jojo
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                handleAbout();
+              }}
+              className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm text-left transition ${
+                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+              }`}
+            >
+              About Us
+            </button>
+
+            <div className={`my-1 h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"}`} />
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleStart();
+                }}
+                className={`w-full py-2.5 rounded-xl font-bold text-xs text-center border transition ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                    : "border-gray-200 bg-white text-[#292530] hover:bg-gray-50"
+                }`}
+              >
+                Log In
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* =====================================================
@@ -427,9 +569,11 @@ const JotLandingTest = ({
         id="home"
         className="
           min-h-screen
-          px-6
+          px-4
+          sm:px-6
           pb-16
-          pt-32
+          pt-24
+          sm:pt-32
           md:px-10
           lg:px-16
         "
@@ -438,27 +582,34 @@ const JotLandingTest = ({
           className="
             mx-auto
             grid
-            min-h-[700px]
             w-full
             max-w-6xl
             items-center
-            gap-10
+            gap-6
+            sm:gap-6
+            lg:gap-10
+            grid-cols-1
+            sm:grid-cols-2
             lg:grid-cols-[0.9fr_1.1fr]
           "
         >
           {/* LEFT SIDE */}
-          <div className="relative z-20">
+          <div className="relative z-20 min-w-0">
             <div
               className={`
-                mb-7
+                mb-4
+                sm:mb-6
                 inline-flex
                 items-center
                 gap-2
                 rounded-full
                 border
-                px-4
-                py-2
-                text-sm
+                px-3
+                py-1
+                sm:px-4
+                sm:py-2
+                text-xs
+                sm:text-sm
                 font-semibold
                 backdrop-blur-xl
                 ${
@@ -484,12 +635,15 @@ const JotLandingTest = ({
             <h1
               className={`
                 max-w-xl
-                text-6xl
+                text-3xl
+                min-[400px]:text-4xl
+                sm:text-4xl
+                md:text-5xl
+                lg:text-7xl
+                xl:text-8xl
                 font-black
                 leading-[0.93]
                 tracking-[-0.065em]
-                md:text-7xl
-                lg:text-8xl
                 ${
                   isDarkMode
                     ? "text-white"
@@ -497,6 +651,7 @@ const JotLandingTest = ({
                 }
               `}
             >
+
               Study
               <br />
               <span
@@ -517,9 +672,11 @@ const JotLandingTest = ({
 
             <div
               className="
-                mt-5
+                mt-4
+                sm:mt-5
                 h-2
-                w-28
+                w-24
+                sm:w-28
                 rotate-[-2deg]
                 rounded-full
                 bg-[#8B5CF6]/50
@@ -528,10 +685,13 @@ const JotLandingTest = ({
 
             <p
               className={`
-                mt-8
+                mt-6
+                sm:mt-8
                 max-w-xl
-                text-lg
-                leading-8
+                text-base
+                sm:text-lg
+                leading-relaxed
+                sm:leading-8
                 md:text-xl
                 ${
                   isDarkMode
@@ -545,16 +705,21 @@ const JotLandingTest = ({
               flashcards and quick revision material.
             </p>
 
-            <div className="mt-9 flex flex-wrap gap-4">
+            <div className="mt-7 sm:mt-9 flex flex-col sm:flex-row flex-wrap gap-3.5 sm:gap-4">
               <button
                 type="button"
                 onClick={handleStart}
                 className="
+                  w-full
+                  sm:w-auto
                   cursor-pointer
                   rounded-xl
                   bg-[#8064C7]
-                  px-8
-                  py-4
+                  px-7
+                  py-3.5
+                  sm:px-8
+                  sm:py-4
+                  text-center
                   font-bold
                   text-white
                   shadow-[0_15px_35px_rgba(128,100,199,0.35)]
@@ -570,10 +735,15 @@ const JotLandingTest = ({
               <a
                 href="#how"
                 className={`
+                  w-full
+                  sm:w-auto
+                  text-center
                   rounded-xl
                   border
-                  px-8
-                  py-4
+                  px-7
+                  py-3.5
+                  sm:px-8
+                  sm:py-4
                   font-bold
                   backdrop-blur-xl
                   transition
@@ -590,11 +760,13 @@ const JotLandingTest = ({
 
             <div
               className={`
-                mt-8
+                mt-7
+                sm:mt-8
                 flex
                 items-center
-                gap-3
-                text-sm
+                gap-2.5
+                text-xs
+                sm:text-sm
                 ${
                   isDarkMode
                     ? "text-white/40"
@@ -602,20 +774,23 @@ const JotLandingTest = ({
                 }
               `}
             >
-              <span className="text-lg">✨</span>
+              <span className="text-base sm:text-lg">✨</span>
               Jot it. Organise it. Top it.
             </div>
           </div>
 
-          {/* RIGHT HERO */}
-          <div className="relative h-[680px] w-full">
+          {/* RIGHT HERO Visual Composition */}
+          <div className="relative h-[480px] min-[400px]:h-[520px] sm:h-[560px] md:h-[600px] lg:h-[680px] w-full max-w-[440px] sm:max-w-[480px] md:max-w-[540px] lg:max-w-[580px] mx-auto scale-[0.72] min-[400px]:scale-[0.8] sm:scale-[0.72] md:scale-[0.85] lg:scale-100 origin-center lg:origin-right my-[-30px] min-[400px]:my-[-20px] sm:my-0">
+
             <div
               className={`
                 absolute
                 left-[50%]
                 top-[50%]
-                h-[520px]
-                w-[520px]
+                h-[440px]
+                w-[440px]
+                sm:h-[520px]
+                sm:w-[520px]
                 -translate-x-1/2
                 -translate-y-1/2
                 rounded-full
@@ -636,20 +811,23 @@ const JotLandingTest = ({
               isDarkMode={isDarkMode}
               className="
                 absolute
-                right-[0%]
-                top-[5%]
+                right-[1%]
+                sm:right-[0%]
+                top-[4%]
                 z-10
-                w-[260px]
+                w-[245px]
+                sm:w-[285px]
                 rotate-[5deg]
                 rounded-[28px]
-                p-4
-                md:w-[285px]
+                p-3.5
+                sm:p-4
               "
             >
               <div
                 className={`
                   rounded-[22px]
-                  p-5
+                  p-4
+                  sm:p-5
                   ${
                     isDarkMode
                       ? "bg-[#292432]/90"
@@ -677,8 +855,9 @@ const JotLandingTest = ({
 
                     <h3
                       className={`
-                        mt-2
-                        text-base
+                        mt-1.5
+                        text-sm
+                        sm:text-base
                         font-black
                         ${
                           isDarkMode
@@ -708,7 +887,8 @@ const JotLandingTest = ({
 
                 <div
                   className={`
-                    my-5
+                    my-4
+                    sm:my-5
                     h-px
                     ${
                       isDarkMode
@@ -774,9 +954,11 @@ const JotLandingTest = ({
 
                 <div
                   className={`
-                    mt-6
+                    mt-5
+                    sm:mt-6
                     rounded-2xl
-                    p-4
+                    p-3.5
+                    sm:p-4
                     ${
                       isDarkMode
                         ? "bg-[#8064C7]/20"
@@ -790,9 +972,10 @@ const JotLandingTest = ({
 
                   <p
                     className={`
-                      mt-2
+                      mt-1.5
                       text-[10px]
-                      leading-5
+                      leading-4
+                      sm:leading-5
                       ${
                         isDarkMode
                           ? "text-white/55"
@@ -813,21 +996,25 @@ const JotLandingTest = ({
               isDarkMode={isDarkMode}
               className="
                 absolute
-                left-[0%]
-                top-[29%]
+                left-[1%]
+                sm:left-[0%]
+                top-[27%]
                 z-40
                 rounded-2xl
-                px-5
-                py-4
+                px-4
+                py-3
+                sm:px-5
+                sm:py-4
               "
             >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">✨</span>
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <span className="text-lg sm:text-xl">✨</span>
 
                 <div>
                   <p
                     className={`
-                      text-[10px]
+                      text-[9px]
+                      sm:text-[10px]
                       ${
                         isDarkMode
                           ? "text-white/35"
@@ -840,7 +1027,8 @@ const JotLandingTest = ({
 
                   <p
                     className={`
-                      text-sm
+                      text-xs
+                      sm:text-sm
                       font-bold
                       ${
                         isDarkMode
@@ -877,21 +1065,26 @@ const JotLandingTest = ({
               isDarkMode={isDarkMode}
               className="
                 absolute
-                bottom-[7%]
-                left-[0%]
+                bottom-[8%]
+                sm:bottom-[7%]
+                left-[1%]
+                sm:left-[0%]
                 z-40
                 rounded-2xl
-                px-5
-                py-4
+                px-4
+                py-3
+                sm:px-5
+                sm:py-4
               "
             >
-              <div className="flex items-start gap-3">
-                <span className="text-xl">✏️</span>
+              <div className="flex items-start gap-2.5 sm:gap-3">
+                <span className="text-lg sm:text-xl">✏️</span>
 
                 <div>
                   <p
                     className={`
-                      text-sm
+                      text-xs
+                      sm:text-sm
                       font-black
                       ${
                         isDarkMode
@@ -905,8 +1098,9 @@ const JotLandingTest = ({
 
                   <p
                     className={`
-                      mt-1
-                      text-xs
+                      mt-0.5
+                      text-[10px]
+                      sm:text-xs
                       ${
                         isDarkMode
                           ? "text-white/40"
@@ -925,20 +1119,25 @@ const JotLandingTest = ({
               isDarkMode={isDarkMode}
               className="
                 absolute
-                bottom-[20%]
-                right-[0%]
+                bottom-[21%]
+                sm:bottom-[20%]
+                right-[1%]
+                sm:right-[0%]
                 z-40
                 rounded-2xl
-                px-4
-                py-3
+                px-3.5
+                py-2.5
+                sm:px-4
+                sm:py-3
               "
             >
               <div className="flex items-center gap-2">
-                <span className="text-lg">🧠</span>
+                <span className="text-base sm:text-lg">🧠</span>
 
                 <span
                   className={`
-                    text-sm
+                    text-xs
+                    sm:text-sm
                     font-bold
                     ${
                       isDarkMode
@@ -957,21 +1156,25 @@ const JotLandingTest = ({
               isDarkMode={isDarkMode}
               className="
                 absolute
-                bottom-[0%]
+                bottom-[1%]
+                sm:bottom-[0%]
                 left-[50%]
                 z-40
                 -translate-x-1/2
                 rounded-2xl
-                px-5
-                py-3
+                px-4
+                py-2.5
+                sm:px-5
+                sm:py-3
               "
             >
               <div className="flex items-center gap-2">
-                <span className="text-lg">🃏</span>
+                <span className="text-base sm:text-lg">🃏</span>
 
                 <span
                   className={`
-                    text-sm
+                    text-xs
+                    sm:text-sm
                     font-bold
                     ${
                       isDarkMode
@@ -987,6 +1190,7 @@ const JotLandingTest = ({
           </div>
         </div>
       </section>
+
 
       {/* =====================================================
           BEFORE / AFTER

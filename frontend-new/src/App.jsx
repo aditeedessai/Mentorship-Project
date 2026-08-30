@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Menu } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 import DashboardPage from "./pages/DashboardPage";
@@ -22,6 +23,8 @@ import AboutPage from "./pages/AboutPage";
 import SettingsPage from "./pages/SettingsPage";
 
 import Sidebar from "./components/Sidebar";
+import BackToTop from "./components/BackToTop";
+
 
 import {
   fetchStudySets,
@@ -33,6 +36,7 @@ import { supabase } from "./services/supabase";
 
 function MainAppLayout({ children, onNavigate, currentPage, user }) {
   const { isDarkMode } = useTheme();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div
@@ -59,17 +63,59 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
         />
       </div>
 
+      {/* Top Header Bar for Mobile / Tablet (< 1024px) */}
+      <header
+        className={`lg:hidden fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between px-4 border-b backdrop-blur-2xl transition-colors duration-300 ${
+          isDarkMode
+            ? "border-white/10 bg-[#13101A]/90 text-[#F3F0F8]"
+            : "border-black/5 bg-[#F8F8FC]/90 text-[#231B33]"
+        }`}
+      >
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${
+            isDarkMode
+              ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+              : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
+          }`}
+          aria-label="Open Mobile Menu"
+        >
+          <Menu size={20} />
+        </button>
+
+        <div className="flex items-center gap-1.5 font-black text-xl tracking-tight">
+          <span>Jot</span>
+          <span className="text-[#8064C7]">.</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
+              isDarkMode
+                ? "bg-[#8064C7]/20 text-[#A78BFA]"
+                : "bg-[#8064C7]/10 text-[#8064C7]"
+            }`}
+          >
+            Study
+          </span>
+        </div>
+
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-xs font-bold text-white shadow-md">
+          {user?.name ? user.name[0].toUpperCase() : "J"}
+        </div>
+      </header>
+
       <div className="flex min-h-screen">
         <Sidebar
           onNavigate={onNavigate}
           currentPage={currentPage}
           user={user}
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
         />
-        <main className="ml-64 flex-1 overflow-y-auto p-8">{children}</main>
+        <main className="lg:ml-64 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 min-w-0">{children}</main>
       </div>
     </div>
   );
 }
+
 
 function AppContent() {
   const location = useLocation();
@@ -95,6 +141,15 @@ function AppContent() {
   // ================= SELECTED STUDY SET =================
   const [selectedStudySetId, setSelectedStudySetId] = useState(null);
 
+  // ================= SCROLL TO TOP ON PAGE SWITCH =================
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const mainElement = document.querySelector("main");
+    if (mainElement) {
+      mainElement.scrollTop = 0;
+    }
+  }, [currentPage, authPage]);
+
   // ================= CENTRAL NAVIGATION HANDLER =================
   const handleNavigate = (page, state) => {
     if (page === "upload") {
@@ -104,7 +159,13 @@ function AppContent() {
     }
 
     setCurrentPage(page);
+    window.scrollTo(0, 0);
+    const mainElement = document.querySelector("main");
+    if (mainElement) {
+      mainElement.scrollTop = 0;
+    }
   };
+
 
   // ================= AUTH SESSION LISTENER =================
   useEffect(() => {
@@ -458,6 +519,8 @@ export default function App() {
   return (
     <ThemeProvider>
       <AppContent />
+      <BackToTop />
     </ThemeProvider>
   );
-}
+}
+

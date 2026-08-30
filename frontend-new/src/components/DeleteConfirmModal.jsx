@@ -45,7 +45,7 @@ export default function DeleteConfirmModal({
       />
 
       <div
-        className={`relative w-full max-w-md rounded-3xl p-6 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
+        className={`relative w-[92vw] sm:w-[440px] max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-6 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
           isDarkMode
             ? "border-white/10 bg-[#17131F] text-white"
             : "border-white/80 bg-white text-[#292530]"
@@ -71,7 +71,7 @@ export default function DeleteConfirmModal({
           <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-red-500/20 text-red-400">
             <AlertTriangle size={22} aria-hidden="true" />
           </div>
-          <h2 id="delete-modal-title" className="text-xl font-black tracking-tight">
+          <h2 id="delete-modal-title" className="text-lg sm:text-xl font-black tracking-tight">
             {title}
           </h2>
         </div>
@@ -95,13 +95,13 @@ export default function DeleteConfirmModal({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 sm:gap-3 pt-2">
           <button
             ref={cancelRef}
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className={`rounded-xl border px-5 py-2.5 text-xs font-bold transition ${
+            className={`w-full sm:w-auto rounded-xl border px-5 py-2.5 text-xs font-bold transition text-center ${
               isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white" : "border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
             }`}
           >
@@ -112,7 +112,7 @@ export default function DeleteConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition disabled:opacity-50"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-red-500 hover:bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition disabled:opacity-50 text-center"
           >
             {isLoading ? (
               <>
@@ -124,6 +124,7 @@ export default function DeleteConfirmModal({
             )}
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -191,12 +191,13 @@ export default function ConfigureSession({ studySetId: propStudySetId, studySetN
     <div className="flex flex-col h-full">
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
-        <div className="px-8 pt-8">
+        <div className="px-4 sm:px-8 pt-4 sm:pt-8 pb-6">
           <ModuleBadge text={studySetName ? `Study Set: ${studySetName}` : 'Study Set'} />
 
-          <h1 className="mt-4 text-3xl font-black tracking-tight leading-none">
+          <h1 className="mt-4 text-2xl sm:text-3xl font-black tracking-tight leading-none">
             Configure Session
           </h1>
+
 
           <p className={`mt-3 text-sm leading-relaxed max-w-[600px] ${isDarkMode ? 'text-white/60' : 'text-[#706A78]'}`}>
             Select the question formats you'd like to tackle in this study block. AI Study Engine will generate a

@@ -413,8 +413,8 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       </div>
 
       {/* 2. Hero Overall Performance Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-8 text-white shadow-xl">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
+      <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-5 sm:p-8 text-white shadow-xl">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
@@ -429,58 +429,59 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
               )}
             </div>
 
-            <h1 className="text-3xl font-black mt-3 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black mt-3 tracking-tight">
               {isAttemptComplete ? 'Overall Performance' : 'Cumulative Performance'}
             </h1>
-            <p className="text-purple-100 text-sm mt-1">
+            <p className="text-purple-100 text-xs sm:text-sm mt-1">
               {isAttemptComplete
                 ? 'Combined score evaluated across all 4 mandatory sections in this study set.'
                 : 'Cumulative score evaluated so far across completed question sections.'}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20">
-            <div className="text-center px-3">
-              <div className="text-3xl font-black text-white">{overallPercentage}%</div>
-              <div className="text-xs text-purple-200 mt-0.5 font-bold">Overall Percentage</div>
+          <div className="flex flex-wrap items-center justify-around sm:justify-center gap-3 sm:gap-4 bg-white/10 p-4 sm:p-5 rounded-2xl backdrop-blur-md border border-white/20 w-full lg:w-auto">
+            <div className="text-center px-2 sm:px-3">
+              <div className="text-2xl sm:text-3xl font-black text-white">{overallPercentage}%</div>
+              <div className="text-[10px] sm:text-xs text-purple-200 mt-0.5 font-bold">Overall %</div>
             </div>
 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
-            <div className="text-center px-3">
-              <div className="text-3xl font-black text-emerald-300">{totalCorrect}</div>
-              <div className="text-xs text-emerald-200 mt-0.5 font-bold uppercase tracking-wider">Correct</div>
+            <div className="text-center px-2 sm:px-3">
+              <div className="text-2xl sm:text-3xl font-black text-emerald-300">{totalCorrect}</div>
+              <div className="text-[10px] sm:text-xs text-emerald-200 mt-0.5 font-bold uppercase tracking-wider">Correct</div>
             </div>
 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
-            <div className="text-center px-3">
-              <div className="text-3xl font-black text-rose-300">{totalWrong}</div>
-              <div className="text-xs text-rose-200 mt-0.5 font-bold uppercase tracking-wider">Wrong</div>
+            <div className="text-center px-2 sm:px-3">
+              <div className="text-2xl sm:text-3xl font-black text-rose-300">{totalWrong}</div>
+              <div className="text-[10px] sm:text-xs text-rose-200 mt-0.5 font-bold uppercase tracking-wider">Wrong</div>
             </div>
 
             {totalSkipped > 0 && (
               <>
                 <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
-                <div className="text-center px-3">
-                  <div className="text-3xl font-black text-amber-300">{totalSkipped}</div>
-                  <div className="text-xs text-amber-200 mt-0.5 font-bold uppercase tracking-wider">Skipped</div>
+                <div className="text-center px-2 sm:px-3">
+                  <div className="text-2xl sm:text-3xl font-black text-amber-300">{totalSkipped}</div>
+                  <div className="text-[10px] sm:text-xs text-amber-200 mt-0.5 font-bold uppercase tracking-wider">Skipped</div>
                 </div>
               </>
             )}
 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
-            <div className="text-center px-3">
-              <div className="text-3xl font-black">
-                {totalScore} <span className="text-sm font-normal text-purple-200">/ {maxScore}</span>
+            <div className="text-center px-2 sm:px-3">
+              <div className="text-2xl sm:text-3xl font-black">
+                {totalScore} <span className="text-xs font-normal text-purple-200">/ {maxScore}</span>
               </div>
-              <div className="text-xs text-purple-200 mt-0.5 font-bold">Total Marks</div>
+              <div className="text-[10px] sm:text-xs text-purple-200 mt-0.5 font-bold">Total Marks</div>
             </div>
           </div>
         </div>
       </div>
+
 
       {/* 3. Section-Wise Breakdown */}
       {sectionsList.length > 0 && (

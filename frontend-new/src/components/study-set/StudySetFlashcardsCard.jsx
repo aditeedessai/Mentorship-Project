@@ -251,7 +251,7 @@ function StudySetFlashcardsCard({
               >
                 {/* FRONT SIDE */}
                 <div
-                  className={`absolute inset-0 w-full h-full rounded-2xl p-7 border-l-4 border-l-[#8064C7] flex flex-col items-center justify-center text-center shadow-xs backdrop-blur-xl ${
+                  className={`absolute inset-0 w-full h-full rounded-2xl p-5 sm:p-7 border-l-4 border-l-[#8064C7] flex flex-col items-center justify-center text-center shadow-xs backdrop-blur-xl ${
                     isDarkMode ? "bg-[#17131F] text-white" : "bg-white text-[#292530]"
                   }`}
                   style={{
@@ -265,12 +265,12 @@ function StudySetFlashcardsCard({
                     <span className="w-1.5 h-1.5 rounded-full bg-[#8064C7] animate-pulse" />
                     CARD ({currentCardIndex + 1}/{cardList.length})
                   </div>
-                  <h3 className="text-2xl font-black mb-6 tracking-tight">
+                  <h3 className="text-xl sm:text-2xl font-black mb-4 sm:mb-6 tracking-tight overflow-wrap-anywhere px-2">
                     {currentCard.term}
                   </h3>
                   <button
                     type="button"
-                    className="bg-[#8064C7] hover:bg-[#8B6DD4] text-white px-4.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all hover:scale-105"
+                    className="bg-[#8064C7] hover:bg-[#8B6DD4] text-white px-4 py-2 sm:px-4.5 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all hover:scale-105"
                   >
                     <RotateCw size={14} />
                     <span>Flip to Reveal</span>
@@ -279,7 +279,7 @@ function StudySetFlashcardsCard({
 
                 {/* BACK SIDE */}
                 <div
-                  className={`absolute inset-0 w-full h-full rounded-2xl p-7 border-l-4 border-l-emerald-500 flex flex-col items-center justify-center text-center shadow-xs backdrop-blur-xl ${
+                  className={`absolute inset-0 w-full h-full rounded-2xl p-5 sm:p-7 border-l-4 border-l-emerald-500 flex flex-col items-center justify-center text-center shadow-xs backdrop-blur-xl ${
                     isDarkMode ? "bg-[#17131F] text-white" : "bg-white text-[#292530]"
                   }`}
                   style={{
@@ -292,17 +292,18 @@ function StudySetFlashcardsCard({
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     DEFINITION
                   </div>
-                  <p className="text-sm font-bold mb-6 leading-relaxed max-w-xs">
+                  <p className="text-xs sm:text-sm font-bold mb-4 sm:mb-6 leading-relaxed max-w-xs overflow-wrap-anywhere px-2">
                     {currentCard.definition}
                   </p>
                   <button
                     type="button"
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all hover:scale-105"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 sm:px-4.5 sm:py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md transition-all hover:scale-105"
                   >
                     <RotateCw size={14} />
                     <span>Flip Back</span>
                   </button>
                 </div>
+
               </div>
             </div>
 

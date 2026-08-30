@@ -34,9 +34,18 @@ import JotFooter from "../components/JotFooter";
 export default function AboutPage({ onNavigate }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+    const mainElement = document.querySelector("main");
+    if (mainElement) {
+      mainElement.scrollTop = 0;
+    }
+  }, []);
+
   /* =======================================================
      THEME-BASED JOJO
   ======================================================= */
+
 
   const currentJojo = isDarkMode ? jojoDark : jojo;
 

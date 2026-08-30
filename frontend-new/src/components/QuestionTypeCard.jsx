@@ -19,7 +19,7 @@ export default function QuestionTypeCard({ type, isSelected, isCompleted, onSele
       aria-pressed={isSelected && !isCompleted}
       aria-disabled={isCompleted}
       aria-label={`${title} question type${isCompleted ? ' (Completed)' : ''}`}
-      className={`relative flex-1 min-w-[205px] max-w-[280px] h-[235px] rounded-2xl border-2 text-left p-5 flex flex-col transition-all duration-300 backdrop-blur-xl ${
+      className={`relative w-full sm:w-auto flex-1 min-w-[200px] max-w-none sm:max-w-[280px] min-h-[220px] sm:h-[235px] rounded-2xl border-2 text-left p-4 sm:p-5 flex flex-col transition-all duration-300 backdrop-blur-xl ${
         isCompleted
           ? isDarkMode
             ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 cursor-not-allowed opacity-90'

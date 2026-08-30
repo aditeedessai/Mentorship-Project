@@ -65,7 +65,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
   return (
     <div
-      className={`relative flex min-h-screen items-center justify-center p-6 transition-colors duration-500 font-sans ${
+      className={`relative flex min-h-screen items-center justify-center p-4 sm:p-6 transition-colors duration-500 font-sans ${
         isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
       }`}
     >
@@ -84,11 +84,11 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
       </div>
 
       {/* Top Controls */}
-      <div className="absolute top-6 right-6 flex items-center gap-3">
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-3">
         {onBack && (
           <button
             onClick={onBack}
-            className={`rounded-xl border px-4 py-2 text-xs font-bold transition-all ${
+            className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition-all ${
               isDarkMode
                 ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
                 : "border-white/80 bg-white/70 text-[#292530] hover:bg-white"
@@ -111,7 +111,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
       {/* Main Glass Card */}
       <div
-        className={`grid w-full max-w-5xl overflow-hidden rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 ${
+        className={`grid w-full max-w-5xl overflow-hidden rounded-[24px] sm:rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 mt-12 sm:mt-0 ${
           isDarkMode
             ? "border-white/10 bg-[#17131F]/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
             : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
@@ -150,8 +150,9 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
         </div>
 
         {/* ================= RIGHT SECTION ================= */}
-        <div className="p-8 sm:p-10 lg:p-12">
+        <div className="p-6 sm:p-12 lg:p-14">
           {/* Mobile Brand */}
+
           <div className="mb-6 flex items-center gap-2 lg:hidden">
             <div className="text-3xl font-black tracking-[-0.08em]">
               Jot<span className="text-[#8064C7]">.</span>

@@ -18,7 +18,7 @@ export default function QuizCenter({
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
       {/* Question Header + Progress */}
-      <div className="px-8 pt-4 flex-shrink-0">
+      <div className="px-4 sm:px-8 pt-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#8064C7]" />
@@ -43,23 +43,23 @@ export default function QuizCenter({
       </div>
 
       {/* Question Card - scrollable area */}
-      <div className="flex-1 overflow-y-auto px-8 py-5 min-h-0">
-        <div className={`rounded-3xl border p-7 backdrop-blur-2xl transition-all duration-300 ${
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-5 min-h-0">
+        <div className={`rounded-3xl border p-5 sm:p-7 backdrop-blur-2xl transition-all duration-300 ${
           isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
         }`}>
           {/* Question Text */}
-          <h2 className="text-xl font-extrabold leading-snug mb-5 tracking-tight">
+          <h2 className="text-lg sm:text-xl font-extrabold leading-snug mb-5 tracking-tight overflow-wrap-anywhere">
             {question.question}
           </h2>
 
           {/* AI Hint */}
-          <div className={`flex gap-3 p-4 border rounded-2xl mb-6 ${
+          <div className={`flex gap-3 p-3.5 sm:p-4 border rounded-2xl mb-6 ${
             isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
           }`}>
             <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2} />
-            <p className="text-xs leading-relaxed font-semibold">
+            <p className="text-xs leading-relaxed font-semibold overflow-wrap-anywhere">
               <span className="font-black">AI Hint: </span>
               {question.hint}
             </p>
@@ -74,9 +74,9 @@ export default function QuizCenter({
                   key={idx}
                   type="button"
                   onClick={() => onSelectAnswer(idx)}
-                  className={`w-full flex items-start gap-3.5 py-4 px-5 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                  className={`w-full flex items-start gap-3 py-3.5 px-4 sm:px-5 rounded-2xl border transition-all duration-200 cursor-pointer text-left ${
                     isSelected
-                      ? 'border-[#8064C7] bg-[#8064C7]/15 shadow-md scale-[1.01]'
+                      ? 'border-[#8064C7] bg-[#8064C7]/15 shadow-md scale-[1.005]'
                       : isDarkMode
                       ? 'border-white/5 bg-white/5 hover:border-white/20 hover:bg-white/10'
                       : 'border-gray-200/80 bg-white hover:border-[#8064C7]/50 hover:bg-gray-50'
@@ -98,7 +98,7 @@ export default function QuizCenter({
                   </span>
 
                   {/* Text */}
-                  <span className={`text-sm font-semibold leading-relaxed ${
+                  <span className={`text-xs sm:text-sm font-semibold leading-relaxed overflow-wrap-anywhere ${
                     isSelected ? 'text-[#8064C7] dark:text-white font-bold' : isDarkMode ? 'text-white/90' : 'text-gray-700'
                   }`}>
                     {option.text}
@@ -111,7 +111,7 @@ export default function QuizCenter({
       </div>
 
       {/* Bottom Navigation */}
-      <div className="flex items-center justify-between px-8 py-4 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 flex-shrink-0">
         <button
           type="button"
           onClick={onPrevious}
@@ -128,13 +128,14 @@ export default function QuizCenter({
         <button
           type="button"
           onClick={onNext}
-          className="flex items-center gap-2 h-10 px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
+          className="flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
           aria-label={isLastQuestion ? 'Finish quiz' : 'Confirm and go to next question'}
         >
           {isLastQuestion ? 'Finish Quiz' : 'Confirm & Next'}
           <ArrowRight className="w-4 h-4" strokeWidth={2.2} />
         </button>
       </div>
+
     </div>
   )
 }

@@ -34,6 +34,8 @@ export default function QnAPage() {
   const [remainingSeconds, setRemainingSeconds] = useState(questionCount * 180)
   const [showAbortModal, setShowAbortModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showNavDrawer, setShowNavDrawer] = useState(false)
+  const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
 
   const {
     isFullscreenReady,
@@ -201,17 +203,21 @@ export default function QnAPage() {
         isBookmarked={!!bookmarkedQuestions[currentQuestion]}
         onToggleBookmark={toggleBookmark}
         onAbort={() => setShowAbortModal(true)}
+        onToggleNavigator={() => setShowNavDrawer((prev) => !prev)}
+        onToggleRoughWork={() => setShowRoughWorkDrawer((prev) => !prev)}
       />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         <QuestionNavigator
           questionCount={questionCount}
           currentQuestion={currentQuestion}
           questionStatuses={questionStatuses}
           onSelectQuestion={goToQuestion}
+          isOpen={showNavDrawer}
+          onClose={() => setShowNavDrawer(false)}
         />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="px-8 pt-4 flex-shrink-0">
+          <div className="px-4 sm:px-8 pt-4 flex-shrink-0">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#8064C7]" />
@@ -232,8 +238,8 @@ export default function QnAPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-8 py-5 min-h-0">
-            <div className={`rounded-3xl border p-7 flex flex-col h-full backdrop-blur-2xl ${
+          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-5 min-h-0">
+            <div className={`rounded-3xl border p-5 sm:p-7 flex flex-col h-full backdrop-blur-2xl ${
               isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/70 text-[#292530]"
             }`}>
               <div className="mb-4">
@@ -245,26 +251,26 @@ export default function QnAPage() {
                 </span>
               </div>
 
-              <h2 className="text-xl font-extrabold leading-snug mb-5 tracking-tight">
+              <h2 className="text-lg sm:text-xl font-extrabold leading-snug mb-5 tracking-tight overflow-wrap-anywhere">
                 {currentQ.question}
               </h2>
 
-              <div className={`flex gap-3 p-4 border rounded-2xl mb-5 ${
+              <div className={`flex gap-3 p-3.5 sm:p-4 border rounded-2xl mb-5 ${
                 isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
               }`}>
                 <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                <p className="text-xs leading-relaxed font-semibold">
+                <p className="text-xs leading-relaxed font-semibold overflow-wrap-anywhere">
                   <span className="font-black">AI Hint: </span>
                   {currentQ.hint}
                 </p>
               </div>
 
-              <div className="flex-1 min-h-[180px]" data-ac-editable="true">
+              <div className="flex-1 min-h-[160px] sm:min-h-[180px]" data-ac-editable="true">
                 <textarea
                   value={answers[currentQuestion] || ''}
                   onChange={(e) => handleAnswerChange(e.target.value)}
                   placeholder="Type your answer here..."
-                  className={`w-full h-full min-h-[180px] p-4 rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
+                  className={`w-full h-full min-h-[160px] sm:min-h-[180px] p-4 rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
                       : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
@@ -276,7 +282,7 @@ export default function QnAPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-8 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 sm:px-8 py-4 flex-shrink-0">
             <button
               type="button"
               onClick={handlePrevious}
@@ -293,7 +299,7 @@ export default function QnAPage() {
               type="button"
               onClick={isLastQuestion ? handleFinishQuiz : handleSubmitNext}
               disabled={isSubmitting}
-              className="flex items-center gap-2 h-10 px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
+              className="flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
               aria-label={isLastQuestion ? 'Finish quiz' : 'Submit answer and go to next question'}
             >
               {isSubmitting ? 'Submitting...' : (isLastQuestion ? 'Finish Quiz' : 'Submit Answer')}
@@ -306,6 +312,8 @@ export default function QnAPage() {
           value={scratchpad[currentQuestion] || ''}
           onChange={handleScratchpadChange}
           onClear={handleClearScratchpad}
+          isOpen={showRoughWorkDrawer}
+          onClose={() => setShowRoughWorkDrawer(false)}
         />
       </div>
 
@@ -318,3 +326,4 @@ export default function QnAPage() {
     </div>
   )
 }
+

@@ -150,7 +150,7 @@ function StudySetSummaryCard({
               {summaryParagraphs.map((para, idx) => (
                 <p
                   key={idx}
-                  className={`p-4 border rounded-2xl backdrop-blur-xl ${
+                  className={`p-4 border rounded-2xl backdrop-blur-xl overflow-wrap-anywhere ${
                     isDarkMode ? "border-white/5 bg-white/5" : "border-gray-100 bg-white/90 text-[#292530]"
                   }`}
                 >
@@ -175,7 +175,7 @@ function StudySetSummaryCard({
                       <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
                         <CheckCircle2 size={16} />
                       </div>
-                      <span className="font-bold leading-relaxed">{takeaway}</span>
+                      <span className="font-bold leading-relaxed overflow-wrap-anywhere">{takeaway}</span>
                     </li>
                   ))}
                 </ul>
@@ -183,7 +183,7 @@ function StudySetSummaryCard({
             )}
           </div>
 
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-inherit">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border-inherit">
             <button
               type="button"
               onClick={onGenerateSummary}
@@ -197,18 +197,25 @@ function StudySetSummaryCard({
             <button
               type="button"
               onClick={onCopySummary}
-              className={`p-2.5 rounded-xl border transition-all ${
+              className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all ${
                 isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-gray-200 bg-white hover:bg-gray-50"
               }`}
               title="Copy Summary"
             >
               {copied ? (
-                <Check size={16} className="text-emerald-400" />
+                <>
+                  <Check size={16} className="text-emerald-400" />
+                  <span className="text-xs font-bold sm:hidden text-emerald-400">Copied</span>
+                </>
               ) : (
-                <Copy size={16} />
+                <>
+                  <Copy size={16} />
+                  <span className="text-xs font-bold sm:hidden">Copy</span>
+                </>
               )}
             </button>
           </div>
+
         </div>
       )}
     </section>

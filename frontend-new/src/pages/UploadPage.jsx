@@ -144,18 +144,18 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     <div>
       {/* ================= HEADER ================= */}
       <div
-        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
+        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-5 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
           isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
         }`}
       >
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
+          <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-black tracking-tight">
             Create Study Set
           </h1>
           <p
-            className={`mt-2 text-sm font-medium ${
+            className={`mt-2 text-xs sm:text-sm font-medium ${
               isDarkMode ? "text-white/50" : "text-[#706A78]"
             }`}
           >
@@ -164,13 +164,13 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         </div>
 
         <div
-          className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
+          className={`flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
             isDarkMode
               ? "border-white/10 bg-white/5 text-[#A78BFA]"
               : "border-[#8064C7]/20 bg-white/60 text-[#8064C7] shadow-xs"
           }`}
         >
-          <Upload size={40} />
+          <Upload size={36} />
         </div>
       </div>
 
@@ -196,12 +196,13 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       <div className="grid gap-6 lg:grid-cols-3 items-stretch">
         {/* ================= UPLOAD CARD ================= */}
         <div
-          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 flex flex-col h-full ${
+          className={`rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 flex flex-col h-full ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
           }`}
         >
+
           <div
             onDragOver={(event) => {
               event.preventDefault();

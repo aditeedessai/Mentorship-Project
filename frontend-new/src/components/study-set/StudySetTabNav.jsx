@@ -12,12 +12,13 @@ function StudySetTabNav({
 
   return (
     <div
-      className={`inline-flex flex-wrap items-center gap-1.5 backdrop-blur-2xl p-1.5 rounded-2xl border shadow-sm w-fit sticky top-4 z-20 transition-all duration-500 ${
+      className={`inline-flex items-center gap-1.5 backdrop-blur-2xl p-1.5 rounded-2xl border shadow-sm w-full sm:w-fit max-w-full overflow-x-auto scrollbar-none whitespace-nowrap sticky top-4 z-20 transition-all duration-500 ${
         isDarkMode
           ? "border-white/10 bg-[#17131F]/90 text-white"
           : "border-white/80 bg-white/70 text-[#292530]"
       }`}
     >
+
       <button
         type="button"
         onClick={() => {

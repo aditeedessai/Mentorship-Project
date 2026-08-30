@@ -34,6 +34,9 @@ export default function MCQPage() {
   const [remainingSeconds, setRemainingSeconds] = useState(questionCount * 90) // 1.5 min per question
   const [showAbortModal, setShowAbortModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showNavDrawer, setShowNavDrawer] = useState(false)
+  const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
+
 
   // ── Anti-Cheating ──────────────────────────────────────────────
   const {
@@ -201,13 +204,17 @@ export default function MCQPage() {
         isBookmarked={!!bookmarkedQuestions[currentQuestion]}
         onToggleBookmark={toggleBookmark}
         onAbort={() => setShowAbortModal(true)}
+        onToggleNavigator={() => setShowNavDrawer((prev) => !prev)}
+        onToggleRoughWork={() => setShowRoughWorkDrawer((prev) => !prev)}
       />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         <QuestionNavigator
           questionCount={questionCount}
           currentQuestion={currentQuestion}
           questionStatuses={questionStatuses}
           onSelectQuestion={goToQuestion}
+          isOpen={showNavDrawer}
+          onClose={() => setShowNavDrawer(false)}
         />
         <QuizCenter
           question={currentQ}
@@ -224,8 +231,11 @@ export default function MCQPage() {
           value={scratchpad[currentQuestion] || ''}
           onChange={handleScratchpadChange}
           onClear={handleClearScratchpad}
+          isOpen={showRoughWorkDrawer}
+          onClose={() => setShowRoughWorkDrawer(false)}
         />
       </div>
+
 
       {showAbortModal && (
         <AbortQuizModal

@@ -105,7 +105,7 @@ function StudySetMnemonicsCard({
               <div className={`p-4 border rounded-2xl mb-4 ${
                 isDarkMode ? "border-white/5 bg-white/5 text-[#A78BFA]" : "border-gray-100 bg-purple-50/50 text-[#8064C7]"
               }`}>
-                <p className="text-base sm:text-lg font-black italic">
+                <p className="text-base sm:text-lg font-black italic overflow-wrap-anywhere">
                   "{mnemonic.mnemonic}"
                 </p>
               </div>
@@ -122,15 +122,15 @@ function StudySetMnemonicsCard({
                         isDarkMode ? "border-white/5 bg-white/5" : "border-gray-100 bg-gray-50"
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      <span>{item}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="overflow-wrap-anywhere">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <button
                 type="button"
                 onClick={onCopyMnemonic}
@@ -160,6 +160,7 @@ function StudySetMnemonicsCard({
                 <span>Create Another</span>
               </button>
             </div>
+
           </div>
         )}
 

@@ -116,24 +116,25 @@ const SettingsPage = ({
   return (
     <div className="max-w-4xl space-y-6 pb-12 transition-all duration-300">
       {/* Header Banner */}
-      <div className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 sm:flex-row sm:items-center backdrop-blur-2xl ${
+      <div className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-5 sm:p-8 sm:flex-row sm:items-center backdrop-blur-2xl ${
         isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
           : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
       }`}>
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
+          <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-black tracking-tight">
             Settings
           </h1>
-          <p className={`mt-2 text-sm ${isDarkMode ? "text-white/50" : "text-[#706A78]"}`}>
+          <p className={`mt-2 text-xs sm:text-sm ${isDarkMode ? "text-white/50" : "text-[#706A78]"}`}>
             Manage your account and application preferences.
           </p>
         </div>
 
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-          <Settings size={40} />
+        <div className="flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+          <Settings size={36} />
         </div>
       </div>
+
 
       <div className="space-y-6">
         {notice && (
