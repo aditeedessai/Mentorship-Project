@@ -16,6 +16,7 @@ const SUMMARY_ILLUSTRATION_URL =
 function StudySetSummaryCard({
   summary,
   summaryLoading,
+  summaryFetching = false,
   summaryError,
   copied,
   documentsCount = 0,
@@ -58,21 +59,23 @@ function StudySetSummaryCard({
         </div>
       </div>
 
-      {summaryLoading && (
+      {(summaryLoading || summaryFetching) && (
         <div className={`flex-1 flex flex-col justify-center items-center p-12 border rounded-2xl backdrop-blur-xl text-center ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>
           <Loader2 size={40} className="mb-3 animate-spin text-[#8064C7]" />
           <p className="text-base font-bold">
-            Generating Study Set Summary...
+            {summaryFetching ? "Loading Summary..." : "Generating Study Set Summary..."}
           </p>
           <p className={`mt-1 text-xs max-w-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
-            AI is analyzing your study materials and building a structured breakdown.
+            {summaryFetching
+              ? "Checking for a previously generated summary."
+              : "AI is analyzing your study materials and building a structured breakdown."}
           </p>
         </div>
       )}
 
-      {!summaryLoading && summaryError && (
+      {!summaryLoading && !summaryFetching && summaryError && (
         <div className="flex-1 p-6 border border-red-500/30 rounded-2xl bg-red-500/10 text-center">
           <AlertCircle size={32} className="mx-auto mb-2 text-red-400" />
           <p className="text-sm font-bold text-red-400">
@@ -89,7 +92,7 @@ function StudySetSummaryCard({
         </div>
       )}
 
-      {!summaryLoading && !summaryError && !summary && (
+      {!summaryLoading && !summaryFetching && !summaryError && !summary && (
         <div className={`flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>
@@ -137,7 +140,7 @@ function StudySetSummaryCard({
         </div>
       )}
 
-      {!summaryLoading && !summaryError && summary && (
+      {!summaryLoading && !summaryFetching && !summaryError && summary && (
         <div className={`flex-1 flex flex-col justify-between gap-4 p-6 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>

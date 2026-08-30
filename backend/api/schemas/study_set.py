@@ -120,6 +120,35 @@ class SummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class StoredSummaryResponse(BaseModel):
+    study_set_id: UUID = Field(
+        ...,
+        description="Unique identifier for the study set (UUID)"
+    )
+    title: str | None = Field(
+        None,
+        description="Short descriptive title for the study material summary"
+    )
+    overview_paragraphs: list[str] = Field(
+        default_factory=list,
+        description="Paragraphs summarizing the study material"
+    )
+    key_takeaways: list[str] = Field(
+        default_factory=list,
+        description="Key takeaways/topics extracted from the study material"
+    )
+    created_at: datetime = Field(
+        ...,
+        description="Timestamp when the summary was first saved"
+    )
+    updated_at: datetime = Field(
+        ...,
+        description="Timestamp when the summary was last regenerated"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class FlashcardItem(BaseModel):
     term: str = Field(
         ...,

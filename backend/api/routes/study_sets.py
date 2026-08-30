@@ -11,6 +11,7 @@ from backend.api.schemas.study_set import (
     FlashcardsResponse,
     MnemonicRequest,
     MnemonicResponse,
+    StoredSummaryResponse,
     StudySetListResponse,
     StudySetProgressListResponse,
     StudySetProgressResponse,
@@ -22,6 +23,7 @@ from backend.services.evaluation_service import get_study_set_progress
 from backend.quiz_generation.summary_generator import generate_summary
 from backend.quiz_generation.flashcard_generator import generate_flashcards
 from backend.quiz_generation.mnemonic_generator import generate_mnemonic
+from backend.database import summary_repository, flashcard_repository
 
 router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
 
@@ -47,6 +49,18 @@ def generate_study_set_summary(
             )
 
         summary_data = generate_summary(study_set_id=str(study_set_id))
+
+        try:
+            summary_repository.save_summary(
+                study_set_id=str(study_set_id),
+                user_id=current_user.user_id,
+                title=summary_data.get("title"),
+                overview_paragraphs=summary_data.get("overview_paragraphs", []),
+                key_takeaways=summary_data.get("key_topics", []),
+            )
+        except Exception as save_err:
+            print(f"Failed to save summary for study set {study_set_id}: {save_err}")
+
         return SummaryResponse(**summary_data)
     except HTTPException:
         raise
@@ -59,6 +73,42 @@ def generate_study_set_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate summary: {str(e)}"
+        )
+
+
+@router.get(
+    "/{study_set_id}/summary",
+    response_model=StoredSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get the saved summary for a study set",
+    description="Retrieves the previously generated and saved summary for a study set, if one exists."
+)
+def get_study_set_summary(
+    study_set_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> StoredSummaryResponse:
+    try:
+        # Verify ownership
+        study_set = study_service.get_study_set(str(study_set_id), user_id=current_user.user_id)
+        if not study_set:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Study set with ID '{study_set_id}' not found"
+            )
+
+        summary = summary_repository.get_summary(str(study_set_id), user_id=current_user.user_id)
+        if not summary:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No summary found for study set '{study_set_id}'"
+            )
+        return StoredSummaryResponse(**summary)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get summary: {str(e)}"
         )
 
 
@@ -83,6 +133,16 @@ def generate_study_set_flashcards(
             )
 
         flashcard_data = generate_flashcards(study_set_id=str(study_set_id))
+
+        try:
+            flashcard_repository.save_flashcards(
+                study_set_id=str(study_set_id),
+                user_id=current_user.user_id,
+                cards=flashcard_data.get("flashcards", []),
+            )
+        except Exception as save_err:
+            print(f"Failed to save flashcards for study set {study_set_id}: {save_err}")
+
         return FlashcardsResponse(**flashcard_data)
     except HTTPException:
         raise
@@ -95,6 +155,42 @@ def generate_study_set_flashcards(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate flashcards: {str(e)}"
+        )
+
+
+@router.get(
+    "/{study_set_id}/flashcards",
+    response_model=FlashcardsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get the saved flashcards for a study set",
+    description="Retrieves the previously generated and saved flashcards for a study set, if any exist."
+)
+def get_study_set_flashcards(
+    study_set_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> FlashcardsResponse:
+    try:
+        # Verify ownership
+        study_set = study_service.get_study_set(str(study_set_id), user_id=current_user.user_id)
+        if not study_set:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Study set with ID '{study_set_id}' not found"
+            )
+
+        cards = flashcard_repository.get_flashcards(str(study_set_id), user_id=current_user.user_id)
+        if not cards:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No flashcards found for study set '{study_set_id}'"
+            )
+        return FlashcardsResponse(flashcards=cards)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get flashcards: {str(e)}"
         )
 
 

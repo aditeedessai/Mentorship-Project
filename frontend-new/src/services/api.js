@@ -122,6 +122,22 @@ export async function generateStudySetSummary(studySetId) {
 }
 
 /**
+ * Fetch the previously saved summary for a study set, if one exists.
+ * GET /api/study-sets/{studySetId}/summary
+ * Returns null if no summary has been generated yet (404).
+ */
+export async function fetchStudySetSummary(studySetId) {
+  try {
+    return await request(`/api/study-sets/${studySetId}/summary`);
+  } catch (err) {
+    if (err.message && err.message.includes("404")) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
  * Generate flashcards for a study set.
  * POST /api/study-sets/{studySetId}/flashcards
  */
@@ -129,6 +145,23 @@ export async function generateStudySetFlashcards(studySetId) {
   return request(`/api/study-sets/${studySetId}/flashcards`, {
     method: "POST",
   });
+}
+
+/**
+ * Fetch the previously saved flashcards for a study set, if any exist.
+ * GET /api/study-sets/{studySetId}/flashcards
+ * Returns an empty array if no flashcards have been generated yet (404).
+ */
+export async function fetchStudySetFlashcards(studySetId) {
+  try {
+    const data = await request(`/api/study-sets/${studySetId}/flashcards`);
+    return data.flashcards || [];
+  } catch (err) {
+    if (err.message && err.message.includes("404")) {
+      return [];
+    }
+    throw err;
+  }
 }
 
 /**
