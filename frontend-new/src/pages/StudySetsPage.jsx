@@ -49,10 +49,11 @@ function StudySetsPage({
           results[id] = {
             docCount: docList.length,
             hasProgress: Boolean(activeAttempt),
+            completedSections: activeAttempt?.completed_sections || [],
             loaded: true,
           };
         } catch {
-          results[id] = { docCount: 0, hasProgress: false, loaded: true };
+          results[id] = { docCount: 0, hasProgress: false, completedSections: [], loaded: true };
         }
       })
     );
@@ -74,10 +75,9 @@ function StudySetsPage({
   const getProgress = (id) => {
     const meta = cardMeta[id];
     if (!meta || !meta.loaded) return 0;
-    if (meta.hasProgress) {
-      return meta.docCount > 0 ? Math.min(meta.docCount * 10, 75) : 0;
-    }
-    return 0;
+    // 25% per completed question type (4 types total)
+    const sections = meta.completedSections || [];
+    return Math.min(sections.length * 25, 100);
   };
 
   const getCtaLabel = (id) => {
