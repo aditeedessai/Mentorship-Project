@@ -5,6 +5,8 @@ import {
   fetchStudySet,
   fetchStudySetDocuments,
   fetchActiveAttempt,
+  fetchStudySetSummary,
+  fetchStudySetFlashcards,
   generateStudySetSummary,
   generateStudySetFlashcards,
   generateStudySetMnemonic,
@@ -67,11 +69,13 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
 
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryFetching, setSummaryFetching] = useState(true);
   const [summaryError, setSummaryError] = useState("");
   const [copied, setCopied] = useState(false);
 
   const [flashcards, setFlashcards] = useState(null);
   const [flashcardsLoading, setFlashcardsLoading] = useState(false);
+  const [flashcardsFetching, setFlashcardsFetching] = useState(true);
   const [flashcardsError, setFlashcardsError] = useState("");
   const [practiceMode, setPracticeMode] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -128,9 +132,11 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
     setSummary(null);
     setSummaryError("");
     setSummaryLoading(false);
+    setSummaryFetching(true);
     setFlashcards(null);
     setFlashcardsError("");
     setFlashcardsLoading(false);
+    setFlashcardsFetching(true);
     setPracticeMode(false);
     setMnemonic(null);
     setMnemonicError("");
@@ -138,6 +144,8 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
 
     if (!studySetId) {
       setLoading(false);
+      setSummaryFetching(false);
+      setFlashcardsFetching(false);
       return;
     }
 
@@ -183,7 +191,39 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
       }
     }
 
+    async function loadExistingSummary() {
+      try {
+        const existingSummary = await fetchStudySetSummary(studySetId);
+        if (isMounted && existingSummary) {
+          setSummary(existingSummary);
+        }
+      } catch (err) {
+        console.warn("Could not fetch existing summary:", err);
+      } finally {
+        if (isMounted) {
+          setSummaryFetching(false);
+        }
+      }
+    }
+
+    async function loadExistingFlashcards() {
+      try {
+        const existingFlashcards = await fetchStudySetFlashcards(studySetId);
+        if (isMounted && existingFlashcards && existingFlashcards.length > 0) {
+          setFlashcards(existingFlashcards);
+        }
+      } catch (err) {
+        console.warn("Could not fetch existing flashcards:", err);
+      } finally {
+        if (isMounted) {
+          setFlashcardsFetching(false);
+        }
+      }
+    }
+
     loadData();
+    loadExistingSummary();
+    loadExistingFlashcards();
 
     return () => {
       isMounted = false;
@@ -309,6 +349,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
               sectionRef={summaryRef}
               summary={summary}
               summaryLoading={summaryLoading}
+              summaryFetching={summaryFetching}
               summaryError={summaryError}
               copied={copied}
               documentsCount={documents.length}
@@ -321,6 +362,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
               sectionRef={flashcardsRef}
               flashcards={flashcards}
               flashcardsLoading={flashcardsLoading}
+              flashcardsFetching={flashcardsFetching}
               flashcardsError={flashcardsError}
               practiceMode={practiceMode}
               setPracticeMode={setPracticeMode}

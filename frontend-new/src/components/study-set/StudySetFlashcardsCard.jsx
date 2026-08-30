@@ -7,6 +7,7 @@ const FLASHCARDS_ILLUSTRATION_URL =
 function StudySetFlashcardsCard({
   flashcards = null,
   flashcardsLoading = false,
+  flashcardsFetching = false,
   flashcardsError = "",
   practiceMode = false,
   setPracticeMode,
@@ -59,21 +60,23 @@ function StudySetFlashcardsCard({
         )}
       </div>
 
-      {flashcardsLoading && (
+      {(flashcardsLoading || flashcardsFetching) && (
         <div className={`flex-1 flex flex-col justify-center items-center p-12 border rounded-2xl backdrop-blur-xl text-center ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>
           <Loader2 size={40} className="mb-3 animate-spin text-[#8064C7]" />
           <p className="text-base font-bold">
-            Generating Study Set Flashcards...
+            {flashcardsFetching ? "Loading Flashcards..." : "Generating Study Set Flashcards..."}
           </p>
           <p className={`mt-1 text-xs max-w-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
-            AI is analyzing your study materials and generating active recall cards.
+            {flashcardsFetching
+              ? "Checking for previously generated flashcards."
+              : "AI is analyzing your study materials and generating active recall cards."}
           </p>
         </div>
       )}
 
-      {!flashcardsLoading && flashcardsError && (
+      {!flashcardsLoading && !flashcardsFetching && flashcardsError && (
         <div className="flex-1 p-6 border border-red-500/30 rounded-2xl bg-red-500/10 text-center">
           <AlertCircle size={32} className="mx-auto mb-2 text-red-400" />
           <p className="text-sm font-bold text-red-400">
@@ -90,7 +93,7 @@ function StudySetFlashcardsCard({
         </div>
       )}
 
-      {!flashcardsLoading && !flashcardsError && (!flashcards || cardList.length === 0) && (
+      {!flashcardsLoading && !flashcardsFetching && !flashcardsError && (!flashcards || cardList.length === 0) && (
         <div className={`flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border rounded-2xl backdrop-blur-xl ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>
@@ -148,7 +151,7 @@ function StudySetFlashcardsCard({
         </div>
       )}
 
-      {!flashcardsLoading && !flashcardsError && flashcards && cardList.length > 0 && !practiceMode && (
+      {!flashcardsLoading && !flashcardsFetching && !flashcardsError && flashcards && cardList.length > 0 && !practiceMode && (
         <div className={`flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border rounded-2xl backdrop-blur-xl ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>
@@ -227,7 +230,7 @@ function StudySetFlashcardsCard({
         </div>
       )}
 
-      {!flashcardsLoading && !flashcardsError && flashcards && cardList.length > 0 && practiceMode && currentCard && (
+      {!flashcardsLoading && !flashcardsFetching && !flashcardsError && flashcards && cardList.length > 0 && practiceMode && currentCard && (
         <div className={`flex-1 flex flex-col gap-6 p-6 border rounded-2xl backdrop-blur-xl ${
           isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
         }`}>

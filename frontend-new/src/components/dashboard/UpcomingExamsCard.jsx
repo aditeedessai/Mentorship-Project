@@ -70,6 +70,9 @@ function UpcomingExamsCard({ onSeeAll }) {
 
   const [removingId, setRemovingId] = useState(null);
 
+  const getStudySetName = (id) =>
+    studySets.find((set) => set.study_set_id === id)?.name;
+
   const loadExams = async () => {
     setIsLoading(true);
     setLoadError("");
@@ -361,17 +364,20 @@ function UpcomingExamsCard({ onSeeAll }) {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex min-w-0 items-center gap-1.5">
                         <p className="truncate text-sm font-bold">
                           {exam.subject}
                         </p>
                         {exam.study_set_id && (
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                            isDarkMode
-                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                              : "bg-emerald-100 text-emerald-700"
-                          }`}>
-                            Set Linked
+                          <span
+                            title={getStudySetName(exam.study_set_id) || undefined}
+                            className={`max-w-[110px] shrink-0 truncate rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                              isDarkMode
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
+                          >
+                            {getStudySetName(exam.study_set_id) || "Set Linked"}
                           </span>
                         )}
                       </div>
