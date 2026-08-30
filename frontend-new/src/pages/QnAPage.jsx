@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
 import QuizHeader from '../components/quiz/QuizHeader'
 import QuestionNavigator from '../components/quiz/QuestionNavigator'
 import RoughWorkPanel from '../components/quiz/RoughWorkPanel'
@@ -10,10 +11,10 @@ import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
 
 export default function QnAPage() {
+  const { isDarkMode } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Pull data from route state (set by ConfigureSession)
   const questions = useMemo(() => location.state?.questions || [], [location.state?.questions])
   const attemptId = location.state?.attemptId
   const questionType = location.state?.questionType || 'short-answer'
@@ -30,11 +31,10 @@ export default function QnAPage() {
   })
   const [scratchpad, setScratchpad] = useState({})
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState({})
-  const [remainingSeconds, setRemainingSeconds] = useState(questionCount * 180) // 3 min per question
+  const [remainingSeconds, setRemainingSeconds] = useState(questionCount * 180)
   const [showAbortModal, setShowAbortModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // ── Anti-Cheating ──────────────────────────────────────────────
   const {
     isFullscreenReady,
     quizTerminated,
@@ -45,14 +45,12 @@ export default function QnAPage() {
     onTerminate: () => navigate('/'),
   })
 
-  // Redirect if no questions were loaded
   useEffect(() => {
     if (questionCount === 0) {
       navigate('/quiz')
     }
   }, [questionCount, navigate])
 
-  // Timer — only ticks when fullscreen is established
   useEffect(() => {
     if (remainingSeconds <= 0 || !isFullscreenReady) return
     const interval = setInterval(() => {
@@ -105,7 +103,6 @@ export default function QnAPage() {
     setIsSubmitting(true)
 
     try {
-      // Build answers array for ALL section questions (answered + skipped)
       const answersPayload = []
       for (let i = 1; i <= questionCount; i++) {
         const q = questions[i - 1]
@@ -118,15 +115,12 @@ export default function QnAPage() {
         }
       }
 
-      // 1. Submit section answers
       if (answersPayload.length > 0) {
         await submitAnswers(attemptId, questionType, answersPayload)
       }
 
-      // 2. Cleanup anti-cheating before navigating away
       antiCheatCleanup()
 
-      // 3. Navigate to results
       const studySetId = location.state?.studySetId
       navigate('/results', {
         state: {
@@ -162,7 +156,6 @@ export default function QnAPage() {
     navigate('/')
   }, [navigate, antiCheatCleanup])
 
-  // Don't render if no questions or quiz was terminated by anti-cheat
   if (questionCount === 0 || quizTerminated) return null
 
   const currentQ = questions[currentQuestion - 1] || questions[0]
@@ -178,19 +171,22 @@ export default function QnAPage() {
       : 'Short Answer'
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden font-sans select-none">
-      {/* Fullscreen gate — blocks quiz until fullscreen is confirmed */}
+    <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none ${
+      isDarkMode ? "bg-[#0E0B15] text-white" : "bg-[#F6F3FC] text-[#292530]"
+    }`}>
       {!isFullscreenReady && (
-        <div className="fixed inset-0 z-[200] bg-white flex items-center justify-center">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${
+          isDarkMode ? "bg-[#0E0B15]/90 text-white" : "bg-white/90 text-[#292530]"
+        }`}>
           <div className="text-center max-w-sm px-6">
-            <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#F0EAF5] flex items-center justify-center animate-pulse">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#542078" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-[#8064C7]/20 flex items-center justify-center animate-pulse text-[#8064C7]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" />
                 <path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-[#3E3E75] mb-2">Entering Secure Mode</h2>
-            <p className="text-[13px] text-[#888] leading-relaxed">
+            <h2 className="text-xl font-black mb-2 tracking-tight">Entering Secure Mode</h2>
+            <p className={`text-xs leading-relaxed ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
               This quiz requires fullscreen mode for a secure exam environment.
               Click anywhere or press any key to continue.
             </p>
@@ -198,7 +194,6 @@ export default function QnAPage() {
         </div>
       )}
 
-      {/* Clipboard warning overlay */}
       <AntiCheatingWarning warnings={warnings} />
 
       <QuizHeader
@@ -215,25 +210,19 @@ export default function QnAPage() {
           onSelectQuestion={goToQuestion}
         />
 
-        {/* Center QnA Content */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#FAFAFA]">
-          {/* Question Header + Progress */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <div className="px-8 pt-4 flex-shrink-0">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2">
-                <div className="w-[7px] h-[7px] rounded-full bg-[#087C7B]" />
-                <span className="text-[11px] font-bold text-[#087C7B] tracking-[0.12em] uppercase">
+                <div className="w-2 h-2 rounded-full bg-[#8064C7]" />
+                <span className="text-xs font-mono font-bold tracking-wider uppercase text-[#8064C7] dark:text-[#A78BFA]">
                   Question {currentQuestion} of {questionCount}
                 </span>
               </div>
-              <div className="text-[11px] text-[#888] bg-[#F0F0F0] px-3 py-1 rounded-full font-medium">
-                Module 4: Neural Networks
-              </div>
             </div>
-            {/* Progress Bar */}
-            <div className="w-full h-[3px] bg-[#E5E5E5] rounded-full overflow-hidden">
+            <div className={`w-full h-1.5 rounded-full overflow-hidden ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
               <div
-                className="h-full bg-[#087C7B] rounded-full transition-all duration-300 ease-out"
+                className="h-full bg-[#8064C7] rounded-full transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
                 role="progressbar"
                 aria-valuenow={Math.round(progress)}
@@ -243,38 +232,43 @@ export default function QnAPage() {
             </div>
           </div>
 
-          {/* Question Card */}
           <div className="flex-1 overflow-y-auto px-8 py-5 min-h-0">
-            <div className="bg-white rounded-xl border border-[#E3E3E3] shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-7 flex flex-col h-full">
-              {/* Question Type Badge */}
+            <div className={`rounded-3xl border p-7 flex flex-col h-full backdrop-blur-2xl ${
+              isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/70 text-[#292530]"
+            }`}>
               <div className="mb-4">
-                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#55217A] bg-[#F5F0F8] border border-[#D8CBE0] rounded-full px-3 py-[3px]">
-                  <PenLine className="w-[12px] h-[12px]" strokeWidth={2.2} />
+                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${
+                  isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/20 text-[#A78BFA]" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+                }`}>
+                  <PenLine className="w-3.5 h-3.5" strokeWidth={2.2} />
                   {typeLabel}
                 </span>
               </div>
 
-              {/* Question Text */}
-              <h2 className="text-[18px] font-semibold text-[#222222] leading-[1.4] mb-5">
+              <h2 className="text-xl font-extrabold leading-snug mb-5 tracking-tight">
                 {currentQ.question}
               </h2>
 
-              {/* AI Hint */}
-              <div className="flex gap-3 p-4 bg-[#F7F3F9] border border-[#DDD1E2] rounded-lg mb-5">
-                <Lightbulb className="w-[16px] h-[16px] text-[#8B5FB0] mt-0.5 flex-shrink-0" strokeWidth={2} />
-                <p className="text-[12.5px] text-[#666666] leading-[1.55]">
-                  <span className="font-semibold text-[#7B6190]">AI Hint: </span>
+              <div className={`flex gap-3 p-4 border rounded-2xl mb-5 ${
+                isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+              }`}>
+                <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2} />
+                <p className="text-xs leading-relaxed font-semibold">
+                  <span className="font-black">AI Hint: </span>
                   {currentQ.hint}
                 </p>
               </div>
 
-              {/* Answer Textarea – marked as editable so anti-cheat allows typing */}
               <div className="flex-1 min-h-[180px]" data-ac-editable="true">
                 <textarea
                   value={answers[currentQuestion] || ''}
                   onChange={(e) => handleAnswerChange(e.target.value)}
                   placeholder="Type your answer here..."
-                  className="w-full h-full min-h-[180px] p-4 bg-white border border-[#D8D8D8] rounded-[10px] text-[14px] text-[#333] leading-[1.6] placeholder-[#AAAAAA] resize-none focus:outline-none focus:border-[#087C7B] focus:ring-1 focus:ring-[#087C7B]/20 transition-colors duration-150 select-text"
+                  className={`w-full h-full min-h-[180px] p-4 rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
+                    isDarkMode
+                      ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
+                      : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
+                  }`}
                   aria-label={`Answer for question ${currentQuestion}`}
                   data-ac-editable="true"
                 />
@@ -282,17 +276,16 @@ export default function QnAPage() {
             </div>
           </div>
 
-          {/* Bottom Navigation */}
-          <div className="flex items-center justify-between px-8 py-4 flex-shrink-0 bg-[#FAFAFA]">
+          <div className="flex items-center justify-between px-8 py-4 flex-shrink-0">
             <button
               type="button"
               onClick={handlePrevious}
               disabled={isFirstQuestion}
-              className={`flex items-center gap-1.5 text-[13.5px] font-semibold transition-colors duration-150
-                ${isFirstQuestion ? 'text-[#CCCCCC] cursor-not-allowed' : 'text-[#087C7B] hover:text-[#065E5D] cursor-pointer'}`}
+              className={`flex items-center gap-1.5 text-xs font-bold transition-opacity
+                ${isFirstQuestion ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'}`}
               aria-label="Previous question"
             >
-              <ArrowLeft className="w-[15px] h-[15px]" strokeWidth={2.2} />
+              <ArrowLeft className="w-4 h-4" strokeWidth={2.2} />
               Previous
             </button>
 
@@ -300,13 +293,11 @@ export default function QnAPage() {
               type="button"
               onClick={isLastQuestion ? handleFinishQuiz : handleSubmitNext}
               disabled={isSubmitting}
-              className="flex items-center gap-2 h-[38px] px-5 bg-[#542078] text-white text-[13.5px] font-semibold rounded-[8px] cursor-pointer
-                hover:bg-[#462066] hover:-translate-y-[1px] hover:shadow-[0_3px_10px_rgba(84,32,122,0.25)]
-                active:translate-y-0 transition-all duration-150"
+              className="flex items-center gap-2 h-10 px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
               aria-label={isLastQuestion ? 'Finish quiz' : 'Submit answer and go to next question'}
             >
               {isSubmitting ? 'Submitting...' : (isLastQuestion ? 'Finish Quiz' : 'Submit Answer')}
-              <ArrowRight className="w-[15px] h-[15px]" strokeWidth={2.2} />
+              <ArrowRight className="w-4 h-4" strokeWidth={2.2} />
             </button>
           </div>
         </div>

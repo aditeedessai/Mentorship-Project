@@ -5,6 +5,7 @@ import {
   Lightbulb,
   BookOpen,
 } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 
 const QUESTION_TYPES = [
   {
@@ -12,32 +13,24 @@ const QUESTION_TYPES = [
     title: "Multiple Choice (MCQ)",
     defaultTotal: 5,
     icon: <ListChecks size={16} />,
-    colorClass: "bg-gradient-to-r from-[#006B5F] to-[#1D9E75]",
-    barClass: "bg-gradient-to-r from-[#006B5F] to-[#62FAE3]",
   },
   {
     id: "short",
     title: "Short Answer",
     defaultTotal: 5,
     icon: <FileText size={16} />,
-    colorClass: "bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75]",
-    barClass: "bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE]",
   },
   {
     id: "application",
     title: "Application Questions",
     defaultTotal: 5,
     icon: <Lightbulb size={16} />,
-    colorClass: "bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75]",
-    barClass: "bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE]",
   },
   {
     id: "qna",
     title: "Long Answers",
     defaultTotal: 5,
     icon: <BookOpen size={16} />,
-    colorClass: "bg-gradient-to-r from-[#4E1F6E] to-[#3E3E75]",
-    barClass: "bg-gradient-to-r from-[#4E1F6E] to-[#98E8DE]",
   },
 ];
 
@@ -45,6 +38,8 @@ function StudySetQuestionProgressCard({
   completedSections = [],
   questionCounts = {},
 }) {
+  const { isDarkMode } = useTheme();
+
   const progressItems = QUESTION_TYPES.map((typeMeta) => {
     const isCompleted =
       completedSections.includes(typeMeta.id) ||
@@ -65,18 +60,26 @@ function StudySetQuestionProgressCard({
   });
 
   return (
-    <section className="rounded-2xl bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-[0_4px_25px_rgba(78,31,110,0.06)] hover:shadow-[0_8px_30px_rgba(78,31,110,0.09)] border border-gray-100/90 flex flex-col transition-all duration-300">
+    <section
+      className={`rounded-3xl border p-6 sm:p-7 backdrop-blur-2xl transition-all duration-500 flex flex-col ${
+        isDarkMode
+          ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+      }`}
+    >
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="bg-gradient-to-br from-[#98E8DE]/40 via-[#98E8DE]/20 to-[#4E1F6E]/10 border border-[#98E8DE]/60 text-[#4E1F6E] p-2.5 rounded-xl shadow-2xs shrink-0">
+          <div className="bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] p-2.5 rounded-2xl shrink-0">
             <Target size={20} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-extrabold text-[#3E3E75] leading-tight truncate">Question Progress</h2>
-            <p className="text-xs text-gray-500 truncate">Answered vs. Pending Question Sets</p>
+            <h2 className="text-lg font-black leading-tight truncate">Question Progress</h2>
+            <p className={`text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Answered vs. Pending Question Sets</p>
           </div>
         </div>
-        <span className="shrink-0 whitespace-nowrap bg-[#4E1F6E]/10 border border-[#4E1F6E]/20 text-[#4E1F6E] font-mono text-xs font-bold px-3 py-1 rounded-full shadow-2xs">
+        <span className={`shrink-0 whitespace-nowrap font-mono text-xs font-bold px-3 py-1 rounded-full ${
+          isDarkMode ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
+        }`}>
           {progressItems.length} Types
         </span>
       </div>
@@ -85,38 +88,45 @@ function StudySetQuestionProgressCard({
         {progressItems.map((item) => (
           <div
             key={item.id}
-            className="p-4 border border-gray-200/80 rounded-2xl bg-gradient-to-r from-white via-gray-50/40 to-[#98E8DE]/10 shadow-2xs hover:border-[#4E1F6E]/40 hover:shadow-md transition-all cursor-pointer group"
+            className={`p-4 border rounded-2xl transition-all backdrop-blur-xl group ${
+              isDarkMode
+                ? "border-white/5 bg-white/5 hover:border-white/10"
+                : "border-gray-200/80 bg-white hover:border-[#8064C7]"
+            }`}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`p-2.5 rounded-xl text-white shrink-0 shadow-2xs ${item.colorClass}`}>
+                <div className="p-2.5 rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] shrink-0">
                   {item.icon}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-[#3E3E75] truncate group-hover:text-[#4E1F6E] transition-colors">
+                  <h4 className="text-sm font-bold truncate group-hover:text-[#8064C7] dark:group-hover:text-[#A78BFA] transition-colors">
                     {item.title}
                   </h4>
-                  <p className="text-xs text-gray-500 mt-0.5 font-mono font-medium">
+                  <p className={`text-xs mt-0.5 font-mono font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                     {item.answered}/{item.total} Answered
                   </p>
                 </div>
               </div>
 
               <span
-                className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shadow-2xs shrink-0 ml-2 ${item.status === "Completed"
-                    ? "bg-[#98E8DE]/35 border-[#98E8DE]/70 text-[#006B5F]"
-                    : "bg-gray-100 border-gray-200 text-gray-500"
-                  }`}
+                className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ml-2 ${
+                  item.status === "Completed"
+                    ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                    : isDarkMode
+                    ? "bg-white/5 border-white/10 text-white/40"
+                    : "bg-gray-100 border-gray-200 text-gray-400"
+                }`}
               >
                 {item.status}
               </span>
             </div>
 
-            {/* Dynamic Progress Bar */}
-            <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden p-0.5 border border-gray-200 mt-2.5">
+            <div className={`w-full h-2 rounded-full overflow-hidden mt-3 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
               <div
-                className={`h-full rounded-full transition-all duration-500 ${item.status === "Completed" ? item.barClass : "bg-gray-200"
-                  }`}
+                className={`h-full rounded-full transition-all duration-500 ${
+                  item.status === "Completed" ? "bg-emerald-500" : "bg-[#8064C7]"
+                }`}
                 style={{ width: `${item.percentage}%` }}
               />
             </div>
@@ -128,3 +138,4 @@ function StudySetQuestionProgressCard({
 }
 
 export default StudySetQuestionProgressCard;
+

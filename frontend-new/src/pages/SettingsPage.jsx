@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   X,
 } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { deleteAccount } from "../services/api";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
@@ -25,10 +26,10 @@ const SettingsPage = ({
   onDismissNotice,
   onDeleteAllStudySets,
 }) => {
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState("");
 
-  // 'all-study-sets' | 'account' | null
   const [confirmAction, setConfirmAction] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState(null);
@@ -82,10 +83,6 @@ const SettingsPage = ({
         setStudySetsDeletedMessage("All your study sets have been permanently deleted.");
       } else if (confirmAction === "account") {
         await deleteAccount();
-        // Signing out here flips `user` to null via App.jsx's
-        // onAuthStateChange listener, which already resets app state and
-        // sends the user back to the landing/login screen - nothing else
-        // to do on this page after this succeeds.
         await supabase.auth.signOut();
       }
     } catch {
@@ -117,34 +114,38 @@ const SettingsPage = ({
         };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFA]">
+    <div className="max-w-4xl space-y-6 pb-12 transition-all duration-300">
       {/* Header Banner */}
-      <div className="mb-8 flex flex-col items-start justify-between gap-6 rounded-2xl bg-[#98E8DE]/25 p-8 sm:flex-row sm:items-center">
+      <div className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-8 sm:flex-row sm:items-center backdrop-blur-2xl ${
+        isDarkMode
+          ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
+      }`}>
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-[#4E1F6E]">
+          <h1 className="flex items-center gap-2 text-3xl font-black tracking-tight">
             Settings
           </h1>
-          <p className="mt-2 text-sm text-[#3E3E75]/70">
+          <p className={`mt-2 text-sm ${isDarkMode ? "text-white/50" : "text-[#706A78]"}`}>
             Manage your account and application preferences.
           </p>
         </div>
 
-        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white/60">
-          <Settings size={44} className="text-[#4E1F6E]" />
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+          <Settings size={40} />
         </div>
       </div>
 
-      <div className="max-w-4xl space-y-6">
+      <div className="space-y-6">
         {notice && (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#1D9E75]/30 bg-[#1D9E75]/10 px-5 py-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-[#1D9E75]">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
               <CheckCircle2 size={18} />
               {notice}
             </div>
             <button
               type="button"
               onClick={onDismissNotice}
-              className="text-[#1D9E75] transition hover:opacity-70"
+              className="text-emerald-400 transition hover:opacity-70 cursor-pointer"
               aria-label="Dismiss notice"
             >
               <X size={16} />
@@ -152,138 +153,149 @@ const SettingsPage = ({
           </div>
         )}
 
-        {/* ================= PROFILE ================= */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        {/* PROFILE */}
+        <section className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}>
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0E8F5]">
-              <User size={20} className="text-[#4E1F6E]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+              <User size={20} />
             </div>
 
             <div>
-              <h2 className="font-semibold text-[#3E3E75]">Profile</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="font-black tracking-tight">Profile</h2>
+              <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                 Manage your personal information
               </p>
             </div>
           </div>
 
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            {/* Avatar */}
             <div className="relative">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#4E1F6E] text-2xl font-semibold text-white">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#8064C7] text-2xl font-black text-[#F3F0F8] shadow-md">
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}
               </div>
 
               <button
                 type="button"
-                className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#98E8DE] text-[#3E3E75] shadow-sm transition hover:scale-105"
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-xl border-2 border-inherit bg-[#8064C7] text-white shadow-sm transition hover:scale-105"
               >
                 <Camera size={14} />
               </button>
             </div>
 
-            {/* User details */}
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-[#3E3E75]">
+              <h3 className="text-lg font-black tracking-tight">
                 {user?.name || "Student User"}
               </h3>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className={`mt-0.5 text-xs font-semibold ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
                 {user?.email || "No email available"}
               </p>
 
-              <p className="mt-1 text-xs text-gray-400">
+              <p className={`mt-1 text-[11px] ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
                 Your account information
               </p>
             </div>
 
             <button
               type="button"
-              className="rounded-xl bg-[#4E1F6E] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#3E1857] hover:shadow-md"
+              className="rounded-xl bg-[#8064C7] hover:bg-[#8B6DD4] px-5 py-2.5 text-xs font-bold text-white transition shadow-md cursor-pointer"
             >
               Edit Profile
             </button>
           </div>
         </section>
 
-        {/* ================= APPEARANCE ================= */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        {/* APPEARANCE */}
+        <section className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}>
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0E8F5]">
-              <Palette size={20} className="text-[#4E1F6E]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+              <Palette size={20} />
             </div>
 
             <div>
-              <h2 className="font-semibold text-[#3E3E75]">Appearance</h2>
-              <p className="text-sm text-gray-500">
-                Choose how AI Study Engine looks
+              <h2 className="font-black tracking-tight">Appearance</h2>
+              <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
+                Choose how Jot looks
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl bg-[#F8FAFA] p-4">
+          <div className={`flex items-center justify-between rounded-2xl p-4 border ${
+            isDarkMode ? "border-white/5 bg-white/5" : "border-gray-200/80 bg-white"
+          }`}>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
-                <Sun size={19} className="text-[#4E1F6E]" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                {isDarkMode ? <Moon size={19} /> : <Sun size={19} />}
               </div>
 
               <div>
-                <p className="text-sm font-medium text-[#3E3E75]">
+                <p className="text-xs font-bold">
                   Theme
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className={`text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                   Switch between light and dark mode
                 </p>
               </div>
             </div>
 
-            {/* Light / Dark Toggle */}
             <button
               type="button"
+              onClick={toggleDarkMode}
               aria-label="Toggle dark mode"
-              className="relative flex h-9 w-[68px] items-center rounded-full bg-[#E6E0EA] p-1 transition-all duration-300"
+              className={`relative flex h-9 w-[68px] items-center rounded-full p-1 transition-all duration-300 cursor-pointer ${
+                isDarkMode ? "bg-[#8064C7]" : "bg-gray-200"
+              }`}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-md transition-all duration-300">
-                <Sun size={15} className="text-[#4E1F6E]" />
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#8064C7] shadow-md transition-all duration-300 ${
+                isDarkMode ? "translate-x-[32px]" : "translate-x-0"
+              }`}>
+                {isDarkMode ? <Moon size={15} /> : <Sun size={15} />}
               </span>
-
-              <Moon
-                size={15}
-                className="absolute right-2 text-gray-500"
-              />
             </button>
           </div>
         </section>
 
-        {/* ================= SECURITY ================= */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        {/* SECURITY */}
+        <section className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}>
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0E8F5]">
-              <Shield size={20} className="text-[#4E1F6E]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+              <Shield size={20} />
             </div>
 
             <div>
-              <h2 className="font-semibold text-[#3E3E75]">
+              <h2 className="font-black tracking-tight">
                 Security & Privacy
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                 Manage your account security
               </p>
             </div>
           </div>
 
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-inherit">
             <button
               type="button"
               onClick={handleChangePasswordClick}
               disabled={isSendingResetEmail}
-              className="flex w-full items-center justify-between py-4 text-left transition hover:bg-[#F8FAFA] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-between py-4 text-left transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             >
               <div>
-                <p className="text-sm font-medium text-[#3E3E75]">
+                <p className="text-xs font-bold">
                   Change Password
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                   {isSendingResetEmail
                     ? "Sending verification code..."
                     : "Update your account password"}
@@ -291,86 +303,78 @@ const SettingsPage = ({
               </div>
 
               {isSendingResetEmail ? (
-                <Loader2 size={18} className="animate-spin text-gray-400" />
+                <Loader2 size={18} className="animate-spin text-[#8064C7]" />
               ) : (
-                <ChevronRight size={18} className="text-gray-400" />
+                <ChevronRight size={18} className="opacity-40" />
               )}
             </button>
 
             {changePasswordError && (
-              <p className="py-2 text-xs font-medium text-red-500">
+              <p className="py-2 text-xs font-bold text-rose-400">
                 {changePasswordError}
               </p>
             )}
 
             <button
               type="button"
-              className="flex w-full items-center justify-between py-4 text-left transition hover:bg-[#F8FAFA]"
+              className="flex w-full items-center justify-between py-4 text-left transition hover:opacity-80 cursor-pointer"
             >
               <div>
-                <p className="text-sm font-medium text-[#3E3E75]">
+                <p className="text-xs font-bold">
                   Active Sessions
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                   Manage devices where you're signed in
                 </p>
               </div>
 
-              <ChevronRight size={18} className="text-gray-400" />
+              <ChevronRight size={18} className="opacity-40" />
             </button>
 
             <button
               type="button"
-              className="flex w-full items-center justify-between py-4 text-left transition hover:bg-[#F8FAFA]"
+              className="flex w-full items-center justify-between py-4 text-left transition hover:opacity-80 cursor-pointer"
             >
               <div>
-                <p className="text-sm font-medium text-[#3E3E75]">
-                  Privacy
+                <p className="text-xs font-bold">
+                  Privacy Policy
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                   Learn how your information is handled
                 </p>
               </div>
 
-              <ChevronRight size={18} className="text-gray-400" />
-            </button>
-
-            <button
-              type="button"
-              className="flex w-full items-center justify-between py-4 text-left transition hover:bg-[#F8FAFA]"
-            >
-              <div>
-                <p className="text-sm font-medium text-[#3E3E75]">
-                  Sign out of all devices
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  End all active sessions
-                </p>
-              </div>
-
-              <ChevronRight size={18} className="text-gray-400" />
+              <ChevronRight size={18} className="opacity-40" />
             </button>
           </div>
         </section>
 
-        {/* ================= DANGER ZONE ================= */}
-        <section className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
-              <Trash2 size={20} className="text-red-500" />
+        {/* DANGER ZONE */}
+        <section className={`rounded-3xl border p-6 backdrop-blur-2xl space-y-4 transition-all duration-300 ${
+          isDarkMode
+            ? "border-red-500/30 bg-red-500/10"
+            : "border-red-200/80 bg-red-50/30 shadow-[0_4px_25px_rgba(239,68,68,0.02)]"
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+              isDarkMode ? "bg-red-500/20 text-red-400" : "bg-red-100/80 text-red-500"
+            }`}>
+              <Trash2 size={20} />
             </div>
 
             <div>
-              <h2 className="font-semibold text-red-600">Danger Zone</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className={`font-black tracking-tight ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
+                Danger Zone
+              </h2>
+              <p className={`text-xs font-semibold ${isDarkMode ? "text-red-300/70" : "text-red-600/60"}`}>
                 These actions cannot be easily undone
               </p>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             {studySetsDeletedMessage && (
-              <div className="flex items-center gap-2 rounded-xl border border-[#1D9E75]/30 bg-[#1D9E75]/10 px-4 py-3 text-sm font-medium text-[#1D9E75]">
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
                 <CheckCircle2 size={16} />
                 {studySetsDeletedMessage}
               </div>
@@ -379,40 +383,53 @@ const SettingsPage = ({
             <button
               type="button"
               onClick={() => openConfirm("all-study-sets")}
-              className="flex w-full items-center justify-between rounded-xl border border-red-100 px-4 py-3 text-left transition hover:bg-red-50"
+              className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition cursor-pointer ${
+                isDarkMode
+                  ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
+                  : "border-red-200/60 bg-white/80 hover:bg-red-50/80 shadow-xs"
+              }`}
             >
               <div>
-                <p className="text-sm font-medium text-red-600">
+                <p className={`text-xs font-bold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                   Delete all study sets
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-red-300/70" : "text-gray-500"}`}>
                   Permanently remove all your study sets
                 </p>
               </div>
 
-              <Trash2 size={17} className="text-red-400" />
+              <Trash2 size={17} className={isDarkMode ? "text-red-400" : "text-red-500"} />
             </button>
 
             <button
               type="button"
               onClick={() => openConfirm("account")}
-              className="flex w-full items-center justify-between rounded-xl border border-red-100 px-4 py-3 text-left transition hover:bg-red-50"
+              className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition cursor-pointer ${
+                isDarkMode
+                  ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
+                  : "border-red-200/60 bg-white/80 hover:bg-red-50/80 shadow-xs"
+              }`}
             >
               <div>
-                <p className="text-sm font-medium text-red-600">
+                <p className={`text-xs font-bold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                   Delete account
                 </p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-red-300/70" : "text-gray-500"}`}>
                   Permanently delete your account and data
                 </p>
               </div>
 
-              <Trash2 size={17} className="text-red-400" />
+              <Trash2 size={17} className={isDarkMode ? "text-red-400" : "text-red-500"} />
             </button>
 
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+              onClick={() => supabase.auth.signOut()}
+              className={`flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition cursor-pointer ${
+                isDarkMode
+                  ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  : "border-red-200 bg-red-50/70 text-red-600 hover:bg-red-100/70 shadow-xs"
+              }`}
             >
               <LogOut size={17} />
               Log Out
@@ -438,3 +455,4 @@ const SettingsPage = ({
 };
 
 export default SettingsPage;
+

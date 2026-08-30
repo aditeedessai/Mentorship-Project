@@ -1,51 +1,52 @@
-import { LayoutGrid, Copy } from 'lucide-react'
-
-const statusClasses = {
-  attempted: 'bg-[#087C7B] text-white',
-  skipped: 'bg-white text-[#D99A35] border-2 border-[#D99A35]',
-  current: 'bg-white text-[#542078] border-2 border-[#542078] ring-2 ring-[#542078]/25 ring-offset-1',
-  unvisited: 'bg-[#E9E9E9] text-[#888888]',
-}
+import { LayoutGrid } from 'lucide-react'
+import { useTheme } from '../../context/ThemeContext'
 
 export default function QuestionNavigator({ questionCount, currentQuestion, questionStatuses, onSelectQuestion }) {
-  const getStatus = (num) => {
-    if (num === currentQuestion) return 'current'
-    return questionStatuses[num] || 'unvisited'
+  const { isDarkMode } = useTheme()
+
+  const getStatusClass = (num) => {
+    const status = questionStatuses[num] || 'unvisited'
+    const isCurrent = num === currentQuestion
+
+    if (isCurrent && status === 'attempted') {
+      return "border-2 border-[#8064C7] dark:border-[#A78BFA] bg-emerald-500 text-white font-black shadow-md ring-2 ring-emerald-500/30"
+    }
+    if (isCurrent) {
+      return "border-2 border-[#8064C7] bg-[#8064C7]/20 text-[#8064C7] dark:text-[#A78BFA] font-black"
+    }
+    if (status === 'attempted') {
+      return "bg-emerald-500 text-white font-bold shadow-sm"
+    }
+    if (status === 'skipped') {
+      return "border-2 border-amber-400 text-amber-400 bg-amber-400/10 font-bold"
+    }
+    return isDarkMode ? "bg-white/5 text-white/40 border border-white/5" : "bg-gray-100 text-gray-400"
   }
 
   return (
-    <aside className="w-[230px] min-w-[230px] bg-white border-r border-[#E5E5E5] flex flex-col overflow-y-auto flex-shrink-0">
+    <aside className={`w-60 min-w-[240px] border-r backdrop-blur-2xl transition-colors duration-300 flex flex-col overflow-y-auto flex-shrink-0 ${
+      isDarkMode ? "border-white/10 bg-[#17131F]/90 text-white" : "border-gray-200/80 bg-white/80 text-[#292530]"
+    }`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
-          <LayoutGrid className="w-[15px] h-[15px] text-[#555]" strokeWidth={2} />
-          <span className="text-[13px] font-semibold text-[#333]">Question Navigator</span>
+          <LayoutGrid className="w-4 h-4 text-[#8064C7]" strokeWidth={2} />
+          <span className="text-xs font-black tracking-tight">Question Navigator</span>
         </div>
-        <button
-          type="button"
-          className="p-1 rounded hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
-          aria-label="Collapse navigator"
-        >
-          <Copy className="w-[14px] h-[14px] text-[#999]" strokeWidth={1.8} />
-        </button>
       </div>
 
       {/* Question Grid */}
       <div className="px-5 pt-2">
-        <div className="grid grid-cols-4 gap-[9px]">
+        <div className="grid grid-cols-4 gap-2.5">
           {Array.from({ length: questionCount }, (_, i) => {
             const num = i + 1
-            const status = getStatus(num)
             return (
               <button
                 key={num}
                 type="button"
                 onClick={() => onSelectQuestion(num)}
-                className={`aspect-square rounded-[8px] text-[13px] font-semibold flex items-center justify-center cursor-pointer transition-all duration-150 hover:opacity-85 ${
-                  status === 'attempted' || status === 'unvisited' ? '' : ''
-                } ${statusClasses[status]}`}
-                aria-label={`Question ${num}, ${status}`}
-                aria-current={num === currentQuestion ? 'true' : undefined}
+                className={`aspect-square rounded-xl text-xs flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105 ${getStatusClass(num)}`}
+                aria-label={`Question ${num}`}
               >
                 {num}
               </button>
@@ -55,27 +56,30 @@ export default function QuestionNavigator({ questionCount, currentQuestion, ques
       </div>
 
       {/* Legend */}
-      <div className="px-5 pt-7 pb-4">
-        <div className="text-[10px] font-bold text-[#999] tracking-[0.1em] uppercase mb-3">Legend</div>
-        <div className="space-y-[10px]">
+      <div className="px-5 pt-7 pb-4 mt-auto">
+        <div className={`text-[10px] font-mono font-bold tracking-wider uppercase mb-3 ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
+          Legend
+        </div>
+        <div className="space-y-2.5 text-xs font-bold">
           <div className="flex items-center gap-2.5">
-            <div className="w-[14px] h-[14px] rounded-[3px] bg-[#087C7B]" />
-            <span className="text-[12px] text-[#555]">Attempted</span>
+            <div className="w-3.5 h-3.5 rounded-md bg-emerald-500" />
+            <span className={isDarkMode ? "text-white/70" : "text-gray-600"}>Attempted</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <div className="w-[14px] h-[14px] rounded-[3px] bg-white border-2 border-[#D99A35]" />
-            <span className="text-[12px] text-[#555]">Skipped</span>
+            <div className="w-3.5 h-3.5 rounded-md border-2 border-amber-400 bg-amber-400/10" />
+            <span className={isDarkMode ? "text-white/70" : "text-gray-600"}>Skipped</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <div className="w-[14px] h-[14px] rounded-[3px] bg-white border-2 border-[#542078]" />
-            <span className="text-[12px] text-[#555]">Current</span>
+            <div className="w-3.5 h-3.5 rounded-md border-2 border-[#8064C7] bg-[#8064C7]/20" />
+            <span className={isDarkMode ? "text-white/70" : "text-gray-600"}>Current</span>
           </div>
           <div className="flex items-center gap-2.5">
-            <div className="w-[14px] h-[14px] rounded-[3px] bg-[#E9E9E9]" />
-            <span className="text-[12px] text-[#555]">Unvisited</span>
+            <div className={`w-3.5 h-3.5 rounded-md ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
+            <span className={isDarkMode ? "text-white/70" : "text-gray-600"}>Unvisited</span>
           </div>
         </div>
       </div>
     </aside>
   )
 }
+

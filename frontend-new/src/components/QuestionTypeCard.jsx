@@ -1,6 +1,8 @@
 import { Check } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 
 export default function QuestionTypeCard({ type, isSelected, isCompleted, onSelect }) {
+  const { isDarkMode } = useTheme()
   const { title, description, badge, icon: Icon } = type
 
   const handleClick = () => {
@@ -17,48 +19,64 @@ export default function QuestionTypeCard({ type, isSelected, isCompleted, onSele
       aria-pressed={isSelected && !isCompleted}
       aria-disabled={isCompleted}
       aria-label={`${title} question type${isCompleted ? ' (Completed)' : ''}`}
-      className={`relative flex-1 min-w-[205px] max-w-[280px] h-[235px] rounded-[9px] border-2 text-left p-5 flex flex-col transition-all duration-[180ms] ease-in-out ${
+      className={`relative flex-1 min-w-[205px] max-w-[280px] h-[235px] rounded-2xl border-2 text-left p-5 flex flex-col transition-all duration-300 backdrop-blur-xl ${
         isCompleted
-          ? 'border-emerald-300 bg-emerald-50/50 cursor-not-allowed opacity-90'
+          ? isDarkMode
+            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 cursor-not-allowed opacity-90'
+            : 'border-emerald-300 bg-emerald-50/70 text-emerald-800 cursor-not-allowed opacity-90'
           : isSelected
-          ? 'border-[#68CECC] bg-white cursor-pointer hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] shadow-[0_2px_8px_rgba(104,206,204,0.12)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#68CECC]'
-          : 'border-[#A5DDDC] bg-white cursor-pointer hover:-translate-y-[2px] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:border-[#7DD4D2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#68CECC]'
+          ? isDarkMode
+            ? 'border-[#8064C7] bg-[#8064C7]/20 text-white shadow-[0_15px_35px_rgba(128,100,199,0.25)]'
+            : 'border-[#8064C7] bg-white text-[#292530] shadow-[0_15px_35px_rgba(128,100,199,0.15)]'
+          : isDarkMode
+          ? 'border-white/8 bg-[#14101D]/75 text-[#F3F0F8] hover:border-[#8064C7]/40 hover:bg-white/10'
+          : 'border-black/5 bg-[#F8F8FC]/95 text-[#231B33] hover:border-[#8064C7]/30 hover:bg-white'
       }`}
     >
       {/* Completed indicator badge */}
       {isCompleted ? (
-        <div className="absolute top-[13px] right-[13px] px-2 py-0.5 rounded-full bg-emerald-100 border border-emerald-300 flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
-          <Check className="w-[12px] h-[12px] text-emerald-600" strokeWidth={3} />
+        <div className="absolute top-[13px] right-[13px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center gap-1 text-[11px] font-bold text-emerald-400">
+          <Check className="w-[12px] h-[12px]" strokeWidth={3} />
           Completed
         </div>
       ) : (
-        /* Selected check indicator (when not completed) */
+        /* Selected check indicator */
         isSelected && (
-          <div className="absolute top-[13px] right-[13px] w-[20px] h-[20px] rounded-full bg-[#65CECC] flex items-center justify-center">
-            <Check className="w-[12px] h-[12px] text-white" strokeWidth={3} />
+          <div className="absolute top-[13px] right-[13px] w-5 h-5 rounded-full bg-[#8064C7] flex items-center justify-center shadow-md">
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
           </div>
         )
       )}
 
       {/* Icon container */}
-      <div className={`w-9 h-9 rounded-[7px] flex items-center justify-center mb-[14px] ${isCompleted ? 'bg-emerald-100' : 'bg-[#F1F2F3]'}`}>
-        <Icon className={`w-[18px] h-[18px] ${isCompleted ? 'text-emerald-700' : 'text-[#4A4A4A]'}`} strokeWidth={1.8} />
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3.5 ${
+        isCompleted
+          ? 'bg-emerald-500/20 text-emerald-400'
+          : isDarkMode
+          ? 'bg-white/10 text-[#A78BFA]'
+          : 'bg-[#8064C7]/15 text-[#8064C7]'
+      }`}>
+        <Icon className="w-5 h-5" strokeWidth={2} />
       </div>
 
       {/* Title */}
-      <h3 className={`text-[15px] font-semibold mb-[8px] ${isCompleted ? 'text-emerald-950' : 'text-[#222222]'}`}>{title}</h3>
+      <h3 className="text-base font-black mb-1.5 tracking-tight">{title}</h3>
 
       {/* Description */}
-      <p className={`text-[11.5px] leading-[1.5] flex-1 ${isCompleted ? 'text-emerald-800' : 'text-[#555555]'}`}>{description}</p>
+      <p className={`text-xs leading-relaxed flex-1 ${isDarkMode ? 'text-white/60' : 'text-[#706A78]'}`}>{description}</p>
 
       {/* Badge */}
-      <div className="mt-auto pt-[8px]">
+      <div className="mt-auto pt-2">
         {isCompleted ? (
-          <span className="inline-block text-[10px] font-semibold text-emerald-800 bg-emerald-100 border border-emerald-300 rounded-[4px] px-[7px] py-[3px]">
+          <span className="inline-block text-[10px] font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-2.5 py-1">
             Section Done
           </span>
         ) : (
-          <span className="inline-block text-[10px] font-medium text-[#3D8584] bg-[#EFFBFA] border border-[#C5E8E7] rounded-[4px] px-[7px] py-[3px]">
+          <span className={`inline-block text-[10px] font-bold rounded-lg px-2.5 py-1 ${
+            isDarkMode
+              ? 'text-[#A78BFA] bg-[#8064C7]/20 border border-[#8064C7]/30'
+              : 'text-[#8064C7] bg-[#8064C7]/10 border border-[#8064C7]/20'
+          }`}>
             {badge}
           </span>
         )}
@@ -66,3 +84,4 @@ export default function QuestionTypeCard({ type, isSelected, isCompleted, onSele
     </button>
   )
 }
+

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import { fetchResults, fetchPerformance, fetchEvaluations, finishAttempt } from '../services/api';
 import {
   CheckCircle2,
@@ -24,6 +25,7 @@ const normalizeTypeName = (typeStr) => {
 };
 
 export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) {
+  const { isDarkMode } = useTheme();
   const { attemptId: paramAttemptId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,7 +40,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
   const [error, setError] = useState(null);
   const [activeSection, setActiveSection] = useState(null);
 
-  // Ref to protect finishAttempt from being called multiple times
   const finishedAttemptRef = useRef(null);
 
   const handleGoDashboard = () => {
@@ -66,7 +67,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     setActiveSection((prev) => (prev === sectionName ? null : sectionName));
   };
 
-  // Fetch results & performance data on mount
   useEffect(() => {
     if (!passedAttemptId) return;
 
@@ -93,7 +93,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
         setEvaluations(rawList);
 
-        // Auto-set active section to recently submitted section or first completed section
         const submittedType = location.state?.questionType
           ? normalizeTypeName(location.state.questionType)
           : null;
@@ -116,7 +115,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     loadAllResults();
   }, [passedAttemptId, location.state?.questionType]);
 
-  // Determine overall completion status from backend
   const isAttemptComplete = useMemo(() => {
     if (performanceData?.is_attempt_complete !== undefined) {
       return Boolean(performanceData.is_attempt_complete);
@@ -130,7 +128,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return false;
   }, [performanceData, resultsData]);
 
-  // Call finishAttempt ONCE only when isAttemptComplete is true
   useEffect(() => {
     if (
       isAttemptComplete &&
@@ -144,7 +141,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     }
   }, [isAttemptComplete, passedAttemptId]);
 
-  // Overall Cumulative Performance directly from backend
   const cumulativeData = useMemo(() => {
     const perf = performanceData || resultsData;
     return perf?.cumulative || null;
@@ -175,7 +171,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return cumulativeData?.overall_remark || null;
   }, [cumulativeData]);
 
-  // Section list directly from backend performance/results response
   const sectionsList = useMemo(() => {
     const perf = performanceData || resultsData;
     const rawSections = perf?.sections || [];
@@ -200,7 +195,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       });
     }
 
-    // Defensive fallback ONLY if backend sections list is absent but evaluations exist
     if (evaluations && evaluations.length > 0) {
       const grouped = {};
       evaluations.forEach((item) => {
@@ -229,7 +223,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return [];
   }, [performanceData, resultsData, evaluations]);
 
-  // Questions for active drawer filter
   const activeQuestions = useMemo(() => {
     if (!activeSection || !evaluations || evaluations.length === 0) return [];
 
@@ -244,10 +237,8 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       const awardedMarks = Number(item.marks_awarded ?? item.score ?? 0);
       const maxMarks = Number(item.max_marks ?? 1);
 
-      // Use is_correct directly from backend evaluation schema if provided as boolean
       const isCorrect = typeof item.is_correct === 'boolean' ? item.is_correct : null;
 
-      // Backend feedback directly, or neutral fallback "No feedback available."
       const feedbackText = item.feedback && String(item.feedback).trim() !== ''
         ? item.feedback
         : 'No feedback available.';
@@ -261,7 +252,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
         feedback: feedbackText,
         awardedMarks: Math.round(awardedMarks * 100) / 100,
         maxMarks: Math.round(maxMarks * 100) / 100,
-        isCorrect, // true, false, or null
+        isCorrect,
         isSkipped,
       };
     });
@@ -301,7 +292,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     }).length;
   }, [evaluations]);
 
-  // Derived Strengths directly from backend cumulative.strongest_section and backend section remarks
   const strengths = useMemo(() => {
     const list = [];
     const perf = performanceData || resultsData;
@@ -330,7 +320,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     return list;
   }, [performanceData, resultsData, sectionsList, overallRemark]);
 
-  // Derived Areas for Improvement directly from backend cumulative.weakest_section and remaining_sections
   const improvements = useMemo(() => {
     const list = [];
     const perf = performanceData || resultsData;
@@ -364,7 +353,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto mt-20 p-12 text-center text-gray-500 font-medium animate-pulse">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#98E8DE]/30 text-[#4E1F6E] mb-4">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#8064C7]/20 text-[#8064C7] mb-4">
           <Sparkles className="animate-spin" size={24} />
         </div>
         Evaluating performance metrics...
@@ -374,14 +363,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
   if (error && !performanceData && evaluations.length === 0) {
     return (
-      <div className="max-w-md mx-auto mt-20 p-6 bg-red-50 text-red-700 rounded-2xl border border-red-200 text-center">
-        <AlertCircle className="mx-auto mb-2 text-red-500" size={28} />
-        <p className="font-semibold text-base">Failed to load evaluation</p>
-        <p className="text-xs text-red-600 mt-1">{error}</p>
+      <div className="max-w-md mx-auto mt-20 p-6 bg-red-500/10 text-red-400 rounded-3xl border border-red-500/30 text-center">
+        <AlertCircle className="mx-auto mb-2 text-red-400" size={28} />
+        <p className="font-black text-base">Failed to load evaluation</p>
+        <p className="text-xs text-red-300 mt-1">{error}</p>
         <button
           type="button"
           onClick={handleGoDashboard}
-          className="mt-4 px-5 py-2 bg-red-600 text-white rounded-xl text-xs font-semibold hover:bg-red-700 transition cursor-pointer"
+          className="mt-4 px-5 py-2.5 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition shadow-md"
         >
           Back to Dashboard
         </button>
@@ -395,8 +384,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
     <div className="max-w-6xl mx-auto space-y-6 pb-12 transition-all duration-300">
       {/* 1. Header Banner */}
       <div className="space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#98E8DE] bg-[#98E8DE]/20 px-3.5 py-1 text-xs font-semibold text-[#136a6a]">
-          <span className="flex h-2 w-2 rounded-full bg-[#45A9A9] animate-pulse" />
+        <div className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-bold ${
+          isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/20 text-[#A78BFA]" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+        }`}>
+          <span className="flex h-2 w-2 rounded-full bg-[#8064C7] animate-pulse" />
           <span>
             {isAttemptComplete
               ? 'Evaluation Completed • Final Assessment'
@@ -405,14 +396,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]/40 text-[#4E1F6E]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
             <Sparkles size={22} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[#3E3E75]">
+            <h1 className="text-3xl font-black tracking-tight">
               {isAttemptComplete ? 'Overall Performance' : 'Section Evaluation Snapshot'}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className={`text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
               {isAttemptComplete
                 ? 'Detailed breakdown of questions answered right vs wrong across all completed sections.'
                 : 'Performance snapshot for your recent section submission and cumulative quiz progress.'}
@@ -422,23 +413,23 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       </div>
 
       {/* 2. Hero Overall Performance Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#4E1F6E] p-8 text-white shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-8 text-white shadow-xl">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#98E8DE]/20 px-3 py-1 text-xs font-semibold text-[#98E8DE]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
                 <CheckCircle2 size={14} />
                 {isAttemptComplete ? 'Attempt Completed' : `In-Progress Attempt (${completedSectionsCount}/4 Sections)`}
               </span>
               {overallRemark && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#98E8DE]/30 px-3 py-1 text-xs font-bold text-white border border-[#98E8DE]/40">
-                  <Sparkles size={14} className="text-[#98E8DE]" />
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/30 px-3 py-1 text-xs font-bold text-white border border-white/40">
+                  <Sparkles size={14} />
                   Overall Remark: {overallRemark}
                 </span>
               )}
             </div>
 
-            <h1 className="text-3xl font-bold mt-3">
+            <h1 className="text-3xl font-black mt-3 tracking-tight">
               {isAttemptComplete ? 'Overall Performance' : 'Cumulative Performance'}
             </h1>
             <p className="text-purple-100 text-sm mt-1">
@@ -448,23 +439,23 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/20">
+          <div className="flex flex-wrap items-center gap-4 bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20">
             <div className="text-center px-3">
-              <div className="text-3xl font-black text-[#98E8DE]">{overallPercentage}%</div>
-              <div className="text-xs text-purple-200 mt-0.5 font-medium">Overall Percentage</div>
+              <div className="text-3xl font-black text-white">{overallPercentage}%</div>
+              <div className="text-xs text-purple-200 mt-0.5 font-bold">Overall Percentage</div>
             </div>
 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
             <div className="text-center px-3">
-              <div className="text-3xl font-bold text-white">{totalCorrect}</div>
-              <div className="text-xs text-[#98E8DE] mt-0.5 font-bold uppercase tracking-wider">Correct</div>
+              <div className="text-3xl font-black text-emerald-300">{totalCorrect}</div>
+              <div className="text-xs text-emerald-200 mt-0.5 font-bold uppercase tracking-wider">Correct</div>
             </div>
 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
             <div className="text-center px-3">
-              <div className="text-3xl font-bold text-rose-300">{totalWrong}</div>
+              <div className="text-3xl font-black text-rose-300">{totalWrong}</div>
               <div className="text-xs text-rose-200 mt-0.5 font-bold uppercase tracking-wider">Wrong</div>
             </div>
 
@@ -473,7 +464,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                 <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
                 <div className="text-center px-3">
-                  <div className="text-3xl font-bold text-amber-300">{totalSkipped}</div>
+                  <div className="text-3xl font-black text-amber-300">{totalSkipped}</div>
                   <div className="text-xs text-amber-200 mt-0.5 font-bold uppercase tracking-wider">Skipped</div>
                 </div>
               </>
@@ -482,10 +473,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
             <div className="h-8 w-px bg-white/20 hidden sm:block" />
 
             <div className="text-center px-3">
-              <div className="text-3xl font-bold">
+              <div className="text-3xl font-black">
                 {totalScore} <span className="text-sm font-normal text-purple-200">/ {maxScore}</span>
               </div>
-              <div className="text-xs text-purple-200 mt-0.5 font-medium">Total Marks</div>
+              <div className="text-xs text-purple-200 mt-0.5 font-bold">Total Marks</div>
             </div>
           </div>
         </div>
@@ -493,10 +484,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
       {/* 3. Section-Wise Breakdown */}
       {sectionsList.length > 0 && (
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 space-y-4">
+        <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-4 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#3E3E75]">Section-Wise Breakdown</h2>
-            <span className="text-xs text-gray-400 font-medium">
+            <h2 className="text-lg font-black tracking-tight">Section-Wise Breakdown</h2>
+            <span className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-400"}`}>
               {activeSection ? 'Click section card again to collapse' : 'Click a section card below to view its question breakdown'}
             </span>
           </div>
@@ -511,39 +506,43 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                   onClick={() => handleToggleSection(sec.name)}
                   className={`group rounded-2xl p-5 cursor-pointer transition-all duration-300 border ${
                     isSelected
-                      ? 'border-[#45A9A9] bg-[#98E8DE]/10 shadow-md ring-2 ring-[#98E8DE]/50'
-                      : 'border-[#98E8DE]/60 bg-[#F8FAFA] hover:-translate-y-1 hover:border-[#45A9A9] hover:bg-white hover:shadow-md'
+                      ? 'border-[#8064C7] bg-[#8064C7]/15 shadow-md ring-2 ring-[#8064C7]/50'
+                      : isDarkMode
+                      ? 'border-white/5 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                      : 'border-gray-200/80 bg-white hover:border-[#8064C7] hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#4E1F6E]">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#8064C7] dark:text-[#A78BFA]">
                       {sec.name}
                     </span>
-                    <span className="rounded-full bg-[#98E8DE]/40 border border-[#98E8DE] px-2.5 py-0.5 text-[11px] font-bold text-[#136a6a]">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                      isDarkMode ? "bg-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 text-[#8064C7]"
+                    }`}>
                       {sec.percentage}%
                     </span>
                   </div>
 
-                  <div className="text-2xl font-bold text-[#3E3E75] mt-3">
-                    {sec.marksObtained} <span className="text-xs font-normal text-gray-500">/ {sec.maximumMarks} Marks</span>
+                  <div className="text-2xl font-black mt-3 tracking-tight">
+                    {sec.marksObtained} <span className={`text-xs font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>/ {sec.maximumMarks} Marks</span>
                   </div>
 
                   {sec.remark && (
-                    <div className="mt-1 text-xs font-semibold text-[#136a6a]">
-                      Remark: <span className="font-bold">{sec.remark}</span>
+                    <div className="mt-1 text-xs font-bold text-[#8064C7] dark:text-[#A78BFA]">
+                      Remark: <span>{sec.remark}</span>
                     </div>
                   )}
 
                   <div className="mt-3">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                    <div className={`h-1.5 w-full overflow-hidden rounded-full ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
                       <div
-                        className="h-full rounded-full bg-[#45A9A9] transition-all duration-500"
+                        className="h-full rounded-full bg-[#8064C7] transition-all duration-500"
                         style={{ width: `${Math.min(Math.max(sec.percentage, 0), 100)}%` }}
                       />
                     </div>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between text-[11px] font-semibold text-[#136a6a]">
+                  <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-[#8064C7] dark:text-[#A78BFA]">
                     <span>{isSelected ? 'Viewing Questions' : 'Switch to this Section'}</span>
                     {isSelected ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
@@ -554,30 +553,32 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
           {/* 4. Active Section Review Drawer */}
           {activeSection && activeQuestions.length > 0 && (
-            <div className="mt-6 rounded-2xl bg-[#F8FAFA] border border-[#98E8DE]/60 p-6 space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+            <div className={`mt-6 rounded-2xl border p-6 space-y-4 backdrop-blur-xl animate-fade-in ${
+              isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200 bg-gray-50/50"
+            }`}>
+              <div className="flex items-center justify-between pb-3 border-b border-inherit">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#45A9A9]">Section Review</span>
-                  <h3 className="text-lg font-bold text-[#3E3E75]">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8064C7] dark:text-[#A78BFA]">Section Review</span>
+                  <h3 className="text-lg font-black tracking-tight">
                     {activeSection} Questions
                   </h3>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-[#136a6a] bg-[#98E8DE]/40 px-2.5 py-1 rounded-lg">
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2.5 py-1 rounded-lg border border-emerald-500/30">
                     {activeCorrect} Right
                   </span>
-                  <span className="text-xs font-bold text-rose-700 bg-rose-100 px-2.5 py-1 rounded-lg">
+                  <span className="text-xs font-bold text-rose-400 bg-rose-500/20 px-2.5 py-1 rounded-lg border border-rose-500/30">
                     {activeWrong} Wrong
                   </span>
                   {activeSkipped > 0 && (
-                    <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-lg">
+                    <span className="text-xs font-bold text-amber-400 bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30">
                       {activeSkipped} Skipped
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={() => setActiveSection(null)}
-                    className="text-xs font-semibold text-gray-500 hover:text-[#4E1F6E] transition ml-2 cursor-pointer"
+                    className="text-xs font-bold opacity-60 hover:opacity-100 transition ml-2 cursor-pointer"
                   >
                     ✕ Close
                   </button>
@@ -588,29 +589,29 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                 {activeQuestions.map((q) => (
                   <div
                     key={q.id}
-                    className={`rounded-xl border p-5 space-y-3 bg-white ${
+                    className={`rounded-2xl border p-5 space-y-3 backdrop-blur-xl ${
                       q.isSkipped
-                        ? 'border-amber-200 bg-amber-50/10'
+                        ? 'border-amber-500/30 bg-amber-500/10'
                         : q.isCorrect === true
-                        ? 'border-gray-100'
+                        ? isDarkMode ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-white'
                         : q.isCorrect === false
-                        ? 'border-rose-200 bg-rose-50/10'
-                        : 'border-gray-200 bg-gray-50/10'
+                        ? 'border-rose-500/30 bg-rose-500/10'
+                        : isDarkMode ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#4E1F6E]">
+                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8064C7] dark:text-[#A78BFA]">
                         Question {q.id}
                       </span>
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
                           q.isSkipped
-                            ? 'bg-amber-100 text-amber-800'
+                            ? 'bg-amber-500/20 border-amber-500/30 text-amber-400'
                             : q.isCorrect === true
-                            ? 'bg-[#98E8DE]/50 text-[#136a6a]'
+                            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
                             : q.isCorrect === false
-                            ? 'bg-rose-100 text-rose-700'
-                            : 'bg-gray-100 text-gray-700'
+                            ? 'bg-rose-500/20 border-rose-500/30 text-rose-400'
+                            : 'bg-white/10 border-white/20 text-white/70'
                         }`}
                       >
                         {q.isSkipped ? (
@@ -630,42 +631,44 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                       </span>
                     </div>
 
-                    <p className="text-sm font-semibold text-[#3E3E75]">
+                    <p className="text-sm font-bold tracking-tight">
                       {q.prompt}
                     </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
-                      <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
-                        <span className="font-semibold text-gray-400 uppercase text-[10px] block mb-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs font-medium">
+                      <div className={`rounded-xl border p-3 ${isDarkMode ? "border-white/5 bg-white/5" : "border-gray-100 bg-gray-50"}`}>
+                        <span className="font-bold opacity-40 uppercase text-[10px] block mb-1">
                           Your Submitted Answer
                         </span>
                         <span
                           className={
                             q.isSkipped
-                              ? 'text-amber-800 font-semibold italic'
+                              ? 'text-amber-400 font-bold italic'
                               : q.isCorrect === true
-                              ? 'text-[#3E3E75] font-medium'
+                              ? 'font-bold'
                               : q.isCorrect === false
-                              ? 'text-rose-600 font-semibold'
-                              : 'text-[#3E3E75] font-medium'
+                              ? 'text-rose-400 font-bold'
+                              : 'font-bold'
                           }
                         >
                           {q.userAnswer}
                         </span>
                       </div>
 
-                      <div className="rounded-lg bg-[#98E8DE]/15 border border-[#98E8DE]/40 p-3">
-                        <span className="font-semibold text-[#136a6a] uppercase text-[10px] block mb-1">
+                      <div className={`rounded-xl border p-3 ${isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15" : "border-[#8064C7]/20 bg-purple-50"}`}>
+                        <span className="font-bold text-[#8064C7] dark:text-[#A78BFA] uppercase text-[10px] block mb-1">
                           Correct / Expected Solution
                         </span>
-                        <span className="text-[#3E3E75] font-medium">
+                        <span className="font-bold">
                           {q.correctAnswer}
                         </span>
                       </div>
                     </div>
 
-                    <div className="rounded-lg border-l-4 border-[#4E1F6E] bg-[#98E8DE]/10 p-3 text-xs text-[#3E3E75]">
-                      <span className="font-bold text-[#4E1F6E]">Explanation & Feedback: </span>
+                    <div className={`rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs ${
+                      isDarkMode ? "bg-white/5" : "bg-purple-50/50"
+                    }`}>
+                      <span className="font-bold text-[#8064C7] dark:text-[#A78BFA]">Explanation & Feedback: </span>
                       {q.feedback}
                     </div>
                   </div>
@@ -678,18 +681,22 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
       {/* 5. Key Strengths & Areas for Improvement */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 space-y-3">
-          <div className="flex items-center gap-2 text-[#136a6a]">
+        <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-3 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}>
+          <div className="flex items-center gap-2 text-emerald-400">
             <TrendingUp size={18} />
-            <h3 className="font-bold text-sm text-[#3E3E75]">Key Strengths</h3>
+            <h3 className="font-black text-sm tracking-tight">Key Strengths</h3>
           </div>
           <ul className="space-y-2">
             {strengths.map((item, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-xs text-[#3E3E75] font-medium leading-relaxed"
+                className="flex items-start gap-2.5 text-xs font-semibold leading-relaxed"
               >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#98E8DE] text-[#136a6a] font-bold text-[9px]">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[9px]">
                   ✓
                 </span>
                 <span>{item}</span>
@@ -698,18 +705,22 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
           </ul>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 space-y-3">
-          <div className="flex items-center gap-2 text-[#4E1F6E]">
+        <div className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 space-y-3 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}>
+          <div className="flex items-center gap-2 text-[#8064C7] dark:text-[#A78BFA]">
             <Target size={18} />
-            <h3 className="font-bold text-sm text-[#3E3E75]">Areas for Improvement</h3>
+            <h3 className="font-black text-sm tracking-tight">Areas for Improvement</h3>
           </div>
           <ul className="space-y-2">
             {improvements.map((item, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-xs text-[#3E3E75] font-medium leading-relaxed"
+                className="flex items-start gap-2.5 text-xs font-semibold leading-relaxed"
               >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold text-[9px]">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 font-bold text-[9px]">
                   !
                 </span>
                 <span>{item}</span>
@@ -720,13 +731,19 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       </div>
 
       {/* 6. Navigation Controls */}
-      <div className="rounded-2xl bg-white p-5 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className={`rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-300 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+        isDarkMode
+          ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+          : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+      }`}>
         {isAttemptComplete ? (
           <>
             <button
               type="button"
               onClick={handleRetakeQuiz}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-[#3E3E75] transition hover:bg-gray-50 cursor-pointer"
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border px-6 py-3 text-xs font-bold transition cursor-pointer ${
+                isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-gray-200 bg-white hover:bg-gray-50"
+              }`}
             >
               <RotateCcw size={16} /> Retake Quiz / Study Sets
             </button>
@@ -734,7 +751,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
             <button
               type="button"
               onClick={handleGoDashboard}
-              className="w-full sm:w-auto group inline-flex items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3E3E75] cursor-pointer"
+              className="w-full sm:w-auto group inline-flex items-center justify-center gap-2 rounded-xl bg-[#8064C7] hover:bg-[#8B6DD4] px-8 py-3 text-xs font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition cursor-pointer"
             >
               Return to Dashboard
               <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
@@ -745,7 +762,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
             <button
               type="button"
               onClick={handleGoDashboard}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-[#3E3E75] transition hover:bg-gray-50 cursor-pointer"
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border px-6 py-3 text-xs font-bold transition cursor-pointer ${
+                isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-gray-200 bg-white hover:bg-gray-50"
+              }`}
             >
               Return to Dashboard
             </button>
@@ -753,7 +772,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
             <button
               type="button"
               onClick={handleContinueQuiz}
-              className="w-full sm:w-auto group inline-flex items-center justify-center gap-2 rounded-xl bg-[#4E1F6E] px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3E3E75] cursor-pointer"
+              className="w-full sm:w-auto group inline-flex items-center justify-center gap-2 rounded-xl bg-[#8064C7] hover:bg-[#8B6DD4] px-8 py-3 text-xs font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition cursor-pointer"
             >
               Continue Quiz Session
               <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
@@ -763,4 +782,4 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
       </div>
     </div>
   );
-}
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
 import QuizHeader from '../components/quiz/QuizHeader'
 import QuestionNavigator from '../components/quiz/QuestionNavigator'
 import QuizCenter from '../components/quiz/QuizCenter'
@@ -10,6 +11,7 @@ import { submitAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 
 export default function MCQPage() {
+  const { isDarkMode } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -167,19 +169,23 @@ export default function MCQPage() {
   const currentQ = questions[currentQuestion - 1] || questions[0]
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden font-sans select-none">
+    <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none ${
+      isDarkMode ? "bg-[#0E0B15] text-white" : "bg-[#F6F3FC] text-[#292530]"
+    }`}>
       {/* Fullscreen gate — blocks quiz until fullscreen is confirmed */}
       {!isFullscreenReady && (
-        <div className="fixed inset-0 z-[200] bg-white flex items-center justify-center">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${
+          isDarkMode ? "bg-[#0E0B15]/90 text-white" : "bg-white/90 text-[#292530]"
+        }`}>
           <div className="text-center max-w-sm px-6">
-            <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-[#F0EAF5] flex items-center justify-center animate-pulse">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#542078" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-[#8064C7]/20 flex items-center justify-center animate-pulse text-[#8064C7]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" />
                 <path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-[#3E3E75] mb-2">Entering Secure Mode</h2>
-            <p className="text-[13px] text-[#888] leading-relaxed">
+            <h2 className="text-xl font-black mb-2 tracking-tight">Entering Secure Mode</h2>
+            <p className={`text-xs leading-relaxed ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
               This quiz requires fullscreen mode for a secure exam environment.
               Click anywhere or press any key to continue.
             </p>

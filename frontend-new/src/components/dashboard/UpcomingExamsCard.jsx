@@ -9,13 +9,11 @@ import {
   AlertCircle,
   Trash2,
 } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 import DeleteConfirmModal from "../DeleteConfirmModal";
 import { fetchExams, createExam, deleteExam, fetchStudySets } from "../../services/api";
 
-// Time the collapse/fade-out transition takes when an exam is deleted.
-// Kept in sync with the transition duration classes below.
 const COLLAPSE_DURATION_MS = 300;
-
 const EXAM_TYPE_OPTIONS = ["Exam", "Midterm", "Final", "Quiz", "Assignment"];
 
 const getSubjectIcon = (subject) => {
@@ -42,9 +40,6 @@ function formatExamDate(examDate) {
   });
 }
 
-// Local (not UTC) today as "YYYY-MM-DD", matching the format <input type="date">
-// uses - lets both the input's min and the past-date check use plain string
-// comparison instead of parsing dates back out.
 function getTodayIsoDate() {
   const now = new Date();
   const year = now.getFullYear();
@@ -54,6 +49,7 @@ function getTodayIsoDate() {
 }
 
 function UpcomingExamsCard({ onSeeAll }) {
+  const { isDarkMode } = useTheme();
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -134,9 +130,6 @@ function UpcomingExamsCard({ onSeeAll }) {
         studySetId || undefined
       );
 
-      // Insert at its sorted position (exam_date is an ISO date string, so
-      // string comparison sorts chronologically) rather than re-sorting
-      // the whole list - the fetched order is otherwise left untouched.
       setExams((prev) => {
         const next = [...prev];
         const insertAt = next.findIndex((e) => e.exam_date > created.exam_date);
@@ -192,16 +185,22 @@ function UpcomingExamsCard({ onSeeAll }) {
 
   return (
     <>
-      <div className="flex flex-col rounded-2xl bg-white p-6 shadow-sm">
+      <div
+        className={`flex flex-col rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[#3E3E75]">
+          <h2 className="text-xl font-black tracking-tight">
             Upcoming Exams
           </h2>
 
           <button
             type="button"
             onClick={openAddForm}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4E1F6E] text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-white shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
             aria-label="Add exam"
           >
             <Plus size={18} />
@@ -209,7 +208,7 @@ function UpcomingExamsCard({ onSeeAll }) {
         </div>
 
         {isAdding && (
-          <div className="mb-4 space-y-2">
+          <div className="mb-4 space-y-2.5">
             <input
               type="text"
               autoFocus
@@ -223,7 +222,11 @@ function UpcomingExamsCard({ onSeeAll }) {
               }}
               disabled={isAddSubmitting}
               placeholder="Exam subject (e.g. Calculus II)"
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#3E3E75] outline-none transition focus:border-[#4E1F6E] focus:ring-2 focus:ring-[#98E8DE]/40 disabled:opacity-60"
+              className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
+                isDarkMode
+                  ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
+                  : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
+              } disabled:opacity-60`}
             />
 
             <div className="flex gap-2">
@@ -231,7 +234,11 @@ function UpcomingExamsCard({ onSeeAll }) {
                 value={examType}
                 onChange={(e) => setExamType(e.target.value)}
                 disabled={isAddSubmitting}
-                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#3E3E75] outline-none transition focus:border-[#4E1F6E] focus:ring-2 focus:ring-[#98E8DE]/40 disabled:opacity-60"
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none transition ${
+                  isDarkMode
+                    ? "border-white/10 bg-[#17131F] text-white focus:border-[#8064C7]"
+                    : "border-gray-200 bg-white text-[#292530] focus:border-[#8064C7]"
+                } disabled:opacity-60`}
               >
                 {EXAM_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
@@ -249,7 +256,11 @@ function UpcomingExamsCard({ onSeeAll }) {
                   if (addError) setAddError("");
                 }}
                 disabled={isAddSubmitting}
-                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#3E3E75] outline-none transition focus:border-[#4E1F6E] focus:ring-2 focus:ring-[#98E8DE]/40 disabled:opacity-60"
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none transition ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7]"
+                    : "border-gray-200 bg-white text-[#292530] focus:border-[#8064C7]"
+                } disabled:opacity-60`}
               />
             </div>
 
@@ -257,7 +268,11 @@ function UpcomingExamsCard({ onSeeAll }) {
               value={studySetId}
               onChange={(e) => setStudySetId(e.target.value)}
               disabled={isAddSubmitting}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#3E3E75] outline-none transition focus:border-[#4E1F6E] focus:ring-2 focus:ring-[#98E8DE]/40 disabled:opacity-60"
+              className={`w-full rounded-xl border px-3.5 py-2 text-sm outline-none transition ${
+                isDarkMode
+                  ? "border-white/10 bg-[#17131F] text-white focus:border-[#8064C7]"
+                  : "border-gray-200 bg-white text-[#292530] focus:border-[#8064C7]"
+              } disabled:opacity-60`}
             >
               <option value="">No linked study set</option>
               {studySets.map((set) => (
@@ -272,7 +287,7 @@ function UpcomingExamsCard({ onSeeAll }) {
                 type="button"
                 onClick={confirmAddExam}
                 disabled={isAddSubmitting}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-[#4E1F6E] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#3E3E75] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isAddSubmitting ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -284,43 +299,43 @@ function UpcomingExamsCard({ onSeeAll }) {
                 type="button"
                 onClick={cancelAdd}
                 disabled={isAddSubmitting}
-                className="text-xs font-semibold text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="text-xs font-semibold opacity-60 hover:opacity-100"
               >
                 Cancel
               </button>
             </div>
 
             {addError && (
-              <p className="text-xs font-medium text-red-500">{addError}</p>
+              <p className="text-xs font-medium text-red-400">{addError}</p>
             )}
           </div>
         )}
 
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
+          <div className="flex items-center justify-center gap-2 py-6 text-sm opacity-50">
             <Loader2 size={16} className="animate-spin" />
             Loading exams...
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <div className="flex items-center gap-1.5 text-sm font-medium text-red-500">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-red-400">
               <AlertCircle size={16} />
               {loadError}
             </div>
             <button
               type="button"
               onClick={loadExams}
-              className="text-xs font-semibold text-[#4E1F6E] underline underline-offset-2 hover:text-[#3E3E75]"
+              className="text-xs font-bold text-[#8064C7] underline underline-offset-2 hover:text-[#8B6DD4]"
             >
               Retry
             </button>
           </div>
         ) : exams.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">
+          <p className={`py-6 text-center text-sm ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
             No upcoming exams.
           </p>
         ) : (
-          <div className="scrollbar-thin max-h-[224px] overflow-y-auto pr-1">
+          <div className="scrollbar-thin max-h-[224px] overflow-y-auto pr-1 space-y-3">
             {exams.map((exam) => {
               const Icon = getSubjectIcon(exam.subject);
               const isRemoving = removingId === exam.id;
@@ -331,25 +346,42 @@ function UpcomingExamsCard({ onSeeAll }) {
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     isRemoving
                       ? "max-h-0 opacity-0 mb-0"
-                      : "max-h-24 opacity-100 mb-4"
+                      : "max-h-24 opacity-100"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#98E8DE]">
-                      <Icon size={18} className="text-[#4E1F6E]" />
+                  <div
+                    className={`flex items-center gap-3.5 rounded-2xl border p-3.5 transition-all ${
+                      isDarkMode
+                        ? "border-white/5 bg-white/5 text-white"
+                        : "border-white/80 bg-white/70 text-[#292530]"
+                    }`}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                      <Icon size={20} />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-[#3E3E75]">
-                        {exam.subject}
-                      </p>
-                      <p className="truncate text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-sm font-bold">
+                          {exam.subject}
+                        </p>
+                        {exam.study_set_id && (
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                            isDarkMode
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            Set Linked
+                          </span>
+                        )}
+                      </div>
+                      <p className={`truncate text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                         {exam.exam_type} • {getDaysLabel(exam.exam_date)}
                       </p>
                     </div>
 
                     <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="text-xs font-semibold text-[#4E1F6E]">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatExamDate(exam.exam_date)}
                       </span>
                       <button
@@ -357,7 +389,7 @@ function UpcomingExamsCard({ onSeeAll }) {
                         onClick={() => openConfirm(exam)}
                         disabled={isRemoving}
                         aria-label="Delete exam"
-                        className="text-gray-300 transition-colors hover:text-red-500 disabled:cursor-default disabled:hover:text-gray-300"
+                        className="opacity-40 transition-opacity hover:opacity-100 hover:text-red-400 disabled:cursor-default"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -373,7 +405,11 @@ function UpcomingExamsCard({ onSeeAll }) {
           <button
             type="button"
             onClick={onSeeAll}
-            className="rounded-full border border-[#98E8DE] bg-[#98E8DE]/20 px-5 py-2 text-xs font-semibold text-[#4E1F6E] transition hover:bg-[#98E8DE]/40"
+            className={`rounded-full border px-5 py-2 text-xs font-bold transition-all ${
+              isDarkMode
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            }`}
           >
             See all
           </button>
@@ -397,3 +433,4 @@ function UpcomingExamsCard({ onSeeAll }) {
 }
 
 export default UpcomingExamsCard;
+

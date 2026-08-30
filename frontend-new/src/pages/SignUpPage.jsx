@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Eye, EyeOff, BookOpen } from "lucide-react";
+import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
 
-function SignUpPage({ onSignUpSuccess, onLogin }) {
+function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -62,61 +64,113 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFA] px-6 py-8">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl lg:grid-cols-2">
+    <div
+      className={`relative flex min-h-screen items-center justify-center p-6 transition-colors duration-500 font-sans ${
+        isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+      }`}
+    >
+      {/* Background Glows */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div
+          className={`absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full blur-[130px] transition-colors duration-700 ${
+            isDarkMode ? "bg-[#6D45B8]/25" : "bg-[#D9CEF5]/60"
+          }`}
+        />
+        <div
+          className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[130px] ${
+            isDarkMode ? "bg-[#8B5CF6]/15" : "bg-[#E9DDF5]/70"
+          }`}
+        />
+      </div>
+
+      {/* Top Controls */}
+      <div className="absolute top-6 right-6 flex items-center gap-3">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className={`rounded-xl border px-4 py-2 text-xs font-bold transition-all ${
+              isDarkMode
+                ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                : "border-white/80 bg-white/70 text-[#292530] hover:bg-white"
+            }`}
+          >
+            ← Back
+          </button>
+        )}
+        <button
+          onClick={toggleDarkMode}
+          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${
+            isDarkMode
+              ? "border-white/10 bg-white/10 text-yellow-300 hover:bg-white/20"
+              : "border-white/80 bg-white/70 text-purple-600 hover:bg-white shadow-sm"
+          }`}
+        >
+          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+      </div>
+
+      {/* Main Glass Card */}
+      <div
+        className={`grid w-full max-w-5xl overflow-hidden rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 ${
+          isDarkMode
+            ? "border-white/10 bg-[#17131F]/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
+            : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
+        }`}
+      >
         {/* ================= LEFT SECTION ================= */}
-        <div className="hidden flex-col justify-between bg-[#4E1F6E] p-10 text-white lg:flex">
-          <div>
-            <div className="mb-8 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#98E8DE]">
-                <BookOpen size={24} className="text-[#4E1F6E]" />
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-12 text-white lg:flex">
+          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+
+          <div className="relative z-10">
+            <div className="mb-10 flex items-center gap-3">
+              <div className="text-4xl font-black tracking-[-0.08em] text-white">
+                Jot<span className="text-purple-200">.</span>
               </div>
-              <span className="text-xl font-bold">AI STUDY ENGINE</span>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+                your study buddy
+              </span>
             </div>
 
-            <h1 className="max-w-md text-4xl font-bold leading-tight">
-              Your learning journey
+            <h1 className="max-w-md text-4xl font-black leading-tight tracking-tight">
+              Your study journey
               <br />
-              starts here.
+              <span className="text-purple-200">starts here.</span>
             </h1>
 
-            <p className="mt-6 max-w-md text-sm leading-6 text-purple-100">
-              Create your personalized student profile and let AI Study
-              Engine help you learn smarter, practice better, and prepare
-              with confidence.
+            <p className="mt-6 max-w-md text-sm leading-6 text-purple-100/90">
+              Create your profile and let Jojo turn your notes into smart summaries, practice quizzes, and interactive flashcards.
             </p>
           </div>
 
-          <p className="text-xs text-purple-200">
-            AI-powered personalized learning
-          </p>
+          <div className="relative z-10 flex items-center gap-2 text-xs font-semibold text-purple-200">
+            <Sparkles size={16} />
+            <span>Jot it. Organise it. Top it.</span>
+          </div>
         </div>
 
         {/* ================= RIGHT SECTION ================= */}
-        <div className="p-8 sm:p-12 lg:p-14">
-          {/* Mobile Logo */}
-          <div className="mb-7 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#98E8DE]">
-              <BookOpen size={21} className="text-[#4E1F6E]" />
+        <div className="p-8 sm:p-10 lg:p-12">
+          {/* Mobile Brand */}
+          <div className="mb-6 flex items-center gap-2 lg:hidden">
+            <div className="text-3xl font-black tracking-[-0.08em]">
+              Jot<span className="text-[#8064C7]">.</span>
             </div>
-            <span className="font-bold text-[#4E1F6E]">AI STUDY ENGINE</span>
           </div>
 
           {/* Heading */}
-          <div className="mb-7">
-            <h2 className="text-3xl font-bold text-[#3E3E75]">
-              Create your account
-            </h2>
-            <p className="mt-2 text-sm text-gray-500">
-              Set up your profile to start your personalized learning journey.
+          <div className="mb-6">
+            <h2 className="text-3xl font-black tracking-tight">Create your account</h2>
+            <p className={`mt-2 text-sm ${isDarkMode ? "text-white/55" : "text-[#706A78]"}`}>
+              Set up your profile to start studying without the chaos.
             </p>
           </div>
 
           {/* ================= SIGN UP FORM ================= */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             {/* Full Name */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
+              <label className={`mb-1.5 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
                 Full Name
               </label>
               <input
@@ -125,13 +179,17 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-[#45A9A9] focus:bg-white focus:ring-2 focus:ring-[#98E8DE]/40"
+                className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
+                    : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
+                }`}
               />
             </div>
 
             {/* Date of Birth */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
+              <label className={`mb-1.5 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
                 Date of Birth
               </label>
               <input
@@ -139,13 +197,17 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
                 required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 outline-none transition-all focus:border-[#45A9A9] focus:bg-white focus:ring-2 focus:ring-[#98E8DE]/40"
+                className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7] focus:bg-white/10"
+                    : "border-gray-200 bg-white/80 text-[#292530] focus:border-[#8064C7] focus:bg-white"
+                }`}
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
+              <label className={`mb-1.5 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
                 Email Address
               </label>
               <input
@@ -154,13 +216,17 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-[#45A9A9] focus:bg-white focus:ring-2 focus:ring-[#98E8DE]/40"
+                className={`w-full rounded-xl border px-4 py-2.5 text-sm outline-none transition-all ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
+                    : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
+                }`}
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
+              <label className={`mb-1.5 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
                 Password
               </label>
               <div className="relative">
@@ -170,12 +236,18 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-11 text-sm outline-none transition-all focus:border-[#45A9A9] focus:bg-white focus:ring-2 focus:ring-[#98E8DE]/40"
+                  className={`w-full rounded-xl border px-4 py-2.5 pr-11 text-sm outline-none transition-all ${
+                    isDarkMode
+                      ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
+                      : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#4E1F6E]"
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
+                    isDarkMode ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-[#292530]"
+                  }`}
                 >
                   {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                 </button>
@@ -184,7 +256,7 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
 
             {/* Confirm Password */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#3E3E75]">
+              <label className={`mb-1.5 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
                 Confirm Password
               </label>
               <div className="relative">
@@ -194,27 +266,29 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-11 text-sm outline-none transition-all focus:border-[#45A9A9] focus:bg-white focus:ring-2 focus:ring-[#98E8DE]/40"
+                  className={`w-full rounded-xl border px-4 py-2.5 pr-11 text-sm outline-none transition-all ${
+                    isDarkMode
+                      ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
+                      : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
+                  }`}
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#4E1F6E]"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
+                    isDarkMode ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-[#292530]"
+                  }`}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff size={19} />
-                  ) : (
-                    <Eye size={19} />
-                  )}
+                  {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                 </button>
               </div>
             </div>
 
             {/* Error Message */}
             {error && (
-              <p className="text-sm font-medium text-red-500">{error}</p>
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs font-semibold text-red-400">
+                {error}
+              </div>
             )}
 
             {/* Terms */}
@@ -222,9 +296,9 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
               <input
                 type="checkbox"
                 required
-                className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#4E1F6E]"
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#8064C7]"
               />
-              <p className="text-xs leading-5 text-gray-500">
+              <p className={`text-xs ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
                 I agree to the Terms of Service and Privacy Policy.
               </p>
             </div>
@@ -233,20 +307,20 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#4E1F6E] py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl bg-[#8064C7] py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] shadow-[0_15px_35px_rgba(128,100,199,0.35)] disabled:opacity-50"
             >
-              {loading ? "Creating Account..." : "Create Account"}
+              {loading ? "Creating Account..." : "Create Account →"}
             </button>
           </form>
 
           {/* Login */}
-          <div className="mt-7 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="mt-6 text-center">
+            <p className={`text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
               Already have an account?{" "}
               <button
                 type="button"
                 onClick={onLogin}
-                className="font-semibold text-[#4E1F6E] hover:underline"
+                className="font-bold text-[#8064C7] hover:underline"
               >
                 Login
               </button>
@@ -258,4 +332,4 @@ function SignUpPage({ onSignUpSuccess, onLogin }) {
   );
 }
 
-export default SignUpPage;
+export default SignUpPage;

@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
 import { Plus, CheckCircle2, Circle, Loader2, AlertCircle } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 import DeleteConfirmModal from "../DeleteConfirmModal";
 import { fetchTodaysTasks, createTask, deleteTask } from "../../services/api";
 
-// Time the "just completed" state (checked + strikethrough) is held before
-// the task collapses out of the list. Keep in sync with the collapse
-// transition's own duration below.
 const COMPLETED_HOLD_MS = 500;
 const COLLAPSE_DURATION_MS = 300;
 
 function TodaysTasksCard() {
+  const { isDarkMode } = useTheme();
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -117,16 +116,22 @@ function TodaysTasksCard() {
 
   return (
     <>
-      <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <div
+        className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-[#3E3E75]">
+          <h2 className="text-xl font-black tracking-tight">
             Today's Tasks
           </h2>
 
           <button
             type="button"
             onClick={openAddInput}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#4E1F6E] text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3E3E75] hover:shadow-md"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-white shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
             aria-label="Add task"
           >
             <Plus size={18} />
@@ -150,13 +155,17 @@ function TodaysTasksCard() {
                 }}
                 disabled={isAddSubmitting}
                 placeholder="Task name"
-                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#3E3E75] outline-none transition focus:border-[#4E1F6E] focus:ring-2 focus:ring-[#98E8DE]/40 disabled:opacity-60"
+                className={`flex-1 rounded-xl border px-3.5 py-2 text-sm outline-none transition ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
+                    : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
+                } disabled:opacity-60`}
               />
               <button
                 type="button"
                 onClick={confirmAdd}
                 disabled={isAddSubmitting}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-[#4E1F6E] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#3E3E75] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isAddSubmitting ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -166,7 +175,7 @@ function TodaysTasksCard() {
               </button>
             </div>
             {addError && (
-              <p className="mt-1.5 text-xs font-medium text-red-500">
+              <p className="mt-1.5 text-xs font-medium text-red-400">
                 {addError}
               </p>
             )}
@@ -174,26 +183,26 @@ function TodaysTasksCard() {
         )}
 
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
+          <div className="flex items-center justify-center gap-2 py-6 text-sm opacity-50">
             <Loader2 size={16} className="animate-spin" />
             Loading tasks...
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <div className="flex items-center gap-1.5 text-sm font-medium text-red-500">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-red-400">
               <AlertCircle size={16} />
               {loadError}
             </div>
             <button
               type="button"
               onClick={loadTasks}
-              className="text-xs font-semibold text-[#4E1F6E] underline underline-offset-2 hover:text-[#3E3E75]"
+              className="text-xs font-bold text-[#8064C7] underline underline-offset-2 hover:text-[#8B6DD4]"
             >
               Retry
             </button>
           </div>
         ) : tasks.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">
+          <p className={`py-6 text-center text-sm ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
             No tasks yet — add one to get started.
           </p>
         ) : (
@@ -215,24 +224,30 @@ function TodaysTasksCard() {
                     type="button"
                     onClick={() => openConfirm(task)}
                     disabled={isCompleting || isRemoving}
-                    className="flex w-full items-center gap-3 rounded-xl bg-gray-50 p-3 text-left transition hover:bg-gray-100 disabled:cursor-default disabled:hover:bg-gray-50"
+                    className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
+                      isDarkMode
+                        ? "border-white/5 bg-white/5 hover:bg-white/10 text-white"
+                        : "border-white/80 bg-white/70 hover:bg-white text-[#292530]"
+                    } disabled:cursor-default`}
                   >
                     {isCompleting ? (
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#4E1F6E] transition-colors duration-300">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#8064C7]">
                         <CheckCircle2 size={14} className="text-white" />
                       </span>
                     ) : (
                       <Circle
                         size={20}
-                        className="shrink-0 text-gray-300 transition-colors duration-300"
+                        className={`shrink-0 transition-colors ${
+                          isDarkMode ? "text-white/30" : "text-gray-300"
+                        }`}
                       />
                     )}
 
                     <span
-                      className={`text-sm font-medium transition-all duration-300 ${
+                      className={`text-sm font-semibold transition-all duration-300 ${
                         isCompleting
-                          ? "text-gray-400 line-through"
-                          : "text-[#3E3E75]"
+                          ? "opacity-40 line-through"
+                          : "opacity-90"
                       }`}
                     >
                       {task.name}
@@ -262,3 +277,4 @@ function TodaysTasksCard() {
 }
 
 export default TodaysTasksCard;
+

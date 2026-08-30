@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Sparkles,
   ArrowLeft,
@@ -10,941 +10,1368 @@ import {
   Award,
   Target,
   Lightbulb,
-  Code2,
-  ExternalLink,
   Zap,
   CheckCircle2,
-  ShieldCheck,
-  Terminal,
+  Moon,
+  Sun,
+  Brain,
   BookOpen,
-  ArrowUpRight,
-  Lock,
-} from 'lucide-react';
+  Trophy,
+  Rocket,
+} from "lucide-react";
 
-const GithubIcon = ({ size = 15, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-    <path d="M9 18c-4.51 2-5-2-7-2" />
-  </svg>
-);
+import { useTheme } from "../context/ThemeContext";
 
-const LinkedinIcon = ({ size = 15, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect x="2" y="9" width="4" height="12" />
-    <circle cx="4" cy="4" r="2" />
-  </svg>
-);
+import jojo from "../assets/jojo.png";
+import jojoDark from "../assets/jojo-dark.jpg";
 
-const TwitterIcon = ({ size = 15, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
-  </svg>
-);
+import JotFooter from "../components/JotFooter";
 
-const DiscordIcon = ({ size = 15, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M18 6h0a14.5 14.5 0 0 0-4-1.2 12.3 12.3 0 0 0-.6 1.3 13.6 13.6 0 0 0-4.8 0 12.3 12.3 0 0 0-.6-1.3A14.5 14.5 0 0 0 4 6a15.8 15.8 0 0 0-2 11.7A14.8 14.8 0 0 0 6.8 20a10.9 10.9 0 0 0 1-1.6 9.6 9.6 0 0 1-1.5-.7c.1-.1.3-.2.4-.3a10.6 10.6 0 0 0 10.6 0c.1.1.3.2.4.3-.5.3-1 .5-1.5.7.3.5.6 1.1 1 1.6a14.8 14.8 0 0 0 4.8-2.3A15.8 15.8 0 0 0 18 6ZM8.5 15.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm7 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
-  </svg>
-);
+/* =========================================================
+   ABOUT PAGE
+========================================================= */
 
-export default function AboutPage({ onNavigate, isDarkMode = true }) {
+export default function AboutPage({ onNavigate }) {
+  const { isDarkMode, toggleDarkMode } = useTheme();
+
+  /* =======================================================
+     THEME-BASED JOJO
+  ======================================================= */
+
+  const currentJojo = isDarkMode ? jojoDark : jojo;
+
+  /* =======================================================
+     TEXT COLORS
+  ======================================================= */
+
+  const textPrimary = isDarkMode
+    ? "text-white"
+    : "text-[#171326]";
+
+  const textSecondary = isDarkMode
+    ? "text-slate-400"
+    : "text-slate-600";
+
+  /* =======================================================
+     CARD STYLING
+  ======================================================= */
+
+  const card = isDarkMode
+    ? "bg-white/[0.035] border-white/10 hover:border-[#9B7BFF]/40"
+    : "bg-white border-[#E6E0F2] hover:border-[#8064C7]/40";
+
+  /* =======================================================
+     ASSESSMENT TIERS
+  ======================================================= */
+
   const tiers = [
     {
-      tier: 'Tier 01',
-      title: 'Foundational Recall',
-      badge: 'MCQs',
-      desc: 'Rapid-fire verification of key definitions, core formulas, and fundamental vocabulary to build active retrieval speed and eliminate cognitive hesitation.',
+      tier: "Tier 01",
+      title: "Foundational Recall",
+      badge: "MCQs",
+      icon: Brain,
+      desc: "Quick-fire questions that help you lock in definitions, formulas, important terms, and the basics you absolutely need to know.",
     },
     {
-      tier: 'Tier 02',
-      title: 'Concise Articulation',
-      badge: 'Short Answers',
-      desc: 'Targeted prompts that evaluate precision, ensuring you can explain core principles concisely without relying on multiple-choice process of elimination.',
+      tier: "Tier 02",
+      title: "Concise Articulation",
+      badge: "Short Answers",
+      icon: BookOpen,
+      desc: "Explain concepts in your own words and build the confidence to answer without hiding behind multiple-choice options.",
     },
     {
-      tier: 'Tier 03',
-      title: 'Structured Synthesis',
-      badge: 'Long Essays',
-      desc: 'In-depth descriptive questions graded against strict rubric criteria, checking for comprehensive domain terminology, logical flow, and theoretical proofs.',
+      tier: "Tier 03",
+      title: "Structured Synthesis",
+      badge: "Long Answers",
+      icon: Lightbulb,
+      desc: "Go deeper with detailed questions that test how well you can connect ideas, explain concepts, and build strong answers.",
     },
     {
-      tier: 'Tier 04',
-      title: 'Contextual Application',
-      badge: 'Case Scenarios',
-      desc: 'Complex, situational problem sets that test your ability to diagnose scenarios, apply multi-step reasoning, and solve real exam-grade challenges.',
+      tier: "Tier 04",
+      title: "Contextual Application",
+      badge: "Case Scenarios",
+      icon: Trophy,
+      desc: "Take what you learned into realistic situations and prove that you can actually apply the concepts — not just memorize them.",
     },
   ];
+
+  /* =======================================================
+     HOW JOT WORKS
+  ======================================================= */
 
   const steps = [
     {
-      num: '01',
+      num: "01",
       icon: FolderPlus,
-      title: 'Create a Study Set',
-      desc: 'Organize your subjects by creating dedicated sets for midterms, finals, or individual course chapters.',
+      title: "Create a Study Set",
+      desc: "Start by giving your subject its own little home. Keep chapters, topics, and revision material organized.",
     },
     {
-      num: '02',
+      num: "02",
       icon: FileUp,
-      title: 'Upload Your Notes',
-      desc: 'Drop in your PDF notes, slides, or textbook excerpts to build your custom syllabus knowledge base.',
+      title: "Drop Your Notes",
+      desc: "Upload your PDFs, slides, or study material. No more hunting through folders five minutes before an exam.",
     },
     {
-      num: '03',
+      num: "03",
       icon: Sliders,
-      title: 'Customize Your Test',
-      desc: 'Pick your question types (MCQs, Short Answers, Long Essays, or Case Scenarios) and set your pace.',
+      title: "Choose Your Challenge",
+      desc: "Pick the question types you want — from quick MCQs to longer answers and case-based questions.",
     },
     {
-      num: '04',
+      num: "04",
       icon: CheckSquare,
-      title: 'Take the Assessment',
-      desc: 'Solve questions under real exam conditions with clean formatting and dedicated response fields.',
+      title: "Take the Test",
+      desc: "Put your knowledge to work and answer questions generated around the material you actually uploaded.",
     },
     {
-      num: '05',
+      num: "05",
       icon: Sparkles,
-      title: 'Get Instant AI Grading',
-      desc: 'Receive side-by-side answer comparisons, score breakdowns, and constructive keyword feedback.',
+      title: "Get AI Feedback",
+      desc: "See what you got right, where you slipped up, and what important points you may have missed.",
     },
     {
-      num: '06',
+      num: "06",
       icon: BarChart2,
-      title: 'Track Performance',
-      desc: 'Check your Progress tab to see section accuracy, historical attempts, and targeted revision tips.',
+      title: "Track Your Progress",
+      desc: "Watch your performance improve and discover which topics deserve another round of revision.",
     },
   ];
+
+  /* =======================================================
+     CORE FEATURES
+  ======================================================= */
 
   const values = [
     {
       icon: Target,
-      title: 'Precision Evaluation',
-      desc: 'Evaluates long-form explanations and technical terminology against study materials, not just basic multiple choice.',
+      title: "Precision Evaluation",
+      desc: "JOT looks beyond simple right-or-wrong answers and evaluates explanations using relevant concepts, terminology, and study material.",
     },
     {
       icon: Lightbulb,
-      title: 'Context-Aware Generation',
-      desc: 'Synthesizes course materials to test both direct definitions and high-level critical thinking scenarios.',
+      title: "Context-Aware Questions",
+      desc: "Questions are created around your uploaded learning material, helping you practice what actually matters for your subject.",
     },
     {
       icon: Award,
-      title: 'Actionable Insights',
-      desc: 'Provides section-by-section accuracy, time-relative reviews, and identified strengths to prioritize revision.',
+      title: "Actionable Insights",
+      desc: "Instead of simply giving you a score, JOT helps you understand your strengths, weak areas, and what to revise next.",
     },
   ];
 
+  /* =======================================================
+     TEAM
+  ======================================================= */
+
   const teamMembers = [
     {
-      name: 'Aditee',
-      initials: 'AD',
-      role: 'Full-Stack Engineer',
-      focus: 'Service Integration',
-      badgeColor: isDarkMode ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/30' : 'bg-cyan-50 text-cyan-700 border-cyan-200',
-      glowColor: 'from-cyan-500/30 to-blue-500/10',
-      github: 'https://github.com',
-      linkedin: 'https://linkedin.com',
+      name: "Aditee",
+      initials: "AD",
+      role: "Full-Stack Engineer",
+      focus: "Service Integration",
     },
     {
-      name: 'Sandra',
-      initials: 'SD',
-      role: 'Platform Engineer',
-      focus: 'Architecture & CI/CD',
-      badgeColor: isDarkMode ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      glowColor: 'from-indigo-500/30 to-purple-500/10',
-      github: 'https://github.com',
-      linkedin: 'https://linkedin.com',
+      name: "Sandra",
+      initials: "SD",
+      role: "Platform Engineer",
+      focus: "Architecture & CI/CD",
     },
     {
-      name: 'Shanallie',
-      initials: 'SN',
-      role: 'RAG & Vector Lead',
-      focus: 'Embedding & ChromaDB',
-      badgeColor: isDarkMode ? 'bg-purple-950/80 text-purple-300 border-purple-500/30' : 'bg-purple-50 text-purple-700 border-purple-200',
-      glowColor: 'from-purple-500/30 to-pink-500/10',
-      github: 'https://github.com',
-      linkedin: 'https://linkedin.com',
+      name: "Shanallie",
+      initials: "SN",
+      role: "RAG & Vector Lead",
+      focus: "Embedding & ChromaDB",
     },
     {
-      name: 'Riya',
-      initials: 'RY',
-      role: 'Evaluation Architect',
-      focus: 'Semantic Rubrics',
-      badgeColor: isDarkMode ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      glowColor: 'from-emerald-500/30 to-teal-500/10',
-      github: 'https://github.com',
-      linkedin: 'https://linkedin.com',
+      name: "Riya",
+      initials: "RY",
+      role: "Evaluation Architect",
+      focus: "Semantic Rubrics",
     },
     {
-      name: 'Nyla',
-      initials: 'NY',
-      role: 'Frontend Experience',
-      focus: '3D Simulation HUD',
-      badgeColor: isDarkMode ? 'bg-amber-950/80 text-amber-300 border-amber-500/30' : 'bg-amber-50 text-amber-700 border-amber-200',
-      glowColor: 'from-amber-500/30 to-orange-500/10',
-      github: 'https://github.com',
-      linkedin: 'https://linkedin.com',
+      name: "Nyla",
+      initials: "NY",
+      role: "Frontend Experience",
+      focus: "UI/UX & Experience",
     },
   ];
 
   return (
     <div
-      className={`relative min-h-screen flex flex-col justify-between overflow-x-hidden transition-colors duration-500 ${
-        isDarkMode
-          ? 'bg-[#0E131F] text-[#E2E8F0] selection:bg-[#38BDF8] selection:text-[#0E131F]'
-          : 'bg-[#F8FAFC] text-[#1E293B] selection:bg-[#4F46E5] selection:text-white'
-      }`}
+      className={`
+        min-h-screen
+        overflow-x-hidden
+        transition-colors
+        duration-500
+        ${
+          isDarkMode
+            ? "bg-[#0B0910] text-[#F3F0F8]"
+            : "bg-[#F7F5FA] text-[#231B33]"
+        }
+      `}
     >
-      <style>{`
-        /* Mission Slabs */
-        .mission-slab-dark {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-          backdrop-filter: blur(28px);
-          border: 1.5px solid rgba(255, 255, 255, 0.15);
-          box-shadow: 
-            -20px 30px 60px -10px rgba(0, 0, 0, 0.7),
-            0 0 35px rgba(56, 189, 248, 0.08),
-            inset 0 1.5px 2px rgba(255, 255, 255, 0.25),
-            inset 0 -1.5px 2px rgba(0, 0, 0, 0.4);
-        }
+      {/* =====================================================
+          BACKGROUND
+      ===================================================== */}
 
-        .mission-slab-light {
-          background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 50%, #EEF2FF 100%);
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 25px 50px -12px rgba(79, 70, 229, 0.12),
-            0 10px 25px -5px rgba(15, 23, 42, 0.04),
-            inset 0 2px 4px rgba(255, 255, 255, 1);
-        }
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div
+          className={`
+            absolute
+            -right-40
+            -top-40
+            h-[600px]
+            w-[600px]
+            rounded-full
+            blur-[150px]
+            ${
+              isDarkMode
+                ? "bg-[#8064C7]/15"
+                : "bg-[#8064C7]/10"
+            }
+          `}
+        />
 
-        /* Card Elevations */
-        .card-elevated-dark {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(16px);
-          box-shadow: 
-            0 14px 28px -6px rgba(0, 0, 0, 0.5),
-            inset 0 1px 1px rgba(255, 255, 255, 0.1);
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .card-elevated-dark:hover {
-          transform: translateY(-5px);
-          border-color: rgba(56, 189, 248, 0.45);
-          box-shadow: 
-            0 20px 40px -8px rgba(0, 0, 0, 0.7),
-            0 0 20px rgba(56, 189, 248, 0.2),
-            inset 0 1px 1px rgba(255, 255, 255, 0.2);
-        }
+        <div
+          className={`
+            absolute
+            -left-40
+            top-[40%]
+            h-[500px]
+            w-[500px]
+            rounded-full
+            blur-[150px]
+            ${
+              isDarkMode
+                ? "bg-[#6D45B8]/10"
+                : "bg-[#A78BFA]/10"
+            }
+          `}
+        />
 
-        .card-elevated-light {
-          background: #FFFFFF;
-          border: 1.5px solid rgba(255, 255, 255, 0.95);
-          box-shadow: 
-            0 14px 28px -6px rgba(15, 23, 42, 0.05),
-            0 4px 10px -2px rgba(15, 23, 42, 0.02),
-            inset 0 1.5px 2px rgba(255, 255, 255, 1);
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .card-elevated-light:hover {
-          transform: translateY(-5px);
-          border-color: rgba(99, 102, 241, 0.35);
-          box-shadow: 
-            0 24px 45px -8px rgba(79, 70, 229, 0.14),
-            0 8px 18px -4px rgba(79, 70, 229, 0.06),
-            inset 0 1.5px 2px #FFFFFF;
-        }
-      `}</style>
-
-      {/* Atmospheric Background Meshes */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        {isDarkMode ? (
-          <>
-            <div className="absolute top-[-10%] right-[-5%] h-[800px] w-[800px] rounded-full bg-gradient-to-bl from-[#38BDF8]/15 via-[#6366F1]/15 to-transparent blur-[140px]" />
-            <div className="absolute top-[35%] left-[-15%] h-[700px] w-[700px] rounded-full bg-gradient-to-tr from-[#3B82F6]/15 via-transparent to-transparent blur-[140px]" />
-          </>
-        ) : (
-          <>
-            <div className="absolute top-[-10%] right-[-5%] h-[750px] w-[750px] rounded-full bg-gradient-to-bl from-[#6366F1]/15 via-[#A855F7]/10 to-transparent blur-[130px]" />
-            <div className="absolute top-[35%] left-[-15%] h-[680px] w-[680px] rounded-full bg-gradient-to-tr from-[#38BDF8]/15 via-[#818CF8]/10 to-transparent blur-[130px]" />
-          </>
-        )}
+        <div
+          className={`
+            absolute
+            bottom-[-250px]
+            right-[15%]
+            h-[450px]
+            w-[450px]
+            rounded-full
+            blur-[150px]
+            ${
+              isDarkMode
+                ? "bg-[#8B5CF6]/8"
+                : "bg-[#C084FC]/8"
+            }
+          `}
+        />
       </div>
 
-      {/* Top Navbar */}
+      {/* =====================================================
+          NAVBAR
+      ===================================================== */}
+
       <header
-        className={`relative z-30 sticky top-0 border-b backdrop-blur-xl transition-colors duration-300 ${
-          isDarkMode
-            ? 'border-white/10 bg-[#0E131F]/80'
-            : 'border-slate-200/80 bg-white/80'
-        }`}
+        className={`
+          sticky
+          top-0
+          z-50
+          border-b
+          backdrop-blur-xl
+          ${
+            isDarkMode
+              ? "border-white/10 bg-[#0B0910]/85"
+              : "border-[#E8E3EF] bg-white/85"
+          }
+        `}
       >
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
+
+          {/* Back Button */}
+
           <button
-            onClick={() => onNavigate && onNavigate('landing')}
-            className={`inline-flex items-center gap-2 text-sm font-bold transition cursor-pointer px-4 py-2 rounded-xl border ${
-              isDarkMode
-                ? 'bg-white/5 border-white/10 text-slate-300 hover:text-[#38BDF8] hover:bg-white/10'
-                : 'bg-white border-slate-200/80 text-slate-600 hover:text-[#4F46E5] shadow-2xs hover:bg-slate-50'
-            }`}
+            type="button"
+            onClick={() =>
+              onNavigate && onNavigate("landing")
+            }
+            className={`
+              flex
+              items-center
+              gap-2
+              rounded-xl
+              border
+              px-4
+              py-2
+              text-sm
+              font-bold
+              transition
+              ${
+                isDarkMode
+                  ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                  : "border-[#E5DFEE] bg-white text-slate-600 hover:bg-slate-50"
+              }
+            `}
           >
             <ArrowLeft size={16} />
             Back to Home
           </button>
 
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-md ${
-                isDarkMode
-                  ? 'bg-gradient-to-br from-[#38BDF8] to-[#4F46E5] text-white shadow-cyan-500/20'
-                  : 'bg-[#4F46E5] text-white shadow-[#4F46E5]/25'
-              }`}
-            >
-              <Sparkles size={18} className="stroke-[2.2]" />
+          {/* Logo */}
+
+          <div className="hidden items-center gap-3 sm:flex">
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl">
+              <img
+                src={currentJojo}
+                alt="Jojo the JOT pencil"
+                className="h-full w-full object-contain"
+              />
             </div>
-            <span
-              className={`font-black text-lg tracking-tight ${
-                isDarkMode ? 'text-white' : 'text-[#0F172A]'
-              }`}
-            >
-              AI STUDY ENGINE
-            </span>
+
+            <div>
+              <div
+                className={`
+                  font-black
+                  tracking-tight
+                  ${
+                    isDarkMode
+                      ? "text-white"
+                      : "text-[#231B33]"
+                  }
+                `}
+              >
+                JOT
+              </div>
+
+              <div
+                className={`
+                  text-[9px]
+                  font-bold
+                  tracking-wider
+                  ${
+                    isDarkMode
+                      ? "text-purple-300"
+                      : "text-purple-600"
+                  }
+                `}
+              >
+                JOT IT • ORGANISE IT • TOP IT
+              </div>
+            </div>
           </div>
+
+          {/* Theme Toggle */}
+
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            className={`
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-xl
+              border
+              text-lg
+              transition-all
+              duration-300
+              ${
+                isDarkMode
+                  ? "border-white/10 bg-white/5 hover:bg-white/10"
+                  : "border-[#E5DFEE] bg-white hover:bg-purple-50"
+              }
+            `}
+            aria-label="Toggle theme"
+            title={
+              isDarkMode
+                ? "Switch to light mode"
+                : "Switch to dark mode"
+            }
+          >
+            {isDarkMode ? (
+              <Sun size={19} />
+            ) : (
+              <Moon size={19} />
+            )}
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 max-w-5xl mx-auto px-6 py-12 space-y-16 flex-1">
-        
-        {/* Header Section */}
-        <div className="space-y-4 text-center">
-          <div
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold border ${
-              isDarkMode
-                ? 'bg-cyan-950/60 border-cyan-500/30 text-[#38BDF8]'
-                : 'bg-[#EEF2FF] border-[#C7D2FE] text-[#4338CA]'
-            }`}
-          >
-            <span
-              className={`flex h-2 w-2 rounded-full animate-pulse ${
-                isDarkMode ? 'bg-[#38BDF8]' : 'bg-[#4F46E5]'
-              }`}
-            />
-            About the Platform
-          </div>
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
 
-          <h1
-            className={`text-3xl sm:text-5xl font-black tracking-tight leading-[1.12] ${
-              isDarkMode ? 'text-white' : 'text-[#0F172A]'
-            }`}
-          >
-            Bridging Curriculum Ingestion &amp;{' '}
-            <span className="bg-gradient-to-r from-[#38BDF8] via-[#818CF8] to-[#C084FC] bg-clip-text text-transparent">
-              Cognitive Assessment
-            </span>
-          </h1>
+      <main className="relative z-10 mx-auto max-w-6xl space-y-24 px-6 py-14">
 
-          <p
-            className={`text-sm sm:text-base max-w-2xl mx-auto font-medium leading-relaxed ${
-              isDarkMode ? 'text-slate-400' : 'text-slate-600'
-            }`}
-          >
-            AI Study Engine transforms unstructured study documents into rigorous, interactive assessments that replicate real examination environments.
-          </p>
-        </div>
+        {/* ===================================================
+            HERO
+        =================================================== */}
 
-        {/* Comprehensive Mission & Cognitive Depth Slab */}
-        <div
-          className={`rounded-[36px] p-8 sm:p-12 relative overflow-hidden text-left space-y-6 ${
-            isDarkMode ? 'mission-slab-dark' : 'mission-slab-light'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`flex h-8 w-8 items-center justify-center rounded-xl border ${
-                isDarkMode
-                  ? 'bg-cyan-950/80 text-[#38BDF8] border-cyan-500/30'
-                  : 'bg-indigo-50 text-[#4F46E5] border-indigo-100'
-              }`}
-            >
-              <Zap size={16} />
+        <section className="relative flex min-h-[470px] items-center">
+
+          <div className="grid w-full items-center gap-14 lg:grid-cols-2">
+
+            {/* LEFT */}
+
+            <div className="space-y-7">
+
+              <div
+                className={`
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  border
+                  px-4
+                  py-2
+                  text-xs
+                  font-black
+                  ${
+                    isDarkMode
+                      ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
+                      : "border-purple-200 bg-purple-50 text-purple-700"
+                  }
+                `}
+              >
+                <Sparkles size={14} />
+                A LITTLE ABOUT JOT
+              </div>
+
+              <h1
+                className={`
+                  text-5xl
+                  font-black
+                  leading-[1.02]
+                  tracking-tight
+                  sm:text-6xl
+                  ${textPrimary}
+                `}
+              >
+                Studying doesn't
+                <br />
+                have to feel like
+                <br />
+
+                <span className="bg-gradient-to-r from-[#A78BFA] via-[#8B5CF6] to-[#C084FC] bg-clip-text text-transparent">
+                  chaos.
+                </span>
+              </h1>
+
+              <p
+                className={`
+                  max-w-xl
+                  text-base
+                  leading-8
+                  sm:text-lg
+                  ${textSecondary}
+                `}
+              >
+                JOT turns your ordinary study material into
+                something you can actually work with — from
+                summaries and questions to practice and
+                progress tracking.
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+
+                <div
+                  className={`
+                    rounded-xl
+                    border
+                    px-4
+                    py-2
+                    text-xs
+                    font-bold
+                    ${
+                      isDarkMode
+                        ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                        : "border-purple-200 bg-purple-50 text-purple-700"
+                    }
+                  `}
+                >
+                  ✨ Jot It.
+                </div>
+
+                <div
+                  className={`
+                    rounded-xl
+                    border
+                    px-4
+                    py-2
+                    text-xs
+                    font-bold
+                    ${
+                      isDarkMode
+                        ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                        : "border-purple-200 bg-purple-50 text-purple-700"
+                    }
+                  `}
+                >
+                  📚 Organise It.
+                </div>
+
+                <div
+                  className={`
+                    rounded-xl
+                    border
+                    px-4
+                    py-2
+                    text-xs
+                    font-bold
+                    ${
+                      isDarkMode
+                        ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                        : "border-purple-200 bg-purple-50 text-purple-700"
+                    }
+                  `}
+                >
+                  🚀 Top It.
+                </div>
+
+              </div>
             </div>
-            <span
-              className={`text-xs font-black uppercase tracking-widest ${
-                isDarkMode ? 'text-[#38BDF8]' : 'text-[#4F46E5]'
-              }`}
-            >
+
+            {/* RIGHT — JOJO */}
+
+            <div className="relative flex items-center justify-center">
+
+              <div
+                className={`
+                  absolute
+                  h-[340px]
+                  w-[340px]
+                  rounded-full
+                  blur-[80px]
+                  ${
+                    isDarkMode
+                      ? "bg-purple-500/20"
+                      : "bg-purple-400/20"
+                  }
+                `}
+              />
+
+              <div
+                className={`
+                  relative
+                  flex
+                  h-[350px]
+                  w-[350px]
+                  items-center
+                  justify-center
+                  rounded-[44px]
+                  border
+                  ${
+                    isDarkMode
+                      ? "border-white/10 bg-white/[0.035] shadow-[0_30px_80px_rgba(0,0,0,0.25)]"
+                      : "border-purple-100 bg-white shadow-[0_25px_70px_rgba(80,60,120,0.10)]"
+                  }
+                `}
+              >
+
+                <img
+                  src={currentJojo}
+                  alt="Jojo the JOT pencil mascot"
+                  className="h-[270px] w-[270px] object-contain"
+                />
+
+                <div
+                  className={`
+                    absolute
+                    bottom-5
+                    rounded-2xl
+                    border
+                    px-5
+                    py-2.5
+                    text-xs
+                    font-black
+                    ${
+                      isDarkMode
+                        ? "border-white/10 bg-[#181321] text-purple-200"
+                        : "border-purple-100 bg-white text-purple-700 shadow-sm"
+                    }
+                  `}
+                >
+                  Hi! I'm Jojo ✨
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* ===================================================
+            MISSION
+        =================================================== */}
+
+        <section
+          className={`
+            rounded-[36px]
+            border
+            p-8
+            sm:p-12
+            ${
+              isDarkMode
+                ? "border-white/10 bg-white/[0.035]"
+                : "border-[#E7E0F0] bg-white shadow-sm"
+            }
+          `}
+        >
+
+          <div className="mb-6 flex items-center gap-3">
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+              <Rocket size={20} />
+            </div>
+
+            <span className="text-xs font-black uppercase tracking-widest text-purple-400">
               Our Mission
             </span>
+
           </div>
 
           <h2
-            className={`text-2xl sm:text-3xl font-black tracking-tight max-w-2xl leading-snug ${
-              isDarkMode ? 'text-white' : 'text-[#0F172A]'
-            }`}
+            className={`
+              mb-7
+              text-3xl
+              font-black
+              sm:text-4xl
+              ${textPrimary}
+            `}
           >
-            Empowering Efficient, Measurable Learning
+            Make studying feel less
+            <br />
+            overwhelming.
           </h2>
 
           <div
-            className={`space-y-4 text-sm sm:text-base leading-relaxed font-normal max-w-4xl ${
-              isDarkMode ? 'text-slate-300' : 'text-slate-600'
-            }`}
+            className={`
+              max-w-4xl
+              space-y-5
+              text-sm
+              leading-8
+              sm:text-base
+              ${textSecondary}
+            `}
           >
             <p>
-              Rote memorization only scratches the surface of true comprehension. Most conventional study tools reward surface-level pattern recognition, leaving students underprepared for high-stakes examinations that demand critical synthesis.
+              We've all been there — a giant PDF, twenty
+              lecture slides, a notebook full of half-finished
+              notes, and an exam that somehow feels way too
+              close.
             </p>
+
             <p>
-              AI Study Engine bridges this gap by transforming raw course materials into a dynamic cognitive benchmark. By dissecting complex syllabi into progressive evaluation tiers, our platform ensures you don't just recognize terms—you master the underlying mechanics, formulate coherent technical arguments, and apply concepts across real-world problem scenarios.
+              JOT was created to make that process simpler.
+              Instead of staring at a mountain of material and
+              wondering where to begin, you can give your
+              material to JOT and turn it into something
+              structured, interactive, and easier to learn from.
             </p>
-          </div>
 
-          {/* Quick Advantage Indicators */}
-          <div
-            className={`grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t ${
-              isDarkMode ? 'border-white/10' : 'border-slate-200/70'
-            }`}
-          >
-            <div
-              className={`flex items-center gap-2 text-xs font-bold ${
-                isDarkMode ? 'text-slate-300' : 'text-slate-700'
-              }`}
-            >
-              <CheckCircle2 size={16} className={isDarkMode ? 'text-[#38BDF8]' : 'text-[#4F46E5]'} /> Automated Keyword &amp; Rubrics
-            </div>
-            <div
-              className={`flex items-center gap-2 text-xs font-bold ${
-                isDarkMode ? 'text-slate-300' : 'text-slate-700'
-              }`}
-            >
-              <CheckCircle2 size={16} className={isDarkMode ? 'text-[#38BDF8]' : 'text-[#4F46E5]'} /> Targeted Knowledge Gap Profiling
-            </div>
-            <div
-              className={`flex items-center gap-2 text-xs font-bold ${
-                isDarkMode ? 'text-slate-300' : 'text-slate-700'
-              }`}
-            >
-              <CheckCircle2 size={16} className={isDarkMode ? 'text-[#38BDF8]' : 'text-[#4F46E5]'} /> Exam-Simulated Constraint Practice
-            </div>
-          </div>
-        </div>
-
-        {/* 4-Tier Cognitive Mastery Hierarchy */}
-        <div className="space-y-8">
-          <div className="text-center space-y-2">
-            <span
-              className={`text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
-                isDarkMode
-                  ? 'text-[#38BDF8] bg-cyan-950/60 border-cyan-500/30'
-                  : 'text-indigo-600 bg-indigo-50 border-indigo-100/60'
-              }`}
-            >
-              Assessment Framework
-            </span>
-            <h2
-              className={`text-2xl sm:text-3xl font-black tracking-tight ${
-                isDarkMode ? 'text-white' : 'text-[#0F172A]'
-              }`}
-            >
-              The 4-Tier Cognitive Mastery Hierarchy
-            </h2>
-            <p
-              className={`text-xs sm:text-sm max-w-md mx-auto ${
-                isDarkMode ? 'text-slate-400' : 'text-slate-500'
-              }`}
-            >
-              Progressive evaluation levels designed to move students from basic recall to advanced application.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {tiers.map((t, idx) => (
-              <div
-                key={idx}
-                className={`rounded-3xl p-7 text-left space-y-3 flex flex-col justify-between ${
-                  isDarkMode ? 'card-elevated-dark' : 'card-elevated-light'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
-                      isDarkMode
-                        ? 'text-[#38BDF8] bg-cyan-950/80 border-cyan-500/30'
-                        : 'text-[#4F46E5] bg-indigo-50 border-indigo-100'
-                    }`}
-                  >
-                    {t.tier}
-                  </span>
-                  <span
-                    className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${
-                      isDarkMode
-                        ? 'text-slate-300 bg-white/10'
-                        : 'text-slate-500 bg-slate-100'
-                    }`}
-                  >
-                    {t.badge}
-                  </span>
-                </div>
-                <div>
-                  <h3
-                    className={`text-lg font-bold ${
-                      isDarkMode ? 'text-white' : 'text-slate-900'
-                    }`}
-                  >
-                    {t.title}
-                  </h3>
-                  <p
-                    className={`text-xs sm:text-sm leading-relaxed mt-1.5 font-normal ${
-                      isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                    }`}
-                  >
-                    {t.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* How to Use Section */}
-        <div className="space-y-8">
-          <div className="text-center space-y-2">
-            <span
-              className={`text-xs font-bold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
-                isDarkMode
-                  ? 'text-[#38BDF8] bg-cyan-950/60 border-cyan-500/30'
-                  : 'text-indigo-600 bg-indigo-50 border-indigo-100/60'
-              }`}
-            >
-              User Guide
-            </span>
-            <h2
-              className={`text-2xl sm:text-3xl font-black tracking-tight ${
-                isDarkMode ? 'text-white' : 'text-[#0F172A]'
-              }`}
-            >
-              How to Use the Platform
-            </h2>
-            <p
-              className={`text-xs sm:text-sm max-w-md mx-auto ${
-                isDarkMode ? 'text-slate-400' : 'text-slate-500'
-              }`}
-            >
-              Follow these simple steps from uploading your materials to reviewing your test results.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {steps.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-3xl p-6 space-y-4 text-left flex flex-col justify-between ${
-                    isDarkMode ? 'card-elevated-dark' : 'card-elevated-light'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
-                        isDarkMode
-                          ? 'bg-cyan-950/80 text-[#38BDF8] border-cyan-500/30'
-                          : 'bg-indigo-50 text-indigo-600 border-white shadow-xs'
-                      }`}
-                    >
-                      <Icon size={22} className="stroke-[2.2]" />
-                    </div>
-                    <span
-                      className={`text-2xl font-black ${
-                        isDarkMode ? 'text-slate-600' : 'text-slate-300'
-                      }`}
-                    >
-                      {item.num}
-                    </span>
-                  </div>
-                  <div>
-                    <h3
-                      className={`text-base font-bold ${
-                        isDarkMode ? 'text-white' : 'text-slate-900'
-                      }`}
-                    >
-                      {item.title}
-                    </h3>
-                    <p
-                      className={`text-xs leading-relaxed font-normal mt-1 ${
-                        isDarkMode ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Core Engine Features */}
-        <div className="space-y-6">
-          <h3
-            className={`text-xl font-black text-center sm:text-left ${
-              isDarkMode ? 'text-white' : 'text-[#0F172A]'
-            }`}
-          >
-            Core Engine Features
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {values.map((val, idx) => {
-              const Icon = val.icon;
-              return (
-                <div
-                  key={idx}
-                  className={`rounded-3xl p-6 space-y-3 text-left ${
-                    isDarkMode ? 'card-elevated-dark' : 'card-elevated-light'
-                  }`}
-                >
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${
-                      isDarkMode
-                        ? 'bg-cyan-950/80 text-[#38BDF8] border-cyan-500/30'
-                        : 'bg-indigo-50 text-indigo-600 border-white shadow-xs'
-                    }`}
-                  >
-                    <Icon size={20} className="stroke-[2.2]" />
-                  </div>
-                  <h4
-                    className={`text-sm font-bold ${
-                      isDarkMode ? 'text-white' : 'text-slate-900'
-                    }`}
-                  >
-                    {val.title}
-                  </h4>
-                  <p
-                    className={`text-xs leading-relaxed font-normal ${
-                      isDarkMode ? 'text-slate-400' : 'text-slate-500'
-                    }`}
-                  >
-                    {val.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CTA Banner */}
-        <div
-          className={`rounded-3xl p-8 sm:p-12 text-center text-white shadow-xl space-y-6 ${
-            isDarkMode
-              ? 'bg-gradient-to-r from-cyan-950 via-[#1E1B4B] to-slate-900 border border-cyan-500/30'
-              : 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] shadow-[#4F46E5]/20'
-          }`}
-        >
-          <h3 className="text-2xl sm:text-4xl font-black tracking-tight">
-            Ready to start your first session?
-          </h3>
-          <p
-            className={`text-xs sm:text-sm max-w-md mx-auto leading-relaxed ${
-              isDarkMode ? 'text-cyan-100/80' : 'text-indigo-100'
-            }`}
-          >
-            Upload your lecture slides and test yourself with multi-tier adaptive assessments.
-          </p>
-          <button
-            onClick={() => onNavigate && onNavigate('signup')}
-            className={`rounded-2xl px-8 py-4 text-sm font-black shadow-lg transition hover:scale-105 cursor-pointer ${
-              isDarkMode
-                ? 'bg-[#38BDF8] text-[#0E131F] shadow-cyan-500/30 hover:bg-[#7DD3FC]'
-                : 'bg-white text-[#4F46E5] hover:bg-slate-50'
-            }`}
-          >
-            Create Free Account
-          </button>
-        </div>
-
-        {/* Team Section */}
-        <div className="space-y-6 pt-4 text-left">
-          <div
-            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b ${
-              isDarkMode ? 'border-white/10' : 'border-slate-200'
-            }`}
-          >
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-                <span
-                  className={`text-xs font-black uppercase tracking-widest ${
-                    isDarkMode ? 'text-[#38BDF8]' : 'text-indigo-600'
-                  }`}
-                >
-                  Engineering &amp; Research Group
-                </span>
-              </div>
-              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Architects of the synaptic evaluation models, vector indexing pipelines, and real-time simulator.
-              </p>
-            </div>
-
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noreferrer"
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition duration-300 border self-start sm:self-auto cursor-pointer ${
-                isDarkMode
-                  ? 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10 hover:border-cyan-500/50 hover:text-cyan-300 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 shadow-xs'
-              }`}
-            >
-              <Code2 size={15} className={isDarkMode ? 'text-cyan-400' : 'text-indigo-600'} />
-              <span>View Main Repository</span>
-              <ExternalLink size={12} className="opacity-70" />
-            </a>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {teamMembers.map((member, idx) => (
-              <div
-                key={idx}
-                className={`group relative rounded-[28px] p-5 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 border overflow-hidden ${
+            <p>
+              The goal isn't to study more.
+              <strong
+                className={
                   isDarkMode
-                    ? 'bg-[#131B2E]/90 border-white/10 hover:border-cyan-400/50 hover:shadow-[0_15px_30px_rgba(56,189,248,0.15)]'
-                    : 'bg-white border-slate-200/80 hover:border-indigo-400 hover:shadow-[0_20px_35px_rgba(79,70,229,0.12)]'
-                }`}
+                    ? "text-white"
+                    : "text-[#231B33]"
+                }
               >
-                <div
-                  className={`absolute -top-12 -right-12 w-28 h-28 rounded-full bg-gradient-to-br ${member.glowColor} blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}
+                {" "}
+                It's to study smarter.
+              </strong>
+            </p>
+          </div>
+
+          <div
+            className={`
+              mt-9
+              grid
+              gap-4
+              border-t
+              pt-7
+              sm:grid-cols-3
+              ${
+                isDarkMode
+                  ? "border-white/10"
+                  : "border-slate-200"
+              }
+            `}
+          >
+            {[
+              "Less Scrolling",
+              "More Active Recall",
+              "Smarter Revision",
+            ].map((item) => (
+              <div
+                key={item}
+                className={`
+                  flex
+                  items-center
+                  gap-2
+                  text-xs
+                  font-bold
+                  ${textSecondary}
+                `}
+              >
+                <CheckCircle2
+                  size={16}
+                  className="shrink-0 text-purple-400"
                 />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="relative">
-                      <div
-                        className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-sm tracking-wider transition-transform duration-300 group-hover:scale-105 border ${
-                          isDarkMode
-                            ? 'bg-gradient-to-br from-cyan-950 to-slate-900 border-cyan-500/40 text-[#38BDF8] shadow-inner'
-                            : 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 text-[#4F46E5] shadow-xs'
-                        }`}
-                      >
-                        {member.initials}
-                      </div>
-                      <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500 border border-slate-900" />
-                      </span>
-                    </div>
-
-                    <span
-                      className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-md ${
-                        isDarkMode ? 'text-slate-500 bg-white/5' : 'text-slate-400 bg-slate-100'
-                      }`}
-                    >
-                      0{idx + 1}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h4
-                      className={`text-sm font-black tracking-tight ${
-                        isDarkMode ? 'text-white' : 'text-[#0F172A]'
-                      }`}
-                    >
-                      {member.name}
-                    </h4>
-                    <span
-                      className={`text-[11px] font-bold block leading-tight ${
-                        isDarkMode ? 'text-slate-300' : 'text-slate-600'
-                      }`}
-                    >
-                      {member.role}
-                    </span>
-                  </div>
-
-                  <div
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[9.5px] font-extrabold border ${member.badgeColor}`}
-                  >
-                    <Zap size={10} />
-                    {member.focus}
-                  </div>
-                </div>
-
-                <div
-                  className={`pt-4 mt-4 border-t flex items-center justify-between gap-2 ${
-                    isDarkMode ? 'border-white/5' : 'border-slate-100'
-                  }`}
-                >
-                  <a
-                    href={member.github}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-bold transition border cursor-pointer ${
-                      isDarkMode
-                        ? 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10 hover:text-cyan-300 hover:border-cyan-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200'
-                    }`}
-                  >
-                    <GithubIcon size={12} /> GitHub
-                  </a>
-
-                  <a
-                    href={member.linkedin}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`p-1.5 rounded-xl transition border cursor-pointer flex items-center justify-center ${
-                      isDarkMode
-                        ? 'bg-white/5 border-white/5 text-slate-400 hover:text-cyan-300 hover:bg-white/10 hover:border-cyan-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200'
-                    }`}
-                    aria-label="LinkedIn"
-                  >
-                    <LinkedinIcon size={12} />
-                  </a>
-                </div>
+                {item}
               </div>
             ))}
           </div>
-        </div>
-      </main>
 
-      {/* Streamlined Footer */}
-      <footer
-        className={`relative z-20 border-t transition-colors duration-500 overflow-hidden text-left ${
-          isDarkMode ? 'border-white/10 bg-[#070A12] text-[#94A3B8]' : 'border-slate-200 bg-[#F8FAFC] text-[#64748B]'
-        }`}
-      >
-        <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-          
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/10">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-md ${
-                    isDarkMode
-                      ? 'bg-gradient-to-br from-[#38BDF8] to-[#4F46E5] text-white shadow-cyan-500/20'
-                      : 'bg-[#4F46E5] text-white shadow-[#4F46E5]/25'
-                  }`}
-                >
-                  <Sparkles size={16} className="stroke-[2.2]" />
-                </div>
-                <span className={`font-black text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-                  AI STUDY ENGINE
-                </span>
-              </div>
-              
-              <p className="text-xs text-slate-400 italic">
-                "Empowering deep conceptual recall through intelligent curriculum synthesis."
-              </p>
-            </div>
+        </section>
 
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noreferrer"
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                isDarkMode
-                  ? 'bg-white/5 border-white/10 text-slate-300 hover:text-cyan-300 hover:bg-white/10 hover:border-cyan-500/30'
-                  : 'bg-white border-slate-200 text-slate-700 hover:text-indigo-600 hover:bg-slate-50 shadow-2xs'
-              }`}
-            >
-              <Code2 size={14} className={isDarkMode ? 'text-cyan-400' : 'text-indigo-600'} />
-              <span>GitHub Repository</span>
-              <ExternalLink size={11} className="opacity-60" />
-            </a>
-          </div>
+        {/* ===================================================
+            ASSESSMENT FRAMEWORK
+        =================================================== */}
 
-          <div className="space-y-3">
-            <span className={`text-[11px] font-black uppercase tracking-wider block ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              Engineering Contributors
+        <section className="space-y-9">
+
+          <div className="text-center">
+
+            <span className="text-xs font-black uppercase tracking-widest text-purple-400">
+              How JOT Thinks
             </span>
 
-            <div className="flex flex-wrap items-center gap-2.5">
-              {teamMembers.map((member, idx) => (
-                <a
-                  key={idx}
-                  href={member.github}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`group inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition duration-200 cursor-pointer ${
-                    isDarkMode
-                      ? 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10 hover:border-cyan-500/40 hover:text-cyan-300'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 shadow-2xs'
-                  }`}
+            <h2
+              className={`
+                mt-3
+                text-3xl
+                font-black
+                sm:text-4xl
+                ${textPrimary}
+              `}
+            >
+              From "I know this"
+              <br />
+              to "I can actually use this."
+            </h2>
+
+            <p
+              className={`
+                mx-auto
+                mt-4
+                max-w-2xl
+                text-sm
+                ${textSecondary}
+              `}
+            >
+              JOT helps you move through different levels of
+              understanding instead of stopping at memorization.
+            </p>
+
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+
+            {tiers.map((tier) => {
+              const Icon = tier.icon;
+
+              return (
+                <div
+                  key={tier.tier}
+                  className={`
+                    rounded-3xl
+                    border
+                    p-7
+                    transition-all
+                    duration-300
+                    hover:-translate-y-1
+                    ${card}
+                  `}
                 >
-                  <span
-                    className={`h-5 w-5 rounded-md flex items-center justify-center text-[9px] font-black ${
-                      isDarkMode ? 'bg-cyan-950 text-cyan-400' : 'bg-indigo-100 text-indigo-700'
-                    }`}
+
+                  <div className="mb-5 flex items-center justify-between">
+
+                    <span className="text-xs font-black text-purple-400">
+                      {tier.tier}
+                    </span>
+
+                    <span
+                      className={`
+                        rounded-lg
+                        px-3
+                        py-1
+                        text-xs
+                        font-bold
+                        ${
+                          isDarkMode
+                            ? "bg-white/10 text-slate-300"
+                            : "bg-purple-50 text-purple-700"
+                        }
+                      `}
+                    >
+                      {tier.badge}
+                    </span>
+
+                  </div>
+
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
+                    <Icon size={22} />
+                  </div>
+
+                  <h3
+                    className={`
+                      mb-2
+                      text-xl
+                      font-black
+                      ${textPrimary}
+                    `}
+                  >
+                    {tier.title}
+                  </h3>
+
+                  <p
+                    className={`
+                      text-sm
+                      leading-7
+                      ${textSecondary}
+                    `}
+                  >
+                    {tier.desc}
+                  </p>
+
+                </div>
+              );
+            })}
+
+          </div>
+        </section>
+
+        {/* ===================================================
+            HOW TO USE
+        =================================================== */}
+
+        <section className="space-y-9">
+
+          <div className="text-center">
+
+            <span className="text-xs font-black uppercase tracking-widest text-purple-400">
+              Your JOT Journey
+            </span>
+
+            <h2
+              className={`
+                mt-3
+                text-3xl
+                font-black
+                sm:text-4xl
+                ${textPrimary}
+              `}
+            >
+              Six steps from notes
+              <br />
+              to "I've got this."
+            </h2>
+
+            <p
+              className={`
+                mt-4
+                text-sm
+                ${textSecondary}
+              `}
+            >
+              No complicated setup. Just upload, practise,
+              learn, and keep improving.
+            </p>
+
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+            {steps.map((step) => {
+              const Icon = step.icon;
+
+              return (
+                <div
+                  key={step.num}
+                  className={`
+                    rounded-3xl
+                    border
+                    p-6
+                    transition-all
+                    duration-300
+                    hover:-translate-y-1
+                    ${card}
+                  `}
+                >
+
+                  <div className="mb-5 flex items-center justify-between">
+
+                    <div
+                      className={`
+                        flex
+                        h-12
+                        w-12
+                        items-center
+                        justify-center
+                        rounded-2xl
+                        ${
+                          isDarkMode
+                            ? "bg-purple-500/10 text-purple-300"
+                            : "bg-purple-50 text-purple-600"
+                        }
+                      `}
+                    >
+                      <Icon size={22} />
+                    </div>
+
+                    <span
+                      className={`
+                        text-2xl
+                        font-black
+                        ${
+                          isDarkMode
+                            ? "text-white/10"
+                            : "text-slate-200"
+                        }
+                      `}
+                    >
+                      {step.num}
+                    </span>
+
+                  </div>
+
+                  <h3
+                    className={`
+                      mb-2
+                      font-black
+                      ${textPrimary}
+                    `}
+                  >
+                    {step.title}
+                  </h3>
+
+                  <p
+                    className={`
+                      text-xs
+                      leading-7
+                      ${textSecondary}
+                    `}
+                  >
+                    {step.desc}
+                  </p>
+
+                </div>
+              );
+            })}
+
+          </div>
+        </section>
+
+        {/* ===================================================
+            CORE FEATURES
+        =================================================== */}
+
+        <section className="space-y-9">
+
+          <div>
+
+            <span className="text-xs font-black uppercase tracking-widest text-purple-400">
+              What Makes JOT Different
+            </span>
+
+            <h2
+              className={`
+                mt-3
+                text-3xl
+                font-black
+                sm:text-4xl
+                ${textPrimary}
+              `}
+            >
+              More than just
+              <br />
+              question generation.
+            </h2>
+
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+
+            {values.map((value) => {
+              const Icon = value.icon;
+
+              return (
+                <div
+                  key={value.title}
+                  className={`
+                    rounded-3xl
+                    border
+                    p-7
+                    transition-all
+                    duration-300
+                    hover:-translate-y-1
+                    ${card}
+                  `}
+                >
+
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
+                    <Icon size={22} />
+                  </div>
+
+                  <h3
+                    className={`
+                      mb-3
+                      font-black
+                      ${textPrimary}
+                    `}
+                  >
+                    {value.title}
+                  </h3>
+
+                  <p
+                    className={`
+                      text-sm
+                      leading-7
+                      ${textSecondary}
+                    `}
+                  >
+                    {value.desc}
+                  </p>
+
+                </div>
+              );
+            })}
+
+          </div>
+        </section>
+
+        {/* ===================================================
+            JOJO CTA
+        =================================================== */}
+
+        <section
+          className={`
+            relative
+            overflow-hidden
+            rounded-[36px]
+            border
+            p-8
+            text-center
+            sm:p-12
+            ${
+              isDarkMode
+                ? "border-purple-400/20 bg-gradient-to-br from-[#24163A] via-[#181329] to-[#100D17]"
+                : "border-purple-100 bg-gradient-to-br from-purple-50 via-white to-indigo-50"
+            }
+          `}
+        >
+
+          <div
+            className={`
+              absolute
+              -right-20
+              -top-20
+              h-64
+              w-64
+              rounded-full
+              blur-3xl
+              ${
+                isDarkMode
+                  ? "bg-purple-500/15"
+                  : "bg-purple-300/20"
+              }
+            `}
+          />
+
+          <div
+            className={`
+              absolute
+              -bottom-20
+              -left-20
+              h-64
+              w-64
+              rounded-full
+              blur-3xl
+              ${
+                isDarkMode
+                  ? "bg-purple-500/10"
+                  : "bg-purple-200/20"
+              }
+            `}
+          />
+
+          <div className="relative">
+
+            <div className="mb-5 flex justify-center">
+
+              <div
+                className={`
+                  flex
+                  h-28
+                  w-28
+                  items-center
+                  justify-center
+                  rounded-full
+                  ${
+                    isDarkMode
+                      ? "bg-white/5"
+                      : "bg-white shadow-sm"
+                  }
+                `}
+              >
+                <img
+                  src={currentJojo}
+                  alt="Jojo"
+                  className="h-24 w-24 object-contain"
+                />
+              </div>
+
+            </div>
+
+            <h2
+              className={`
+                text-3xl
+                font-black
+                sm:text-4xl
+                ${textPrimary}
+              `}
+            >
+              Ready to JOT?
+            </h2>
+
+            <p
+              className={`
+                mx-auto
+                mt-4
+                max-w-lg
+                text-sm
+                leading-7
+                ${textSecondary}
+              `}
+            >
+              Your notes are waiting. Give Jojo something
+              to work with and turn that study chaos into
+              something a little more manageable.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                onNavigate && onNavigate("signup")
+              }
+              className="
+                mt-7
+                rounded-2xl
+                bg-[#8064C7]
+                px-8
+                py-4
+                text-sm
+                font-black
+                text-white
+                shadow-lg
+                shadow-purple-500/20
+                transition
+                hover:scale-105
+                hover:bg-[#9275D8]
+              "
+            >
+              Create Free Account ✨
+            </button>
+
+          </div>
+
+        </section>
+
+        {/* ===================================================
+            TEAM
+        =================================================== */}
+
+        <section className="space-y-9">
+
+          <div className="text-center">
+
+            <span className="text-xs font-black uppercase tracking-widest text-purple-400">
+              The People Behind JOT
+            </span>
+
+            <h2
+              className={`
+                mt-3
+                text-3xl
+                font-black
+                sm:text-4xl
+                ${textPrimary}
+              `}
+            >
+              Meet the Team
+            </h2>
+
+            <p
+              className={`
+                mx-auto
+                mt-4
+                max-w-2xl
+                text-sm
+                ${textSecondary}
+              `}
+            >
+              Five people, different strengths, one very
+              ambitious study buddy.
+            </p>
+
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+
+            {teamMembers.map((member, index) => (
+              <div
+                key={member.name}
+                className={`
+                  rounded-3xl
+                  border
+                  p-5
+                  transition-all
+                  duration-300
+                  hover:-translate-y-2
+                  ${card}
+                `}
+              >
+
+                <div className="mb-5 flex justify-between">
+
+                  <div
+                    className={`
+                      flex
+                      h-12
+                      w-12
+                      items-center
+                      justify-center
+                      rounded-2xl
+                      font-black
+                      ${
+                        isDarkMode
+                          ? "bg-purple-500/10 text-purple-300"
+                          : "bg-purple-50 text-purple-700"
+                      }
+                    `}
                   >
                     {member.initials}
+                  </div>
+
+                  <span
+                    className={`
+                      text-xs
+                      font-black
+                      ${
+                        isDarkMode
+                          ? "text-white/20"
+                          : "text-slate-300"
+                      }
+                    `}
+                  >
+                    0{index + 1}
                   </span>
-                  <span>{member.name}</span>
-                  <GithubIcon size={11} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-                </a>
-              ))}
-            </div>
+
+                </div>
+
+                <h3
+                  className={`
+                    font-black
+                    ${textPrimary}
+                  `}
+                >
+                  {member.name}
+                </h3>
+
+                <p
+                  className={`
+                    mt-1
+                    text-xs
+                    font-bold
+                    ${textSecondary}
+                  `}
+                >
+                  {member.role}
+                </p>
+
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-purple-500/10 px-2.5 py-1 text-[10px] font-black text-purple-400">
+                  <Zap size={10} />
+                  {member.focus}
+                </div>
+
+                <div
+                  className={`
+                    mt-5
+                    flex
+                    gap-2
+                    border-t
+                    pt-4
+                    ${
+                      isDarkMode
+                        ? "border-white/10"
+                        : "border-slate-200"
+                    }
+                  `}
+                >
+
+                  <a
+                    href="https://github.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`
+                      flex
+                      flex-1
+                      items-center
+                      justify-center
+                      rounded-xl
+                      border
+                      py-2
+                      text-xs
+                      font-bold
+                      ${
+                        isDarkMode
+                          ? "border-white/10 hover:bg-white/5"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }
+                    `}
+                  >
+                    GitHub
+                  </a>
+
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`
+                      flex
+                      items-center
+                      justify-center
+                      rounded-xl
+                      border
+                      px-3
+                      ${
+                        isDarkMode
+                          ? "border-white/10 hover:bg-white/5"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }
+                    `}
+                  >
+                    LinkedIn
+                  </a>
+
+                </div>
+
+              </div>
+            ))}
+
           </div>
+        </section>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10 text-xs text-slate-400 font-medium">
-            <p>© {new Date().getFullYear()} AI Study Engine Research Group.</p>
+      </main>
 
-            <div className="flex items-center gap-2">
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noreferrer"
-                className={`p-2 rounded-xl border transition cursor-pointer ${
-                  isDarkMode
-                    ? 'bg-white/5 border-white/10 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 hover:bg-white/10'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-[#4F46E5] hover:bg-slate-50 shadow-2xs'
-                }`}
-                aria-label="GitHub"
-              >
-                <GithubIcon size={13} />
-              </a>
+      {/* =====================================================
+          SHARED FOOTER
+      ===================================================== */}
 
-              <a
-                href="https://discord.com"
-                target="_blank"
-                rel="noreferrer"
-                className={`p-2 rounded-xl border transition cursor-pointer ${
-                  isDarkMode
-                    ? 'bg-white/5 border-white/10 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 hover:bg-white/10'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-[#4F46E5] hover:bg-slate-50 shadow-2xs'
-                }`}
-                aria-label="Discord"
-              >
-                <DiscordIcon size={13} />
-              </a>
-
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noreferrer"
-                className={`p-2 rounded-xl border transition cursor-pointer ${
-                  isDarkMode
-                    ? 'bg-white/5 border-white/10 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 hover:bg-white/10'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-[#4F46E5] hover:bg-slate-50 shadow-2xs'
-                }`}
-                aria-label="LinkedIn"
-              >
-                <LinkedinIcon size={13} />
-              </a>
-
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noreferrer"
-                className={`p-2 rounded-xl border transition cursor-pointer ${
-                  isDarkMode
-                    ? 'bg-white/5 border-white/10 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 hover:bg-white/10'
-                    : 'bg-white border-slate-200 text-slate-600 hover:text-[#4F46E5] hover:bg-slate-50 shadow-2xs'
-                }`}
-                aria-label="Twitter"
-              >
-                <TwitterIcon size={13} />
-              </a>
-            </div>
-          </div>
-
-        </div>
-      </footer>
+      <JotFooter />
     </div>
   );
 }
