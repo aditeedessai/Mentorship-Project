@@ -8,6 +8,7 @@ export default function QuestionNavigator({
   onSelectQuestion,
   isOpen = false,
   onClose,
+  disabled = false,
 }) {
   const { isDarkMode } = useTheme()
 
@@ -31,6 +32,7 @@ export default function QuestionNavigator({
   }
 
   const handleSelect = (num) => {
+    if (disabled) return
     onSelectQuestion(num)
     if (onClose) onClose()
   }
@@ -87,7 +89,8 @@ export default function QuestionNavigator({
                   key={num}
                   type="button"
                   onClick={() => handleSelect(num)}
-                  className={`aspect-square rounded-xl text-xs flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105 ${getStatusClass(num)}`}
+                  disabled={disabled}
+                  className={`aspect-square rounded-xl text-xs flex items-center justify-center transition-all duration-200 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:scale-105'} ${getStatusClass(num)}`}
                   aria-label={`Question ${num}`}
                 >
                   {num}

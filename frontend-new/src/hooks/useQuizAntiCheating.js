@@ -7,31 +7,49 @@ import { useState, useEffect, useRef, useCallback } from 'react'
  * and clipboard restrictions.
  *
  * Focus/session-loss violations (fullscreen exit, tab switch, focus loss, DevTools):
- * - 1st violation: non-fatal warning banner displayed.
- * - 2nd violation: quiz terminated and user redirected.
+ * - 1st violation: Warning 1 of 2 displayed, quiz blocked until violation clears.
+ * - 2nd violation: Warning 2 of 2 (final warning), quiz blocked until violation clears.
+ * - 3rd violation: Quiz terminated immediately and user redirected.
+ *
+ * DevTools violations are "blocking" — the quiz stays blocked until DevTools is closed.
+ * Non-DevTools violations are "transient" — the warning can be dismissed after acknowledgment.
  *
  * Clipboard restrictions (copy/cut/paste):
- * - Always non-fatal warning.
+ * - Always non-fatal warning (does not increment warning count).
  *
  * @param {{ enabled: boolean, onTerminate: (reason: string) => void }} options
  */
 export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}) {
+  // ── Constants ───────────────────────────────────────────────────
+  const MAX_WARNINGS = 2
+
   // ── State ────────────────────────────────────────────────────────
   const [warnings, setWarnings] = useState([])
   const [isFullscreenReady, setIsFullscreenReady] = useState(false)
   const [quizTerminated, setQuizTerminated] = useState(false)
 
+  // Warning system state
+  const [warningCount, setWarningCount] = useState(0)
+  const [activeViolation, setActiveViolation] = useState(null) // { reason, message, isBlocking }
+  const [isViolationActive, setIsViolationActive] = useState(false)
+
   // ── Refs ─────────────────────────────────────────────────────────
   const cleanedUpRef = useRef(false)
   const quizTerminatedRef = useRef(false)
-  const lastFocusWarningRef = useRef(0)
-  const focusViolationCountRef = useRef(0)
+  const isTerminatingRef = useRef(false)
+  const lastViolationTimeRef = useRef(0)
+  const warningCountRef = useRef(0)
+  const violationActiveRef = useRef(false)
   const wasFullscreenEstablishedRef = useRef(false)
   const devToolsIntervalRef = useRef(null)
   const clipboardDismissTimerRef = useRef(null)
   const historyPushedRef = useRef(false)
   const fullscreenAttemptCountRef = useRef(0)
   const onTerminateRef = useRef(onTerminate)
+
+  // DevTools-specific refs
+  const devToolsDetectedRef = useRef(false)
+  const devToolsViolationActiveRef = useRef(false) // violation-session guard
 
   // Keep onTerminate ref current to avoid stale closures
   useEffect(() => {
@@ -53,12 +71,15 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
   // ── Centralized quiz termination ─────────────────────────────────
   const terminateQuiz = useCallback(() => {
     // Guard: only terminate once
-    if (quizTerminatedRef.current || cleanedUpRef.current) return
+    if (quizTerminatedRef.current || cleanedUpRef.current || isTerminatingRef.current) return
 
+    isTerminatingRef.current = true
     quizTerminatedRef.current = true
     cleanedUpRef.current = true
     setQuizTerminated(true)
     setWarnings([])
+    setActiveViolation(null)
+    setIsViolationActive(false)
 
     // Clear timers
     if (devToolsIntervalRef.current) {
@@ -85,28 +106,64 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     }
   }, [])
 
-  // ── Handler for focus / visibility / fullscreen / DevTools violations
-  const handleFocusLossViolation = useCallback(() => {
-    if (cleanedUpRef.current || quizTerminatedRef.current) return
+  // ── Clear active violation (auto-resume) ──────────────────────────
+  const clearViolation = useCallback(() => {
+    violationActiveRef.current = false
+    devToolsViolationActiveRef.current = false
+    setActiveViolation(null)
+    setIsViolationActive(false)
+  }, [])
 
-    // 300ms deduplication between visibilitychange and window blur
-    const now = Date.now()
-    if (now - lastFocusWarningRef.current < 300) return
-    lastFocusWarningRef.current = now
-
-    if (focusViolationCountRef.current === 0) {
-      // 1st violation: Warning only
-      focusViolationCountRef.current = 1
-      addWarning(
-        'focus_warning',
-        'Warning',
-        'Leaving the quiz window or exiting fullscreen may terminate your quiz.'
-      )
-    } else {
-      // 2nd violation: Terminate quiz
-      terminateQuiz()
+  // ── Dismiss non-blocking (transient) violations ───────────────────
+  const dismissViolation = useCallback(() => {
+    // Only dismiss transient (non-blocking) violations
+    // DevTools violations cannot be dismissed — they auto-clear when DevTools closes
+    if (violationActiveRef.current && devToolsViolationActiveRef.current) {
+      // DevTools still detected — do not allow dismissal
+      return
     }
-  }, [addWarning, terminateQuiz])
+    clearViolation()
+  }, [clearViolation])
+
+  // ── Centralized violation handler ─────────────────────────────────
+  const handleViolation = useCallback((reason, message, isBlocking = false) => {
+    if (cleanedUpRef.current || quizTerminatedRef.current || isTerminatingRef.current) return
+
+    // For DevTools: check violation-session guard
+    // If DevTools violation is already active (same continuous session), don't increment
+    if (reason === 'devtools' && devToolsViolationActiveRef.current) return
+
+    // 300ms deduplication across all violation types
+    const now = Date.now()
+    if (now - lastViolationTimeRef.current < 300) return
+    lastViolationTimeRef.current = now
+
+    // Mark DevTools violation session as active
+    if (reason === 'devtools') {
+      devToolsViolationActiveRef.current = true
+    }
+
+    // Increment warning count
+    const newCount = warningCountRef.current + 1
+    warningCountRef.current = newCount
+    setWarningCount(newCount)
+
+    // Check if we've exceeded the warning limit
+    if (newCount > MAX_WARNINGS) {
+      terminateQuiz()
+      return
+    }
+
+    // Show warning and block quiz
+    violationActiveRef.current = true
+    setIsViolationActive(true)
+    setActiveViolation({
+      reason,
+      message,
+      isBlocking,
+      warningNumber: newCount,
+    })
+  }, [terminateQuiz])
 
   // ── Cleanup for legitimate exits (Abort / Finish) ────────────────
   const cleanup = useCallback(() => {
@@ -123,6 +180,8 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     }
 
     setWarnings([])
+    setActiveViolation(null)
+    setIsViolationActive(false)
 
     try {
       if (document.fullscreenElement) {
@@ -140,9 +199,14 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // Reset state for this activation
     cleanedUpRef.current = false
     quizTerminatedRef.current = false
-    focusViolationCountRef.current = 0
+    isTerminatingRef.current = false
+    warningCountRef.current = 0
+    violationActiveRef.current = false
+    devToolsDetectedRef.current = false
+    devToolsViolationActiveRef.current = false
     wasFullscreenEstablishedRef.current = false
     fullscreenAttemptCountRef.current = 0
+    lastViolationTimeRef.current = 0
 
     // ────────────────────────────────────────────────────────────────
     // 1. FULLSCREEN ENFORCEMENT
@@ -157,7 +221,11 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
         setIsFullscreenReady(false)
         // Only trigger violation if fullscreen was actually established previously
         if (wasFullscreenEstablishedRef.current) {
-          handleFocusLossViolation()
+          handleViolation(
+            'fullscreen',
+            'You exited the fullscreen exam environment.',
+            false // transient — student is already back or can re-enter
+          )
         }
       }
     }
@@ -224,7 +292,11 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     const handleVisibilityChange = () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
       if (document.visibilityState === 'hidden') {
-        handleFocusLossViolation()
+        handleViolation(
+          'tab_switch',
+          'You left the controlled quiz environment.',
+          false // transient
+        )
       }
     }
 
@@ -235,7 +307,11 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // ────────────────────────────────────────────────────────────────
     const handleWindowBlur = () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
-      handleFocusLossViolation()
+      handleViolation(
+        'focus_loss',
+        'The quiz window lost focus.',
+        false // transient
+      )
     }
 
     window.addEventListener('blur', handleWindowBlur)
@@ -331,18 +407,35 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     const DEVTOOLS_THRESHOLD = 160
 
     const checkDevTools = () => {
-      if (cleanedUpRef.current || quizTerminatedRef.current) return
+      if (cleanedUpRef.current || quizTerminatedRef.current || isTerminatingRef.current) return
 
       const widthDiff = window.outerWidth - window.innerWidth
       const heightDiff = window.outerHeight - window.innerHeight
 
-      if (widthDiff > DEVTOOLS_THRESHOLD || heightDiff > DEVTOOLS_THRESHOLD) {
-        handleFocusLossViolation()
+      const isDetected = widthDiff > DEVTOOLS_THRESHOLD || heightDiff > DEVTOOLS_THRESHOLD
+
+      if (isDetected) {
+        devToolsDetectedRef.current = true
+        // handleViolation will check devToolsViolationActiveRef and skip if already active
+        handleViolation(
+          'devtools',
+          'Developer Tools activity has been detected.',
+          true // blocking — quiz stays blocked until DevTools is closed
+        )
+      } else if (devToolsDetectedRef.current) {
+        // DevTools was previously detected but is now closed — clear the violation
+        devToolsDetectedRef.current = false
+        if (devToolsViolationActiveRef.current) {
+          clearViolation()
+        }
       }
     }
 
-    devToolsIntervalRef.current = setInterval(checkDevTools, 3000)
-    const initialDevToolsTimeout = setTimeout(checkDevTools, 1000)
+    // Run initial check immediately (not delayed) to catch pre-opened DevTools
+    checkDevTools()
+
+    // Continue monitoring every 1.5 seconds
+    devToolsIntervalRef.current = setInterval(checkDevTools, 1500)
 
     // ────────────────────────────────────────────────────────────────
     // 9. BACK NAVIGATION PROTECTION
@@ -394,7 +487,6 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
         clearInterval(devToolsIntervalRef.current)
         devToolsIntervalRef.current = null
       }
-      clearTimeout(initialDevToolsTimeout)
 
       window.removeEventListener('popstate', handlePopState)
       window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -406,12 +498,17 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
       historyPushedRef.current = false
     }
-  }, [enabled, addWarning, removeWarning, handleFocusLossViolation, terminateQuiz])
+  }, [enabled, addWarning, removeWarning, handleViolation, clearViolation, terminateQuiz])
 
   return {
     isFullscreenReady,
     quizTerminated,
     warnings,
+    warningCount,
+    maxWarnings: MAX_WARNINGS,
+    activeViolation,
+    isViolationActive,
+    dismissViolation,
     cleanup,
   }
 }

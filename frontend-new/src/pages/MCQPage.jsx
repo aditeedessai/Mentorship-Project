@@ -43,6 +43,11 @@ export default function MCQPage() {
     isFullscreenReady,
     quizTerminated,
     warnings,
+    warningCount,
+    maxWarnings,
+    activeViolation,
+    isViolationActive,
+    dismissViolation,
     cleanup: antiCheatCleanup,
   } = useQuizAntiCheating({
     enabled: questionCount > 0,
@@ -56,14 +61,14 @@ export default function MCQPage() {
     }
   }, [questionCount, navigate])
 
-  // Timer — only ticks when fullscreen is established
+  // Timer — only ticks when fullscreen is established and no active violation
   useEffect(() => {
-    if (remainingSeconds <= 0 || !isFullscreenReady) return
+    if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive) return
     const interval = setInterval(() => {
       setRemainingSeconds(prev => Math.max(0, prev - 1))
     }, 1000)
     return () => clearInterval(interval)
-  }, [remainingSeconds, isFullscreenReady])
+  }, [remainingSeconds, isFullscreenReady, isViolationActive])
 
   const goToQuestion = useCallback((num) => {
     if (num < 1 || num > questionCount || num === currentQuestion) return
@@ -196,8 +201,15 @@ export default function MCQPage() {
         </div>
       )}
 
-      {/* Clipboard warning overlay */}
-      <AntiCheatingWarning warnings={warnings} />
+      {/* Anti-cheating warning system */}
+      <AntiCheatingWarning
+        warnings={warnings}
+        activeViolation={activeViolation}
+        isViolationActive={isViolationActive}
+        warningCount={warningCount}
+        maxWarnings={maxWarnings}
+        onDismissViolation={dismissViolation}
+      />
 
       <QuizHeader
         remainingSeconds={remainingSeconds}
@@ -215,6 +227,7 @@ export default function MCQPage() {
           onSelectQuestion={goToQuestion}
           isOpen={showNavDrawer}
           onClose={() => setShowNavDrawer(false)}
+          disabled={isViolationActive}
         />
         <QuizCenter
           question={currentQ}
@@ -226,6 +239,7 @@ export default function MCQPage() {
           onNext={currentQuestion === questionCount ? handleFinishQuiz : handleConfirmNext}
           isFirstQuestion={currentQuestion === 1}
           isLastQuestion={currentQuestion === questionCount}
+          disabled={isViolationActive}
         />
         <RoughWorkPanel
           value={scratchpad[currentQuestion] || ''}

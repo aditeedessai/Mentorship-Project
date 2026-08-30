@@ -41,6 +41,11 @@ export default function QnAPage() {
     isFullscreenReady,
     quizTerminated,
     warnings,
+    warningCount,
+    maxWarnings,
+    activeViolation,
+    isViolationActive,
+    dismissViolation,
     cleanup: antiCheatCleanup,
   } = useQuizAntiCheating({
     enabled: questionCount > 0,
@@ -54,12 +59,12 @@ export default function QnAPage() {
   }, [questionCount, navigate])
 
   useEffect(() => {
-    if (remainingSeconds <= 0 || !isFullscreenReady) return
+    if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive) return
     const interval = setInterval(() => {
       setRemainingSeconds(prev => Math.max(0, prev - 1))
     }, 1000)
     return () => clearInterval(interval)
-  }, [remainingSeconds, isFullscreenReady])
+  }, [remainingSeconds, isFullscreenReady, isViolationActive])
 
   const goToQuestion = useCallback((num) => {
     if (num < 1 || num > questionCount || num === currentQuestion) return
@@ -196,7 +201,14 @@ export default function QnAPage() {
         </div>
       )}
 
-      <AntiCheatingWarning warnings={warnings} />
+      <AntiCheatingWarning
+        warnings={warnings}
+        activeViolation={activeViolation}
+        isViolationActive={isViolationActive}
+        warningCount={warningCount}
+        maxWarnings={maxWarnings}
+        onDismissViolation={dismissViolation}
+      />
 
       <QuizHeader
         remainingSeconds={remainingSeconds}
@@ -214,6 +226,7 @@ export default function QnAPage() {
           onSelectQuestion={goToQuestion}
           isOpen={showNavDrawer}
           onClose={() => setShowNavDrawer(false)}
+          disabled={isViolationActive}
         />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -265,11 +278,12 @@ export default function QnAPage() {
                 </p>
               </div>
 
-              <div className="flex-1 min-h-[160px] sm:min-h-[180px]" data-ac-editable="true">
+              <div className={`flex-1 min-h-[160px] sm:min-h-[180px] ${isViolationActive ? 'opacity-50 pointer-events-none' : ''}`} data-ac-editable="true">
                 <textarea
                   value={answers[currentQuestion] || ''}
                   onChange={(e) => handleAnswerChange(e.target.value)}
                   placeholder="Type your answer here..."
+                  disabled={isViolationActive}
                   className={`w-full h-full min-h-[160px] sm:min-h-[180px] p-4 rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
@@ -286,9 +300,9 @@ export default function QnAPage() {
             <button
               type="button"
               onClick={handlePrevious}
-              disabled={isFirstQuestion}
+              disabled={isFirstQuestion || isViolationActive}
               className={`flex items-center gap-1.5 text-xs font-bold transition-opacity
-                ${isFirstQuestion ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'}`}
+                ${(isFirstQuestion || isViolationActive) ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'}`}
               aria-label="Previous question"
             >
               <ArrowLeft className="w-4 h-4" strokeWidth={2.2} />
@@ -298,8 +312,10 @@ export default function QnAPage() {
             <button
               type="button"
               onClick={isLastQuestion ? handleFinishQuiz : handleSubmitNext}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
+              disabled={isSubmitting || isViolationActive}
+              className={`flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] text-white text-xs font-bold rounded-xl shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all ${
+                isViolationActive ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#8B6DD4] cursor-pointer hover:-translate-y-0.5'
+              }`}
               aria-label={isLastQuestion ? 'Finish quiz' : 'Submit answer and go to next question'}
             >
               {isSubmitting ? 'Submitting...' : (isLastQuestion ? 'Finish Quiz' : 'Submit Answer')}

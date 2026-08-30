@@ -11,6 +11,7 @@ export default function QuizCenter({
   onNext,
   isFirstQuestion,
   isLastQuestion,
+  disabled = false,
 }) {
   const { isDarkMode } = useTheme()
   const progress = (currentQuestion / questionCount) * 100
@@ -66,7 +67,7 @@ export default function QuizCenter({
           </div>
 
           {/* Answer Options */}
-          <div className="space-y-3">
+          <div className={`space-y-3 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
             {question.options.map((option, idx) => {
               const isSelected = selectedAnswer === idx
               return (
@@ -74,12 +75,14 @@ export default function QuizCenter({
                   key={idx}
                   type="button"
                   onClick={() => onSelectAnswer(idx)}
-                  className={`w-full flex items-start gap-3 py-3.5 px-4 sm:px-5 rounded-2xl border transition-all duration-200 cursor-pointer text-left ${
+                  disabled={disabled}
+                  className={`w-full flex items-start gap-3 py-3.5 px-4 sm:px-5 rounded-2xl border transition-all duration-200 text-left ${
+                    disabled ? 'cursor-not-allowed' :
                     isSelected
-                      ? 'border-[#8064C7] bg-[#8064C7]/15 shadow-md scale-[1.005]'
+                      ? 'border-[#8064C7] bg-[#8064C7]/15 shadow-md scale-[1.005] cursor-pointer'
                       : isDarkMode
-                      ? 'border-white/5 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                      : 'border-gray-200/80 bg-white hover:border-[#8064C7]/50 hover:bg-gray-50'
+                      ? 'border-white/5 bg-white/5 hover:border-white/20 hover:bg-white/10 cursor-pointer'
+                      : 'border-gray-200/80 bg-white hover:border-[#8064C7]/50 hover:bg-gray-50 cursor-pointer'
                   }`}
                   aria-pressed={isSelected}
                 >
@@ -115,9 +118,9 @@ export default function QuizCenter({
         <button
           type="button"
           onClick={onPrevious}
-          disabled={isFirstQuestion}
+          disabled={isFirstQuestion || disabled}
           className={`flex items-center gap-1.5 text-xs font-bold transition-opacity ${
-            isFirstQuestion ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'
+            (isFirstQuestion || disabled) ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'
           }`}
           aria-label="Previous question"
         >
@@ -128,7 +131,10 @@ export default function QuizCenter({
         <button
           type="button"
           onClick={onNext}
-          className="flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] hover:bg-[#8B6DD4] text-white text-xs font-bold rounded-xl cursor-pointer shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all hover:-translate-y-0.5"
+          disabled={disabled}
+          className={`flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] text-white text-xs font-bold rounded-xl shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all ${
+            disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#8B6DD4] cursor-pointer hover:-translate-y-0.5'
+          }`}
           aria-label={isLastQuestion ? 'Finish quiz' : 'Confirm and go to next question'}
         >
           {isLastQuestion ? 'Finish Quiz' : 'Confirm & Next'}
