@@ -1,10 +1,11 @@
-import { BookOpen, GraduationCap, Sparkles } from "lucide-react";
+import { BookOpen, Sparkles } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import TodaysTasksCard from "../components/dashboard/TodaysTasksCard";
 import UpcomingExamsCard from "../components/dashboard/UpcomingExamsCard";
 import StudySetProgressCard from "../components/dashboard/StudySetProgressCard";
 import ActivityCalendarCard from "../components/dashboard/ActivityCalendarCard";
 import MotivationalTaglineCard from "../components/dashboard/MotivationalTaglineCard";
+import jojoImage from "../assets/jojo-transparent-clean.png";
 
 function DashboardPage({ user, onNavigate }) {
   const { isDarkMode } = useTheme();
@@ -19,11 +20,13 @@ function DashboardPage({ user, onNavigate }) {
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
         }`}
       >
+        {/* LEFT SIDE */}
         <div>
           <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-black tracking-tight">
             Hi {user?.name || "Alex"}!
             <Sparkles size={24} className="text-[#8064C7]" />
           </h1>
+
           <p
             className={`mt-2 text-xs sm:text-sm font-medium ${
               isDarkMode ? "text-white/50" : "text-[#706A78]"
@@ -41,34 +44,38 @@ function DashboardPage({ user, onNavigate }) {
           </button>
         </div>
 
-        <div
-          className={`flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
-            isDarkMode
-              ? "border-white/10 bg-white/5 text-[#A78BFA]"
-              : "border-black/5 bg-white/80 text-[#8064C7] shadow-xs"
-          }`}
-        >
-          <GraduationCap size={36} />
+        {/* ================= JOJO ================= */}
+        <div className="relative flex h-32 w-32 sm:h-40 sm:w-40 shrink-0 items-end justify-center">
+          {/* Soft Jojo glow */}
+          <div
+            className={`absolute bottom-4 h-24 w-24 rounded-full blur-3xl ${
+              isDarkMode ? "bg-[#8064C7]/20" : "bg-[#8064C7]/15"
+            }`}
+          />
+
+          <img
+            src={jojoImage}
+            alt="Jojo - JOT study buddy"
+            className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:-translate-y-1"
+          />
         </div>
       </div>
 
       {/* ================= DASHBOARD CARDS ================= */}
       <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="flex flex-1 flex-col gap-6 min-w-0">
+        <div className="flex flex-1 min-w-0 flex-col gap-6">
           <TodaysTasksCard />
           <StudySetProgressCard />
           <MotivationalTaglineCard />
         </div>
 
-        <div className="flex flex-1 flex-col gap-6 min-w-0">
+        <div className="flex flex-1 min-w-0 flex-col gap-6">
           <UpcomingExamsCard />
           <ActivityCalendarCard />
         </div>
       </div>
-
     </div>
   );
 }
 
 export default DashboardPage;
-
