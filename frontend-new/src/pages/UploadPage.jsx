@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { Sparkles, X, FileCheck, Presentation, FileText, Upload } from "lucide-react";
+import { Sparkles, X, FileCheck, Presentation, FileText, Upload, Image as ImageIcon, Camera } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { createStudySet, uploadDocuments } from "../services/api";
 
-const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".pptx"];
+const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".pptx", ".png", ".jpg", ".jpeg", ".webp"];
 
 const getFileIcon = (fileName) => {
   const ext = "." + fileName.toLowerCase().split(".").pop();
   if (ext === ".pdf") return <FileText size={22} className="text-[#8064C7]" />;
   if (ext === ".docx") return <FileCheck size={22} className="text-[#8064C7]" />;
   if (ext === ".pptx") return <Presentation size={22} className="text-[#8064C7]" />;
+  if ([".png", ".jpg", ".jpeg", ".webp"].includes(ext)) {
+    return <ImageIcon size={22} className="text-[#8064C7]" />;
+  }
   return <FileText size={22} className="text-[#8064C7]" />;
 };
 
@@ -33,7 +36,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
     incoming.forEach((file) => {
       const ext = "." + file.name.toLowerCase().split(".").pop();
-      if (ALLOWED_EXTENSIONS.includes(ext)) {
+      if (ALLOWED_EXTENSIONS.includes(ext) || file.type.startsWith("image/")) {
         validFiles.push(file);
       } else {
         invalidFileNames.push(file.name);
@@ -42,7 +45,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
     if (invalidFileNames.length > 0) {
       setUploadError(
-        `Unsupported file format: ${invalidFileNames.join(", ")}. Allowed formats: .pdf, .docx, .pptx`
+        `Unsupported file format: ${invalidFileNames.join(", ")}. Allowed formats: PDF, DOCX, PPTX, PNG, JPG, JPEG, WEBP`
       );
     } else {
       setUploadError("");
@@ -84,7 +87,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
   const handleCreateAndUpload = async () => {
     if (selectedFiles.length === 0) {
-      setUploadError("Please select at least one document file.");
+      setUploadError("Please select or snap at least one document or image file.");
       return;
     }
 
@@ -106,8 +109,15 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       const newStudySetId = newSet.study_set_id;
 
       const fileCount = selectedFiles.length;
+      const hasImages = selectedFiles.some((f) =>
+        f.type.startsWith("image/") ||
+        [".png", ".jpg", ".jpeg", ".webp"].some((ext) => f.name.toLowerCase().endsWith(ext))
+      );
+
       setStatusMessage(
-        `Uploading and processing ${fileCount} document${fileCount > 1 ? "s" : ""}...`
+        hasImages
+          ? `Running Grayscale + OCR on ${fileCount} file${fileCount > 1 ? "s" : ""}...`
+          : `Processing and embedding ${fileCount} document${fileCount > 1 ? "s" : ""}...`
       );
 
       await uploadDocuments(newStudySetId, selectedFiles);
@@ -144,31 +154,28 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     <div>
       {/* ================= HEADER ================= */}
       <div
-        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-5 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
-          isDarkMode
+        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-5 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
-        }`}
+          }`}
       >
         <div>
           <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-black tracking-tight">
             Create Study Set
           </h1>
           <p
-            className={`mt-2 text-xs sm:text-sm font-medium ${
-              isDarkMode ? "text-white/50" : "text-[#706A78]"
-            }`}
+            className={`mt-2 text-xs sm:text-sm font-medium ${isDarkMode ? "text-white/50" : "text-[#706A78]"
+              }`}
           >
-            Upload your study materials and give your set a name to get started.
+            Upload study documents or snap photos of handwritten notes & images.
           </p>
         </div>
 
         <div
-          className={`flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
-            isDarkMode
+          className={`flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${isDarkMode
               ? "border-white/10 bg-white/5 text-[#A78BFA]"
               : "border-[#8064C7]/20 bg-white/60 text-[#8064C7] shadow-xs"
-          }`}
+            }`}
         >
           <Upload size={36} />
         </div>
@@ -196,13 +203,11 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       <div className="grid gap-6 lg:grid-cols-3 items-stretch">
         {/* ================= UPLOAD CARD ================= */}
         <div
-          className={`rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 flex flex-col h-full ${
-            isDarkMode
+          className={`rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 flex flex-col h-full ${isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-          }`}
+            }`}
         >
-
           <div
             onDragOver={(event) => {
               event.preventDefault();
@@ -210,13 +215,12 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex flex-1 min-h-[300px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 sm:p-8 text-center transition-all duration-300 ${
-              isDragging
+            className={`flex flex-1 min-h-[300px] flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 sm:p-8 text-center transition-all duration-300 ${isDragging
                 ? "border-[#8064C7] bg-[#8064C7]/15"
                 : isDarkMode
-                ? "border-white/10 bg-white/5 hover:border-[#8064C7]/50 hover:bg-white/10"
-                : "border-gray-200 bg-white/50 hover:border-[#8064C7]/40 hover:bg-white/80"
-            }`}
+                  ? "border-white/10 bg-white/5 hover:border-[#8064C7]/50 hover:bg-white/10"
+                  : "border-gray-200 bg-white/50 hover:border-[#8064C7]/40 hover:bg-white/80"
+              }`}
           >
             {selectedFiles.length === 0 ? (
               <>
@@ -225,59 +229,91 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 </div>
 
                 <h2 className="text-xl font-black tracking-tight">
-                  Drop your files here
+                  Drop your files or snap a photo
                 </h2>
 
                 <p className={`mt-2 max-w-md text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
-                  Drag and drop your study materials here, or browse your computer to select files.
+                  Drag and drop documents, scanned notes, or use your phone camera.
                 </p>
 
-                <label className="mt-6 cursor-pointer rounded-xl bg-[#8064C7] px-7 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
-                  Browse Files
-                  <input
-                    type="file"
-                    accept=".pdf,.docx,.pptx"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <label className="cursor-pointer rounded-xl bg-[#8064C7] px-6 py-3 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
+                    Browse Files
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Direct Mobile Camera Button */}
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${isDarkMode
+                      ? "border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10 hover:border-[#8064C7]/50"
+                      : "border-[#8064C7]/30 bg-white text-[#8064C7] shadow-sm hover:bg-[#8064C7]/5 hover:border-[#8064C7]"
+                    }`}>
+                    <Camera size={18} />
+                    Take Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
 
                 <p className={`mt-4 text-xs ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
-                  Maximum file size: 20 MB (.pdf, .docx, .pptx)
+                  PDF, DOCX, PPTX, PNG, JPG, JPEG, WEBP (up to 20 MB)
                 </p>
               </>
             ) : (
               <div className="w-full max-w-lg my-auto">
-                <div className={`rounded-2xl border p-5 shadow-sm backdrop-blur-xl ${
-                  isDarkMode ? "border-white/10 bg-[#211D2B]/90" : "border-white/80 bg-white/85"
-                }`}>
+                <div className={`rounded-2xl border p-5 shadow-sm backdrop-blur-xl ${isDarkMode ? "border-white/10 bg-[#211D2B]/90" : "border-white/80 bg-white/85"
+                  }`}>
                   <div className="mb-4 flex items-center justify-between border-b border-inherit pb-3">
                     <p className="text-sm font-bold">
                       Selected Files ({selectedFiles.length})
                     </p>
 
-                    <label className="cursor-pointer text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] transition hover:underline">
-                      + Add more files
-                      <input
-                        type="file"
-                        accept=".pdf,.docx,.pptx"
-                        multiple
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="flex items-center gap-3">
+                      <label className="cursor-pointer text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] transition hover:underline">
+                        + Add files
+                        <input
+                          type="file"
+                          accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <span className="text-xs text-gray-400">|</span>
+
+                      <label className="flex cursor-pointer items-center gap-1 text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] transition hover:underline">
+                        <Camera size={14} />
+                        photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1">
                     {selectedFiles.map((file, index) => (
                       <div
                         key={`${file.name}-${file.size}-${index}`}
-                        className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
-                          isDarkMode
+                        className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${isDarkMode
                             ? "border-white/5 bg-white/5 hover:border-white/10"
                             : "border-gray-100 bg-white/70 hover:border-purple-200"
-                        }`}
+                          }`}
                       >
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
                           {getFileIcon(file.name)}
@@ -313,11 +349,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
         {/* ================= STUDY SET NAME & ACTIONS ================= */}
         <div
-          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 flex flex-col justify-between h-full lg:col-span-1 ${
-            isDarkMode
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 flex flex-col justify-between h-full lg:col-span-1 ${isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-          }`}
+            }`}
         >
           <div>
             <h2 className="text-xl font-black tracking-tight">
@@ -341,11 +376,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   handleCreateAndUpload();
                 }
               }}
-              className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
-                isDarkMode
+              className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${isDarkMode
                   ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
                   : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
-              }`}
+                }`}
             />
           </div>
 
@@ -368,11 +402,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 onNavigate?.("study-sets");
               }}
               disabled={uploading}
-              className={`w-full rounded-xl border px-5 py-2.5 text-sm font-semibold transition text-center ${
-                isDarkMode
+              className={`w-full rounded-xl border px-5 py-2.5 text-sm font-semibold transition text-center ${isDarkMode
                   ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
                   : "border-gray-200 bg-white/70 text-gray-600 hover:bg-white"
-              } disabled:opacity-50`}
+                } disabled:opacity-50`}
             >
               Cancel
             </button>
@@ -382,24 +415,22 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= SUPPORTED FORMATS ================= */}
       <div
-        className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
-          isDarkMode
+        className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${isDarkMode
             ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
-        }`}
+          }`}
       >
         <h2 className="text-base sm:text-lg font-black tracking-tight">
           Supported Formats
         </h2>
 
         <p className={`mt-0.5 text-xs sm:text-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
-          Upload your study materials in any of these formats.
+          Upload study materials, scanned documents, or handwritten notes in any of these formats.
         </p>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
-            isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
-          }`}>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+            }`}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <FileText size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
             </div>
@@ -410,9 +441,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             </div>
           </div>
 
-          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
-            isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
-          }`}>
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+            }`}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <FileCheck size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
             </div>
@@ -423,9 +453,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             </div>
           </div>
 
-          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
-            isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
-          }`}>
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+            }`}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <Presentation size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
             </div>
@@ -435,15 +464,26 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               <p className={`text-[11px] sm:text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Presentations</p>
             </div>
           </div>
+
+          <div className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${isDarkMode ? "border-white/5 bg-white/5" : "border-white/80 bg-white/70"
+            }`}>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+              <Camera size={20} className="text-[#8064C7] dark:text-[#A78BFA]" />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-bold truncate">Camera / OCR</p>
+              <p className={`text-[11px] sm:text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Snap handwritten notes</p>
+            </div>
+          </div>
         </div>
 
-        <div className={`mt-5 rounded-2xl border p-4 ${
-          isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
-        }`}>
+        <div className={`mt-5 rounded-2xl border p-4 ${isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+          }`}>
           <div className="flex gap-2.5 items-start">
             <Sparkles size={18} className="mt-0.5 shrink-0" />
             <p className="text-xs font-semibold leading-relaxed">
-              Your material will be analyzed by Jojo to create summaries, quizzes, flashcards, and personalized study recommendations.
+              Photos and scans of handwritten notes are preprocessed with Grayscale + Adaptive Thresholding and parsed via OCR for question generation and flashcards.
             </p>
           </div>
         </div>
@@ -452,4 +492,4 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   );
 }
 
-export default UploadPage;
+export default UploadPage;
