@@ -1,6 +1,10 @@
+import time
+from contextlib import asynccontextmanager
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.answer_evaluation.sbert_model import preload_models
 from backend.api.routes import (
     account,
     activity,
@@ -14,10 +18,25 @@ from backend.api.routes import (
     tasks,
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Preloads all 4 answer-evaluation models up front so the cost is
+    # paid once here, at startup, instead of unexpectedly on whichever
+    # request happens to be first to trigger lazy loading.
+    print("main.py: preloading answer-evaluation models...")
+    start = time.monotonic()
+    preload_models()
+    elapsed = time.monotonic() - start
+    print(f"main.py: model preloading complete in {elapsed:.1f}s.")
+    yield
+
+
 app = FastAPI(
     title="STUDY ENGINE API",
     version="1.0.0",
     description="FastAPI API layer for the study engine.",
+    lifespan=lifespan,
 )
 
 # ── CORS Configuration ───────────────────────────────────────────────
