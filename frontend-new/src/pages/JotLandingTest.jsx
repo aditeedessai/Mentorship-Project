@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
-import jojoImage from "../assets/jojo.png";
-import jojoDarkImage from "../assets/jojo-dark.jpg";
+import jojoImage from "../assets/jojo-transparent-clean.png";
 import JotFooter from "../components/JotFooter";
 
 /* =========================================================
@@ -94,7 +93,7 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
         `}
       >
         <img
-          src={isDarkMode ? jojoDarkImage : jojoImage}
+          src={jojoImage}
           alt="Jojo - JOT study buddy"
           className="h-full w-full object-contain p-5"
         />
@@ -125,12 +124,11 @@ const JotLandingTest = ({
   React.useEffect(() => {
     window.scrollTo(0, 0);
     const mainElement = document.querySelector("main");
+
     if (mainElement) {
       mainElement.scrollTop = 0;
     }
   }, []);
-
-
 
   /* =======================================================
      NAVIGATION
@@ -446,7 +444,9 @@ const JotLandingTest = ({
           {/* Mobile Hamburger Toggle Button */}
           <button
             type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() =>
+              setIsMobileMenuOpen(!isMobileMenuOpen)
+            }
             className={`
               flex
               h-9
@@ -468,7 +468,11 @@ const JotLandingTest = ({
             `}
             aria-label="Toggle mobile menu"
           >
-            {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            {isMobileMenuOpen ? (
+              <X size={18} />
+            ) : (
+              <Menu size={18} />
+            )}
           </button>
         </div>
 
@@ -501,31 +505,46 @@ const JotLandingTest = ({
           >
             <a
               href="#home"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() =>
+                setIsMobileMenuOpen(false)
+              }
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               Home
             </a>
+
             <a
               href="#how"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() =>
+                setIsMobileMenuOpen(false)
+              }
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               How it works
             </a>
+
             <a
               href="#jojo"
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() =>
+                setIsMobileMenuOpen(false)
+              }
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               Meet Jojo
             </a>
+
             <button
               type="button"
               onClick={() => {
@@ -533,13 +552,21 @@ const JotLandingTest = ({
                 handleAbout();
               }}
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm text-left transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               About Us
             </button>
 
-            <div className={`my-1 h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"}`} />
+            <div
+              className={`my-1 h-px w-full ${
+                isDarkMode
+                  ? "bg-white/10"
+                  : "bg-black/5"
+              }`}
+            />
 
             <div className="flex flex-col gap-2 pt-1">
               <button
@@ -651,7 +678,6 @@ const JotLandingTest = ({
                 }
               `}
             >
-
               Study
               <br />
               <span
@@ -774,7 +800,9 @@ const JotLandingTest = ({
                 }
               `}
             >
-              <span className="text-base sm:text-lg">✨</span>
+              <span className="text-base sm:text-lg">
+                ✨
+              </span>
               Jot it. Organise it. Top it.
             </div>
           </div>
@@ -1008,7 +1036,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-center gap-2.5 sm:gap-3">
-                <span className="text-lg sm:text-xl">✨</span>
+                <span className="text-lg sm:text-xl">
+                  ✨
+                </span>
 
                 <div>
                   <p
@@ -1078,7 +1108,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-start gap-2.5 sm:gap-3">
-                <span className="text-lg sm:text-xl">✏️</span>
+                <span className="text-lg sm:text-xl">
+                  ✏️
+                </span>
 
                 <div>
                   <p
@@ -1132,7 +1164,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg">🧠</span>
+                <span className="text-base sm:text-lg">
+                  🧠
+                </span>
 
                 <span
                   className={`
@@ -1169,7 +1203,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg">🃏</span>
+                <span className="text-base sm:text-lg">
+                  🃏
+                </span>
 
                 <span
                   className={`
@@ -1190,7 +1226,6 @@ const JotLandingTest = ({
           </div>
         </div>
       </section>
-
 
       {/* =====================================================
           BEFORE / AFTER
@@ -1235,7 +1270,9 @@ const JotLandingTest = ({
                   BEFORE JOT
                 </span>
 
-                <span className="text-3xl">😵‍💫</span>
+                <span className="text-3xl">
+                  😵‍💫
+                </span>
               </div>
 
               <h3 className="mt-6 text-3xl font-black">
@@ -1287,7 +1324,9 @@ const JotLandingTest = ({
                   AFTER JOT
                 </span>
 
-                <span className="text-3xl">✨</span>
+                <span className="text-3xl">
+                  ✨
+                </span>
               </div>
 
               <h3 className="mt-6 text-3xl font-black">
@@ -1314,7 +1353,9 @@ const JotLandingTest = ({
                       }
                     `}
                   >
-                    <span className="text-2xl">{icon}</span>
+                    <span className="text-2xl">
+                      {icon}
+                    </span>
 
                     <p className="mt-3 font-bold">
                       {title}
