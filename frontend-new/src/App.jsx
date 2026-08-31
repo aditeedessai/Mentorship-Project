@@ -21,6 +21,7 @@ import JotLandingTest from "./pages/JotLandingTest";
 import LandingPage from "./pages/LandingPage";
 import AboutPage from "./pages/AboutPage";
 import SettingsPage from "./pages/SettingsPage";
+import PlannerPage from "./pages/PlannerPage";
 
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
@@ -40,44 +41,38 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
 
   return (
     <div
-      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${
-        isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
-      }`}
+      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
+        }`}
     >
       {/* Subtle Background Ambient Glow Orbs */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div
-          className={`absolute -left-40 -top-40 h-[550px] w-[550px] rounded-full blur-[160px] transition-colors duration-700 ${
-            isDarkMode ? "bg-[#8064C7]/8" : "bg-[#8064C7]/4"
-          }`}
+          className={`absolute -left-40 -top-40 h-[550px] w-[550px] rounded-full blur-[160px] transition-colors duration-700 ${isDarkMode ? "bg-[#8064C7]/8" : "bg-[#8064C7]/4"
+            }`}
         />
         <div
-          className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[160px] ${
-            isDarkMode ? "bg-[#8064C7]/6" : "bg-[#A78BFA]/5"
-          }`}
+          className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[160px] ${isDarkMode ? "bg-[#8064C7]/6" : "bg-[#A78BFA]/5"
+            }`}
         />
         <div
-          className={`absolute bottom-[-250px] left-[20%] h-[550px] w-[550px] rounded-full blur-[160px] ${
-            isDarkMode ? "bg-[#6D45B8]/8" : "bg-[#8064C7]/4"
-          }`}
+          className={`absolute bottom-[-250px] left-[20%] h-[550px] w-[550px] rounded-full blur-[160px] ${isDarkMode ? "bg-[#6D45B8]/8" : "bg-[#8064C7]/4"
+            }`}
         />
       </div>
 
       {/* Top Header Bar for Mobile / Tablet (< 1024px) */}
       <header
-        className={`lg:hidden fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between px-4 border-b backdrop-blur-2xl transition-colors duration-300 ${
-          isDarkMode
+        className={`lg:hidden fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between px-4 border-b backdrop-blur-2xl transition-colors duration-300 ${isDarkMode
             ? "border-white/10 bg-[#13101A]/90 text-[#F3F0F8]"
             : "border-black/5 bg-[#F8F8FC]/90 text-[#231B33]"
-        }`}
+          }`}
       >
         <button
           onClick={() => setIsMobileMenuOpen(true)}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${
-            isDarkMode
+          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${isDarkMode
               ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
               : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
-          }`}
+            }`}
           aria-label="Open Mobile Menu"
         >
           <Menu size={20} />
@@ -87,11 +82,10 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           <span>Jot</span>
           <span className="text-[#8064C7]">.</span>
           <span
-            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
-              isDarkMode
+            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${isDarkMode
                 ? "bg-[#8064C7]/20 text-[#A78BFA]"
                 : "bg-[#8064C7]/10 text-[#8064C7]"
-            }`}
+              }`}
           >
             Study
           </span>
@@ -504,6 +498,11 @@ function AppContent() {
         />
       )}
 
+      {/* ================= PLANNER ================= */}
+      {currentPage === "planner" && (
+        <PlannerPage onNavigate={handleNavigate} />
+      )}
+
       {/* ================= DASHBOARD ================= */}
       {currentPage === "dashboard" && (
         <DashboardPage
@@ -523,4 +522,4 @@ export default function App() {
     </ThemeProvider>
   );
 }
-
+
