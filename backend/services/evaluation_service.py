@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from backend.answer_evaluation.evaluator import (
     evaluate_answer,
+    evaluate_answers_batch,
     evaluate_mcq
 )
 
@@ -458,7 +459,24 @@ def evaluate_and_save_attempt_answers(
                 f"Answer exceeds the maximum allowed word limit of {max_limit} words."
             )
 
-    for item in answers:
+    # -----------------------------------------------------------------
+    # Evaluate. Skipped (empty) and MCQ answers are graded immediately
+    # inline below - MCQ via evaluate_mcq(), which is fast, local, and
+    # never touches the LLM judge, so there's no reason to batch it.
+    # Every non-MCQ answer with real content is instead collected into
+    # `batch_items` and evaluated together in ONE evaluate_answers_batch()
+    # call after this loop, rather than one evaluate_answer() call per
+    # item - this is what lets multiple items in the same section that
+    # need LLM-judge escalation go out as a handful of grouped requests
+    # (see llm_judge.judge_batch) instead of one individually-throttled
+    # call per item.
+    # -----------------------------------------------------------------
+    eval_results = [None] * len(answers)
+    item_meta = []  # parallel to `answers`: (q_id, student_ans, max_marks)
+    pending_batch_indices = []
+    batch_items = []
+
+    for idx, item in enumerate(answers):
         q_id = item["question_id"]
         student_ans = item["student_answer"]
 
@@ -478,8 +496,10 @@ def evaluate_and_save_attempt_answers(
         else:
             max_marks = 2.0 if q_type == "mcq" else 10.0
 
+        item_meta.append((q_id, student_ans, max_marks))
+
         if student_ans.strip() == "":
-            eval_result = {
+            eval_results[idx] = {
                 "final_score": 0.0,
                 "marks_awarded": 0.0,
                 "semantic_score": 0.0,
@@ -489,22 +509,46 @@ def evaluate_and_save_attempt_answers(
                 "missed_concepts": ["Question skipped by student"],
             }
         elif q_type == "mcq":
-            eval_result = evaluate_mcq(
+            eval_results[idx] = evaluate_mcq(
                 student_choice=student_ans,
                 correct_choice=question.get("correct_option", ""),
                 max_marks=max_marks
             )
         else:
-            eval_result = evaluate_answer(
-                student_answer=student_ans,
-                reference_answer=question.get("reference_answer", ""),
-                max_marks=max_marks
-            )
+            pending_batch_indices.append(idx)
+            batch_items.append({
+                "student": student_ans,
+                "reference": question.get("reference_answer", ""),
+            })
 
+    if batch_items:
+        # evaluate_answers_batch() returns results in the same order as
+        # batch_items, so pending_batch_indices (built in the same order
+        # above) maps each result back to its original position in
+        # `answers` by index.
+        batch_results = evaluate_answers_batch(batch_items)
+        for pos, idx in enumerate(pending_batch_indices):
+            _, _, item_max_marks = item_meta[idx]
+            result = dict(batch_results[pos])
+            # evaluate_answers_batch() applies a single shared max_marks
+            # (its default, 10.0) to every item in the call, since a
+            # batch call has no per-item max_marks parameter. Every
+            # non-MCQ question in this app is generated with marks=10.0
+            # (see quiz_generator.py), so this never actually differs in
+            # practice today - but recomputing marks_awarded against
+            # THIS item's real max_marks (exactly like the old per-item
+            # evaluate_answer(..., max_marks=max_marks) call did) keeps
+            # this correct even if that ever changes, without needing a
+            # separate batch call per distinct max_marks value.
+            result["marks_awarded"] = round(result["final_score"] * item_max_marks, 2)
+            eval_results[idx] = result
+
+    for idx, item in enumerate(answers):
+        q_id, student_ans, _ = item_meta[idx]
         save_evaluation(
             question_id=q_id,
             student_answer="" if student_ans.strip() == "" else student_ans,
-            evaluation=eval_result,
+            evaluation=eval_results[idx],
             attempt_id=attempt_id
         )
 

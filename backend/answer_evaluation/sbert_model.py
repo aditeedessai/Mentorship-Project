@@ -49,6 +49,8 @@ Concretely:
 import os
 import warnings
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- Quiet third-party console noise -------------------------------------
 # huggingface_hub/transformers print their own progress bars ("Loading
@@ -94,6 +96,20 @@ _cross_encoder = None
 _nli_model = None
 _hallucination_model = None
 _HAS_HALLUCINATION_MODEL = None  # tri-state: None=not attempted yet, True/False after
+
+# preload_models() below serializes ALL FOUR _get_*() calls relative to
+# EACH OTHER via this lock - see the comment on that function for why.
+# Short version, confirmed empirically across multiple isolated trials
+# (not a hypothetical): transformers'/accelerate's "meta device" weight-
+# materialization path - used internally by from_pretrained() for both
+# sentence_transformers.CrossEncoder and plain
+# AutoModelForSequenceClassification - patches global (not thread-local)
+# state for the duration of a single model construction. Two or more of
+# THESE loaders running truly concurrently races on that global state and
+# unpredictably raises "Cannot copy out of meta tensor; no data!" for one
+# of them - and which pair/combination fails is NOT consistently the same
+# two models across runs, so no narrower per-pair lock is safe here.
+_model_construction_lock = threading.Lock()
 
 # Set to True to fully silence the console during model loading - no
 # per-model prints and no single batch print from preload_models()
@@ -181,11 +197,43 @@ def preload_models():
     hallucination model) up front, in one call, instead of each
     lazy-loading separately on first use.
 
-    Call this ONCE at process/service startup (e.g. at the top of
-    run_main.py's main(), before the study flow begins) if you want all
-    model-loading cost paid up front rather than scattered across the
-    first few answers evaluated. This is entirely optional - nothing
-    else in this module requires it.
+    Call this ONCE at process/service startup (e.g. via a FastAPI startup
+    hook - see backend/api/main.py) if you want all model-loading cost
+    paid up front rather than scattered across the first few answers
+    evaluated. This is entirely optional - nothing else in this module
+    requires it.
+
+    Submits all four loads to a thread pool rather than calling them one
+    at a time sequentially - each _get_*() function only touches its own
+    independent global variable, so there's no data race in the sense of
+    two threads writing the same variable. HOWEVER, testing found (see
+    _model_construction_lock's comment above - this was confirmed
+    empirically, not assumed) that the underlying transformers/accelerate
+    "meta device" weight-materialization step used internally by
+    from_pretrained() for these specific models is NOT safe for two of
+    THESE FOUR loads to actually execute concurrently: it unpredictably
+    raises "Cannot copy out of meta tensor; no data!" for one of them,
+    and which combination fails is not consistent run to run - a
+    narrower per-pair lock was tried and did not eliminate it. So the
+    four loads are submitted concurrently but their actual construction
+    is serialized via _model_construction_lock, making effective
+    wall-clock time close to the sum of all four rather than the max -
+    the safety issue here is upstream (in transformers/accelerate), not
+    something fixable from this file without patching that library, so
+    correctness is prioritized over the speed win a genuinely concurrent
+    load would otherwise give. The thread-pool/futures structure is kept
+    (rather than a plain sequential loop) so per-loader exception
+    isolation - see below - still works exactly as intended, and so this
+    can freely become truly concurrent again with a one-line change
+    (dropping the lock) if a future transformers/accelerate release
+    fixes the underlying thread-safety gap.
+
+    A failed load for any one model is logged and does NOT stop the
+    others from finishing (this generalizes _get_hallucination_model()'s
+    existing own graceful-degradation behavior - previously the only one
+    of the four with this property - to all four, since with sequential
+    calls an exception from any of the first three would have stopped
+    the rest from ever being attempted).
 
     Console output is controlled by _SHOW_LOADING_MESSAGE above (off by
     default, so this - like lazy loading - now prints nothing).
@@ -196,10 +244,31 @@ def preload_models():
     """
     if _SHOW_LOADING_MESSAGE:
         print("Loading...")
-    _get_bi_encoder()
-    _get_cross_encoder()
-    _get_nli_model()
-    _get_hallucination_model()
+
+    def _serialized(loader):
+        # See _model_construction_lock's comment above: actual
+        # construction has to be one-at-a-time regardless of which
+        # loader it is - this isn't specific to any one model.
+        def _call():
+            with _model_construction_lock:
+                loader()
+        _call.__name__ = loader.__name__
+        return _call
+
+    loaders = (_get_bi_encoder, _get_cross_encoder, _get_nli_model, _get_hallucination_model)
+    serialized_loaders = [_serialized(loader) for loader in loaders]
+    with ThreadPoolExecutor(max_workers=len(serialized_loaders)) as executor:
+        future_to_loader = {executor.submit(loader): loader for loader in serialized_loaders}
+        for future in as_completed(future_to_loader):
+            loader = future_to_loader[future]
+            try:
+                future.result()
+            except Exception as e:  # pragma: no cover
+                logger.warning(
+                    "sbert_model.py: preload_models() - %s() failed to load (%s); "
+                    "the other models still finished loading.",
+                    loader.__name__, e,
+                )
 
 
 def get_embedding(text: str):
