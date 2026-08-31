@@ -2,7 +2,7 @@ import React from "react";
 import { Plus, CalendarDays } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-export default function PlannerHeader({ onAddTask }) {
+export default function PlannerHeader({ onAddTask, onAddExam }) {
   const { isDarkMode } = useTheme();
 
   return (
@@ -24,14 +24,31 @@ export default function PlannerHeader({ onAddTask }) {
         >
           Plan your study sessions, track your tasks, and stay prepared for upcoming exams.
         </p>
-        <button
-          type="button"
-          onClick={onAddTask}
-          className="mt-6 flex items-center gap-2 rounded-xl bg-[#8064C7] px-5 sm:px-6 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#7357B9] cursor-pointer"
-        >
-          <Plus size={17} />
-          Add Task
-        </button>
+
+        {/* Action Buttons: Add Task & Add Exam */}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onAddTask}
+            className="flex items-center gap-2 rounded-xl bg-[#8064C7] px-5 sm:px-6 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#7357B9] cursor-pointer"
+          >
+            <Plus size={17} />
+            Add Task
+          </button>
+
+          <button
+            type="button"
+            onClick={onAddExam}
+            className={`flex items-center gap-2 rounded-xl border px-5 sm:px-6 py-3 text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5 cursor-pointer ${
+              isDarkMode
+                ? "border-[#8064C7]/40 bg-[#8064C7]/20 text-[#A78BFA] hover:bg-[#8064C7]/30"
+                : "border-[#8064C7]/30 bg-white text-[#8064C7] hover:bg-[#8064C7]/10 shadow-xs"
+            }`}
+          >
+            <Plus size={17} />
+            Add Exam
+          </button>
+        </div>
       </div>
 
       <div

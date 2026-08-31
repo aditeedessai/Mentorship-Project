@@ -61,13 +61,13 @@ function DashboardPage({ user, onNavigate }) {
       {/* ================= DASHBOARD CARDS ================= */}
       <div className="flex flex-col gap-6 lg:flex-row">
         <div className="flex flex-1 min-w-0 flex-col gap-6">
-          <TodaysTasksCard />
+          <TodaysTasksCard onNavigate={onNavigate} />
           <StudySetProgressCard />
           <MotivationalTaglineCard />
         </div>
 
         <div className="flex flex-1 min-w-0 flex-col gap-6">
-          <UpcomingExamsCard />
+          <UpcomingExamsCard onNavigate={onNavigate} onSeeAll={() => onNavigate("planner")} />
           <ActivityCalendarCard />
         </div>
       </div>

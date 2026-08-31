@@ -34,7 +34,6 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterSubject, setFilterSubject] = useState("all");
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddExamModalOpen, setIsAddExamModalOpen] = useState(false);
@@ -221,7 +220,10 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 transition-all duration-300">
       {/* 1. Page Header */}
-      <PlannerHeader onAddTask={() => setIsAddModalOpen(true)} />
+      <PlannerHeader
+        onAddTask={() => setIsAddModalOpen(true)}
+        onAddExam={() => setIsAddExamModalOpen(true)}
+      />
 
       {/* 2. Summary Metric Cards (Pure Live Data Only) */}
       <PlannerSummary
@@ -252,8 +254,6 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
             onAddTaskClick={() => setIsAddModalOpen(true)}
             filterStatus={filterStatus}
             onFilterStatusChange={setFilterStatus}
-            filterSubject={filterSubject}
-            onFilterSubjectChange={setFilterSubject}
           />
         </div>
       </div>
@@ -272,6 +272,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
       <WeeklyPlan
         selectedDate={selectedDate}
         tasks={tasks}
+        exams={exams}
         onSelectDate={setSelectedDate}
         onToggleTaskComplete={handleToggleTaskComplete}
       />

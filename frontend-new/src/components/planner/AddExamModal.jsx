@@ -139,11 +139,12 @@ export default function AddExamModal({ isOpen, onClose, onAddExam, studySets = [
               <input
                 type="date"
                 value={examDate}
-                onChange={(e) => setDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => setExamDate(e.target.value)}
                 className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
                   isDarkMode
-                    ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7]"
-                    : "border-gray-200 bg-white text-gray-900 focus:border-[#8064C7]"
+                    ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7] [color-scheme:dark]"
+                    : "border-gray-200 bg-white text-gray-900 focus:border-[#8064C7] [color-scheme:light]"
                 }`}
               />
             </div>

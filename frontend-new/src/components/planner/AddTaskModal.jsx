@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Calendar, Clock, BookOpen, AlertCircle, Plus } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { TASK_TYPES, PRIORITIES, DEFAULT_STUDY_SETS } from "../../data/plannerData";
+import { TASK_TYPES, PRIORITIES } from "../../data/plannerData";
 
 export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, studySets = [] }) {
   const { isDarkMode } = useTheme();
@@ -9,10 +9,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
   const availableStudySets =
     studySets && studySets.length > 0
       ? studySets.map((s) => (typeof s === "object" ? s.name : s))
-      : DEFAULT_STUDY_SETS;
+      : ["General Study"];
 
   const [title, setTitle] = useState("");
-  const [studySet, setStudySet] = useState(availableStudySets[0] || "Biology Fundamentals");
+  const [studySet, setStudySet] = useState(availableStudySets[0] || "General Study");
   const [date, setDate] = useState(defaultDate || new Date().toISOString().split("T")[0]);
   const [time, setTime] = useState("10:00");
   const [type, setType] = useState("Study");
