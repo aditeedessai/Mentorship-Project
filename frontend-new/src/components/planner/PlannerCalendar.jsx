@@ -101,6 +101,18 @@ export default function PlannerCalendar({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Color Legend */}
+          <div className="hidden sm:flex items-center gap-3 mr-2 text-xs font-semibold">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#8064C7] dark:bg-[#A78BFA]" />
+              <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Tasks</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Exams</span>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={handleTodayClick}
@@ -194,7 +206,7 @@ export default function PlannerCalendar({
             >
               <span className="text-xs sm:text-sm">{dayNum}</span>
 
-              {/* Event Indicators */}
+              {/* Event Dots (Purple = Tasks, Orange = Exams) */}
               {hasEvents && (
                 <div className="flex items-center gap-1 mb-1">
                   {dayTasks.length > 0 && (
@@ -202,7 +214,7 @@ export default function PlannerCalendar({
                       className={`h-1.5 w-1.5 rounded-full ${
                         isSelected ? "bg-white" : "bg-[#8064C7] dark:bg-[#A78BFA]"
                       }`}
-                      title={`${dayTasks.length} task(s)`}
+                      title={`${dayTasks.length} task(s) (Purple)`}
                     />
                   )}
                   {dayExams.length > 0 && (
@@ -210,7 +222,7 @@ export default function PlannerCalendar({
                       className={`h-1.5 w-1.5 rounded-full ${
                         isSelected ? "bg-amber-300" : "bg-amber-500"
                       }`}
-                      title={`${dayExams.length} exam(s)`}
+                      title={`${dayExams.length} exam(s) (Orange)`}
                     />
                   )}
                 </div>
@@ -218,6 +230,18 @@ export default function PlannerCalendar({
             </button>
           );
         })}
+      </div>
+
+      {/* Mobile Legend Footer */}
+      <div className="sm:hidden flex items-center justify-center gap-4 mt-3 pt-3 border-t border-inherit text-xs font-semibold">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-[#8064C7] dark:bg-[#A78BFA]" />
+          <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Tasks (Purple)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+          <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Exams (Orange)</span>
+        </div>
       </div>
     </div>
   );
