@@ -7,17 +7,38 @@ import UpcomingExams from "../components/planner/UpcomingExams";
 import WeeklyPlan from "../components/planner/WeeklyPlan";
 import AddTaskModal from "../components/planner/AddTaskModal";
 import AddExamModal from "../components/planner/AddExamModal";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 import {
   fetchExams,
   createExam,
   deleteExam,
   fetchStudySets,
-  fetchTodaysTasks,
+  fetchTasks,
   createTask,
+  toggleTaskCompletion,
   deleteTask,
   fetchStudiedDays,
 } from "../services/api";
+
+function formatBackendTask(t) {
+  const priority = t.priority ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1) : "Medium";
+  const type = t.task_type ? t.task_type.charAt(0).toUpperCase() + t.task_type.slice(1) : "Study";
+  const studySetName = t.study_set_name || "General Study";
+
+  return {
+    id: t.id,
+    title: t.name,
+    subject: studySetName,
+    studySet: studySetName,
+    studySetId: t.study_set_id || null,
+    date: t.due_date,
+    time: t.due_time ? t.due_time.substring(0, 5) : "10:00",
+    type,
+    priority,
+    completed: !!t.completed,
+  };
+}
 
 export default function PlannerPage({ onNavigate, studySets = [] }) {
   const todayStr = new Date().toISOString().split("T")[0];
@@ -37,6 +58,10 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddExamModalOpen, setIsAddExamModalOpen] = useState(false);
+
+  const [deletingTask, setDeletingTask] = useState(null);
+  const [isDeleteTaskLoading, setIsDeleteTaskLoading] = useState(false);
+  const [deleteTaskError, setDeleteTaskError] = useState(null);
 
   // Single mount effect to fetch all initial page data safely without infinite loops
   useEffect(() => {
@@ -67,23 +92,12 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         if (isMounted) setIsLoadingExams(false);
       });
 
-    // 3. Fetch tasks due today
+    // 3. Fetch all tasks for the user
     setIsLoadingTasks(true);
-    fetchTodaysTasks()
+    fetchTasks()
       .then((backendTasks) => {
         if (isMounted && Array.isArray(backendTasks)) {
-          const mappedTasks = backendTasks.map((t) => ({
-            id: t.id,
-            title: t.name,
-            subject: t.subject || "General Study",
-            studySet: t.subject || "General Study",
-            date: t.due_date || todayStr,
-            time: "10:00",
-            type: "Study",
-            priority: t.priority || "Medium",
-            completed: false,
-          }));
-          setTasks(mappedTasks);
+          setTasks(backendTasks.map(formatBackendTask));
         } else if (isMounted) {
           setTasks([]);
         }
@@ -137,37 +151,50 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
 
     if (willBeCompleted) {
       setCompletedTodayCount((prev) => prev + 1);
-      // Call backend delete task if completing persistent backend task
-      try {
-        await deleteTask(taskId);
-      } catch (err) {
-        console.warn("Backend deleteTask failed:", err);
-      }
     } else {
       setCompletedTodayCount((prev) => Math.max(0, prev - 1));
+    }
+
+    try {
+      await toggleTaskCompletion(taskId, willBeCompleted);
+    } catch (err) {
+      console.warn("Backend toggleTaskCompletion failed, reverting state:", err);
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId ? { ...t, completed: targetTask.completed } : t
+        )
+      );
+      if (willBeCompleted) {
+        setCompletedTodayCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setCompletedTodayCount((prev) => prev + 1);
+      }
     }
   };
 
   // Add new task via Backend API
   const handleAddTask = async (newTaskData) => {
     try {
-      const created = await createTask(
-        newTaskData.title,
-        newTaskData.priority || "Medium",
-        newTaskData.date || todayStr
-      );
+      let studySetId = newTaskData.studySetId || null;
+      if (!studySetId && newTaskData.studySet && Array.isArray(userStudySets)) {
+        const found = userStudySets.find(
+          (s) => (typeof s === "object" ? s.name : s) === newTaskData.studySet
+        );
+        if (found && typeof found === "object") {
+          studySetId = found.study_set_id || found.id;
+        }
+      }
 
-      const formattedTask = {
-        id: created.id || `task-${Date.now()}`,
-        title: created.name || newTaskData.title,
-        subject: newTaskData.studySet || newTaskData.subject || "General Study",
-        studySet: newTaskData.studySet || newTaskData.subject || "General Study",
-        date: created.due_date || newTaskData.date || todayStr,
-        time: newTaskData.time || "10:00",
-        type: newTaskData.type || "Study",
-        priority: created.priority || newTaskData.priority || "Medium",
-        completed: false,
-      };
+      const created = await createTask({
+        name: newTaskData.title,
+        priority: newTaskData.priority || "Medium",
+        dueDate: newTaskData.date || todayStr,
+        dueTime: newTaskData.time || undefined,
+        studySetId: studySetId || undefined,
+        taskType: newTaskData.type || "Study",
+      });
+
+      const formattedTask = formatBackendTask(created);
 
       setTasks((prevTasks) => [formattedTask, ...prevTasks]);
       if (formattedTask.date) {
@@ -217,6 +244,33 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
     }
   };
 
+  // Open confirmation modal for deleting a task
+  const handleOpenDeleteTaskConfirm = (taskId) => {
+    const targetTask = tasks.find((t) => t.id === taskId);
+    if (targetTask) {
+      setDeletingTask(targetTask);
+      setDeleteTaskError(null);
+    }
+  };
+
+  // Confirm delete task via Backend API
+  const handleConfirmDeleteTask = async () => {
+    if (!deletingTask) return;
+
+    setIsDeleteTaskLoading(true);
+    setDeleteTaskError(null);
+    try {
+      await deleteTask(deletingTask.id);
+      setTasks((prevTasks) => prevTasks.filter((t) => t.id !== deletingTask.id));
+      setDeletingTask(null);
+    } catch (err) {
+      console.warn("API deleteTask failed:", err);
+      setDeleteTaskError("Could not delete task. Please try again.");
+    } finally {
+      setIsDeleteTaskLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12 transition-all duration-300">
       {/* 1. Page Header */}
@@ -230,7 +284,6 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         tasksTodayCount={tasksTodayCount}
         completedTodayCount={completedTodayCount}
         upcomingExamsCount={upcomingExamsCount}
-        studyStreakDays={studyStreakDays}
       />
 
       {/* 3. Main Grid: Monthly Calendar + Daily Schedule */}
@@ -251,6 +304,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
             selectedDate={selectedDate}
             tasks={tasks}
             onToggleTaskComplete={handleToggleTaskComplete}
+            onDeleteTask={handleOpenDeleteTaskConfirm}
             onAddTaskClick={() => setIsAddModalOpen(true)}
             filterStatus={filterStatus}
             onFilterStatusChange={setFilterStatus}
@@ -293,6 +347,26 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         onAddExam={handleAddExam}
         studySets={userStudySets}
       />
+
+      {/* Delete Task Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={!!deletingTask}
+        title="Delete Study Task?"
+        itemName={deletingTask?.title || deletingTask?.name || ""}
+        warningText="This action will permanently delete this task from your study schedule."
+        confirmText="Delete Task"
+        cancelText="Cancel"
+        isLoading={isDeleteTaskLoading}
+        error={deleteTaskError}
+        onConfirm={handleConfirmDeleteTask}
+        onCancel={() => {
+          if (!isDeleteTaskLoading) {
+            setDeletingTask(null);
+            setDeleteTaskError(null);
+          }
+        }}
+      />
     </div>
   );
 }
+
