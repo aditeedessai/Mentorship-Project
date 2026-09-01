@@ -148,13 +148,21 @@ function StudentProfilePage({ onProfileComplete, user }) {
   const selectClasses = (hasError) =>
     `w-full appearance-none rounded-xl border px-4 py-3 pr-10 text-sm outline-none transition-all cursor-pointer ${
       isDarkMode
-        ? `border-white/10 bg-white/5 text-white focus:border-[#8064C7] focus:bg-white/10 ${
+        ? `border-white/10 bg-[#161220] text-[#F5F2FA] [color-scheme:dark] focus:border-[#8064C7] focus:bg-[#1C1728] ${
             hasError ? "border-red-500/50" : ""
           }`
-        : `border-gray-200 bg-white/80 text-[#292530] focus:border-[#8064C7] focus:bg-white ${
+        : `border-gray-200 bg-white/90 text-[#292530] [color-scheme:light] focus:border-[#8064C7] focus:bg-white ${
             hasError ? "border-red-400" : ""
           }`
     }`;
+
+  const optionClasses = isDarkMode
+    ? "bg-[#161220] text-[#F5F2FA]"
+    : "bg-white text-[#292530]";
+
+  const placeholderOptionClasses = isDarkMode
+    ? "bg-[#161220] text-white/40"
+    : "bg-white text-gray-400";
 
   const inputClasses = `w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
     isDarkMode
@@ -281,11 +289,11 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   onChange={(e) => handleEducationLevelChange(e.target.value)}
                   className={selectClasses(validationErrors.educationLevel)}
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className={placeholderOptionClasses}>
                     Select your level
                   </option>
                   {EDUCATION_LEVELS.map((lvl) => (
-                    <option key={lvl.label} value={lvl.value}>
+                    <option key={lvl.label} value={lvl.value} className={optionClasses}>
                       {lvl.label}
                     </option>
                   ))}
@@ -322,15 +330,15 @@ function StudentProfilePage({ onProfileComplete, user }) {
                     });
                   }}
                   disabled={!educationLevel}
-                  className={`${selectClasses(validationErrors.gradeOrYear)} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`${selectClasses(validationErrors.gradeOrYear)} disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className={placeholderOptionClasses}>
                     {educationLevel
                       ? "Select your grade / year"
                       : "Select level first"}
                   </option>
                   {gradeOptions.map((g) => (
-                    <option key={g} value={g}>
+                    <option key={g} value={g} className={optionClasses}>
                       {g}
                     </option>
                   ))}
@@ -365,15 +373,15 @@ function StudentProfilePage({ onProfileComplete, user }) {
                     });
                   }}
                   disabled={!educationLevel}
-                  className={`${selectClasses(validationErrors.fieldStream)} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`${selectClasses(validationErrors.fieldStream)} disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className={placeholderOptionClasses}>
                     {educationLevel
                       ? "Select your field / stream"
                       : "Select level first"}
                   </option>
                   {fieldOptions.map((f) => (
-                    <option key={f} value={f}>
+                    <option key={f} value={f} className={optionClasses}>
                       {f}
                     </option>
                   ))}
@@ -409,11 +417,11 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   }}
                   className={selectClasses(validationErrors.curriculumType)}
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className={placeholderOptionClasses}>
                     Select your curriculum
                   </option>
                   {CURRICULUM_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
+                    <option key={c} value={c} className={optionClasses}>
                       {c}
                     </option>
                   ))}
