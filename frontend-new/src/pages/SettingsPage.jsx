@@ -18,6 +18,7 @@ import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { deleteAccount } from "../services/api";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 const SettingsPage = ({
   user,
@@ -29,6 +30,7 @@ const SettingsPage = ({
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState("");
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   const [confirmAction, setConfirmAction] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
@@ -115,7 +117,7 @@ const SettingsPage = ({
 
   return (
     <div className="max-w-4xl space-y-6 pb-12 transition-all duration-300">
-      {/* Header Banner */}
+      {/* Header Banner - Page Heading kept as font-black tracking-tight */}
       <div className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-5 sm:p-8 sm:flex-row sm:items-center backdrop-blur-2xl ${
         isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
@@ -166,7 +168,7 @@ const SettingsPage = ({
             </div>
 
             <div>
-              <h2 className="font-black tracking-tight">Profile</h2>
+              <h2 className="font-bold tracking-tight">Profile</h2>
               <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                 Manage your personal information
               </p>
@@ -188,7 +190,7 @@ const SettingsPage = ({
             </div>
 
             <div className="flex-1">
-              <h3 className="text-lg font-black tracking-tight">
+              <h3 className="text-lg font-bold tracking-tight">
                 {user?.name || "Student User"}
               </h3>
 
@@ -222,7 +224,7 @@ const SettingsPage = ({
             </div>
 
             <div>
-              <h2 className="font-black tracking-tight">Appearance</h2>
+              <h2 className="font-bold tracking-tight">Appearance</h2>
               <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
                 Choose how Jot looks
               </p>
@@ -238,7 +240,7 @@ const SettingsPage = ({
               </div>
 
               <div>
-                <p className="text-xs font-bold">
+                <p className="text-xs font-semibold">
                   Theme
                 </p>
                 <p className={`text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
@@ -276,7 +278,7 @@ const SettingsPage = ({
             </div>
 
             <div>
-              <h2 className="font-black tracking-tight">
+              <h2 className="font-bold tracking-tight">
                 Security & Privacy
               </h2>
               <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
@@ -293,7 +295,7 @@ const SettingsPage = ({
               className="flex w-full items-center justify-between py-4 text-left transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             >
               <div>
-                <p className="text-xs font-bold">
+                <p className="text-xs font-semibold">
                   Change Password
                 </p>
                 <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
@@ -318,26 +320,11 @@ const SettingsPage = ({
 
             <button
               type="button"
+              onClick={() => setIsPrivacyModalOpen(true)}
               className="flex w-full items-center justify-between py-4 text-left transition hover:opacity-80 cursor-pointer"
             >
               <div>
-                <p className="text-xs font-bold">
-                  Active Sessions
-                </p>
-                <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
-                  Manage devices where you're signed in
-                </p>
-              </div>
-
-              <ChevronRight size={18} className="opacity-40" />
-            </button>
-
-            <button
-              type="button"
-              className="flex w-full items-center justify-between py-4 text-left transition hover:opacity-80 cursor-pointer"
-            >
-              <div>
-                <p className="text-xs font-bold">
+                <p className="text-xs font-semibold">
                   Privacy Policy
                 </p>
                 <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
@@ -364,7 +351,7 @@ const SettingsPage = ({
             </div>
 
             <div>
-              <h2 className={`font-black tracking-tight ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
+              <h2 className={`font-bold tracking-tight ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                 Danger Zone
               </h2>
               <p className={`text-xs font-semibold ${isDarkMode ? "text-red-300/70" : "text-red-600/60"}`}>
@@ -391,7 +378,7 @@ const SettingsPage = ({
               }`}
             >
               <div>
-                <p className={`text-xs font-bold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
+                <p className={`text-xs font-semibold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                   Delete all study sets
                 </p>
                 <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-red-300/70" : "text-gray-500"}`}>
@@ -412,7 +399,7 @@ const SettingsPage = ({
               }`}
             >
               <div>
-                <p className={`text-xs font-bold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
+                <p className={`text-xs font-semibold ${isDarkMode ? "text-red-400" : "text-red-600"}`}>
                   Delete account
                 </p>
                 <p className={`mt-0.5 text-[11px] ${isDarkMode ? "text-red-300/70" : "text-gray-500"}`}>
@@ -451,9 +438,15 @@ const SettingsPage = ({
         onConfirm={handleConfirm}
         onCancel={cancelConfirm}
       />
+
+      <PrivacyPolicyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
     </div>
   );
 };
 
 export default SettingsPage;
+
 

@@ -76,7 +76,7 @@ function TodaysTasksCard({ onNavigate }) {
       }`}
     >
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-xl font-black tracking-tight">
+        <h2 className="text-xl font-bold tracking-tight">
           Today's Tasks
         </h2>
 
@@ -147,7 +147,7 @@ function TodaysTasksCard({ onNavigate }) {
                   className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all ${
                     isDarkMode
                       ? "border-white/5 bg-white/5 hover:bg-white/10 text-white"
-                      : "border-white/80 bg-white/70 hover:bg-white text-[#292530]"
+                      : "border-white/80 bg-white/70 hover:bg-white text-[#231B33]"
                   }`}
                 >
                   {/* Interactive Ticking Checkbox (Direct toggle like PlannerPage TaskItem) */}

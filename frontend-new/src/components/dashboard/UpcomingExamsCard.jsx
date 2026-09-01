@@ -75,7 +75,7 @@ function UpcomingExamsCard({ onSeeAll, onNavigate }) {
       }`}
     >
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-xl font-black tracking-tight">
+        <h2 className="text-xl font-bold tracking-tight">
           Upcoming Exams
         </h2>
 
@@ -141,7 +141,7 @@ function UpcomingExamsCard({ onSeeAll, onNavigate }) {
                   className={`flex items-center gap-3.5 rounded-2xl border p-3.5 transition-all ${
                     isDarkMode
                       ? "border-white/5 bg-white/5 text-white"
-                      : "border-white/80 bg-white/70 text-[#292530]"
+                      : "border-white/80 bg-white/70 text-[#231B33]"
                   }`}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
