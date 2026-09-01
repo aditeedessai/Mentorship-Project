@@ -11,10 +11,9 @@ import {
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import DeleteConfirmModal from "../DeleteConfirmModal";
-import { fetchExams, createExam, deleteExam, fetchStudySets } from "../../services/api";
+import { fetchExams, deleteExam, fetchStudySets } from "../../services/api";
 
 const COLLAPSE_DURATION_MS = 300;
-const EXAM_TYPE_OPTIONS = ["Exam", "Midterm", "Final", "Quiz", "Assignment"];
 
 const getSubjectIcon = (subject) => {
   const name = subject.toLowerCase();
@@ -40,29 +39,13 @@ function formatExamDate(examDate) {
   });
 }
 
-function getTodayIsoDate() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function UpcomingExamsCard({ onSeeAll }) {
+function UpcomingExamsCard({ onSeeAll, onNavigate }) {
   const { isDarkMode } = useTheme();
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const [studySets, setStudySets] = useState([]);
-
-  const [isAdding, setIsAdding] = useState(false);
-  const [subject, setSubject] = useState("");
-  const [examType, setExamType] = useState(EXAM_TYPE_OPTIONS[0]);
-  const [examDate, setExamDate] = useState("");
-  const [studySetId, setStudySetId] = useState("");
-  const [addError, setAddError] = useState("");
-  const [isAddSubmitting, setIsAddSubmitting] = useState(false);
 
   const [confirmExam, setConfirmExam] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
@@ -92,65 +75,6 @@ function UpcomingExamsCard({ onSeeAll }) {
       .then((data) => setStudySets(data))
       .catch(() => setStudySets([]));
   }, []);
-
-  const openAddForm = () => {
-    setIsAdding(true);
-    setAddError("");
-    setSubject("");
-    setExamType(EXAM_TYPE_OPTIONS[0]);
-    setExamDate("");
-    setStudySetId("");
-  };
-
-  const cancelAdd = () => {
-    setIsAdding(false);
-    setSubject("");
-    setExamDate("");
-    setStudySetId("");
-    setAddError("");
-  };
-
-  const confirmAddExam = async () => {
-    const trimmedSubject = subject.trim();
-
-    if (!trimmedSubject || !examDate) {
-      setAddError("Please enter a subject and exam date.");
-      return;
-    }
-
-    if (examDate < getTodayIsoDate()) {
-      setAddError("Exam date can't be in the past.");
-      return;
-    }
-
-    setIsAddSubmitting(true);
-    setAddError("");
-    try {
-      const created = await createExam(
-        trimmedSubject,
-        examType,
-        examDate,
-        studySetId || undefined
-      );
-
-      setExams((prev) => {
-        const next = [...prev];
-        const insertAt = next.findIndex((e) => e.exam_date > created.exam_date);
-        if (insertAt === -1) next.push(created);
-        else next.splice(insertAt, 0, created);
-        return next;
-      });
-
-      setIsAdding(false);
-      setSubject("");
-      setExamDate("");
-      setStudySetId("");
-    } catch {
-      setAddError("Couldn't add exam. Please try again.");
-    } finally {
-      setIsAddSubmitting(false);
-    }
-  };
 
   const openConfirm = (exam) => {
     setConfirmExam(exam);
@@ -200,119 +124,30 @@ function UpcomingExamsCard({ onSeeAll }) {
             Upcoming Exams
           </h2>
 
-          <button
-            type="button"
-            onClick={openAddForm}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-white shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
-            aria-label="Add exam"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
-
-        {isAdding && (
-          <div className="mb-4 space-y-2.5">
-            <input
-              type="text"
-              autoFocus
-              value={subject}
-              onChange={(e) => {
-                setSubject(e.target.value);
-                if (addError) setAddError("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") cancelAdd();
-              }}
-              disabled={isAddSubmitting}
-              placeholder="Exam subject (e.g. Calculus II)"
-              className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition ${
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => (onNavigate ? onNavigate("planner") : onSeeAll?.())}
+              className={`rounded-full border px-3.5 py-1 text-xs font-bold transition-all cursor-pointer ${
                 isDarkMode
-                  ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
-                  : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
-              } disabled:opacity-60`}
-            />
-
-            <div className="flex gap-2">
-              <select
-                value={examType}
-                onChange={(e) => setExamType(e.target.value)}
-                disabled={isAddSubmitting}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isDarkMode
-                    ? "border-white/10 bg-[#17131F] text-white focus:border-[#8064C7]"
-                    : "border-gray-200 bg-white text-[#292530] focus:border-[#8064C7]"
-                } disabled:opacity-60`}
-              >
-                {EXAM_TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                type="date"
-                value={examDate}
-                min={getTodayIsoDate()}
-                onChange={(e) => {
-                  setExamDate(e.target.value);
-                  if (addError) setAddError("");
-                }}
-                disabled={isAddSubmitting}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none transition ${
-                  isDarkMode
-                    ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7]"
-                    : "border-gray-200 bg-white text-[#292530] focus:border-[#8064C7]"
-                } disabled:opacity-60`}
-              />
-            </div>
-
-            <select
-              value={studySetId}
-              onChange={(e) => setStudySetId(e.target.value)}
-              disabled={isAddSubmitting}
-              className={`w-full rounded-xl border px-3.5 py-2 text-sm outline-none transition ${
-                isDarkMode
-                  ? "border-white/10 bg-[#17131F] text-white focus:border-[#8064C7]"
-                  : "border-gray-200 bg-white text-[#292530] focus:border-[#8064C7]"
-              } disabled:opacity-60`}
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-xs"
+              }`}
             >
-              <option value="">No linked study set</option>
-              {studySets.map((set) => (
-                <option key={set.study_set_id} value={set.study_set_id}>
-                  {set.name}
-                </option>
-              ))}
-            </select>
+              See all
+            </button>
 
-            <div className="flex items-center gap-3 pt-1">
-              <button
-                type="button"
-                onClick={confirmAddExam}
-                disabled={isAddSubmitting}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isAddSubmitting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  "Add"
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={cancelAdd}
-                disabled={isAddSubmitting}
-                className="text-xs font-semibold opacity-60 hover:opacity-100"
-              >
-                Cancel
-              </button>
-            </div>
-
-            {addError && (
-              <p className="text-xs font-medium text-red-400">{addError}</p>
-            )}
+            <button
+              type="button"
+              onClick={() => (onNavigate ? onNavigate("planner") : onSeeAll?.())}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-white shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] cursor-pointer"
+              aria-label="Go to Study Planner"
+              title="Go to Study Planner to add exams"
+            >
+              <Plus size={18} />
+            </button>
           </div>
-        )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-6 text-sm opacity-50">
@@ -335,7 +170,7 @@ function UpcomingExamsCard({ onSeeAll }) {
           </div>
         ) : exams.length === 0 ? (
           <p className={`py-6 text-center text-sm ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
-            No upcoming exams.
+            No upcoming exams. Click + to open Study Planner.
           </p>
         ) : (
           <div className="scrollbar-thin max-h-[224px] overflow-y-auto pr-1 space-y-3">
@@ -407,19 +242,6 @@ function UpcomingExamsCard({ onSeeAll }) {
           </div>
         )}
 
-        <div className="mt-5 flex justify-center">
-          <button
-            type="button"
-            onClick={onSeeAll}
-            className={`rounded-full border px-5 py-2 text-xs font-bold transition-all ${
-              isDarkMode
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-            }`}
-          >
-            See all
-          </button>
-        </div>
       </div>
 
       <DeleteConfirmModal
@@ -439,4 +261,3 @@ function UpcomingExamsCard({ onSeeAll }) {
 }
 
 export default UpcomingExamsCard;
-

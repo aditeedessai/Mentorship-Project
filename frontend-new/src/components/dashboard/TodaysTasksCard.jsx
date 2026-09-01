@@ -2,21 +2,16 @@ import { useEffect, useState } from "react";
 import { Plus, CheckCircle2, Circle, Loader2, AlertCircle } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import DeleteConfirmModal from "../DeleteConfirmModal";
-import { fetchTodaysTasks, createTask, deleteTask } from "../../services/api";
+import { fetchTodaysTasks, deleteTask } from "../../services/api";
 
 const COMPLETED_HOLD_MS = 500;
 const COLLAPSE_DURATION_MS = 300;
 
-function TodaysTasksCard() {
+function TodaysTasksCard({ onNavigate }) {
   const { isDarkMode } = useTheme();
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-
-  const [isAdding, setIsAdding] = useState(false);
-  const [newTaskName, setNewTaskName] = useState("");
-  const [addError, setAddError] = useState("");
-  const [isAddSubmitting, setIsAddSubmitting] = useState(false);
 
   const [confirmTask, setConfirmTask] = useState(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
@@ -41,40 +36,6 @@ function TodaysTasksCard() {
   useEffect(() => {
     loadTasks();
   }, []);
-
-  const openAddInput = () => {
-    setIsAdding(true);
-    setAddError("");
-    setNewTaskName("");
-  };
-
-  const cancelAdd = () => {
-    setIsAdding(false);
-    setNewTaskName("");
-    setAddError("");
-  };
-
-  const confirmAdd = async () => {
-    const trimmedName = newTaskName.trim();
-
-    if (!trimmedName) {
-      setAddError("Please enter a task name.");
-      return;
-    }
-
-    setIsAddSubmitting(true);
-    setAddError("");
-    try {
-      const created = await createTask(trimmedName);
-      setTasks((prev) => [created, ...prev]);
-      setNewTaskName("");
-      setIsAdding(false);
-    } catch {
-      setAddError("Couldn't add task. Please try again.");
-    } finally {
-      setIsAddSubmitting(false);
-    }
-  };
 
   const openConfirm = (task) => {
     setConfirmTask(task);
@@ -128,59 +89,30 @@ function TodaysTasksCard() {
             Today's Tasks
           </h2>
 
-          <button
-            type="button"
-            onClick={openAddInput}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-white shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
-            aria-label="Add task"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate("planner")}
+              className={`rounded-full border px-3.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                isDarkMode
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-xs"
+              }`}
+            >
+              See all
+            </button>
 
-        {isAdding && (
-          <div className="mb-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                autoFocus
-                value={newTaskName}
-                onChange={(e) => {
-                  setNewTaskName(e.target.value);
-                  if (addError) setAddError("");
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") confirmAdd();
-                  if (e.key === "Escape") cancelAdd();
-                }}
-                disabled={isAddSubmitting}
-                placeholder="Task name"
-                className={`flex-1 rounded-xl border px-3.5 py-2 text-sm outline-none transition ${
-                  isDarkMode
-                    ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
-                    : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
-                } disabled:opacity-60`}
-              />
-              <button
-                type="button"
-                onClick={confirmAdd}
-                disabled={isAddSubmitting}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isAddSubmitting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  "Add"
-                )}
-              </button>
-            </div>
-            {addError && (
-              <p className="mt-1.5 text-xs font-medium text-red-400">
-                {addError}
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={() => onNavigate && onNavigate("planner")}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8064C7] text-white shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] cursor-pointer"
+              aria-label="Go to Study Planner"
+              title="Go to Study Planner to add tasks"
+            >
+              <Plus size={18} />
+            </button>
           </div>
-        )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-6 text-sm opacity-50">
@@ -203,7 +135,7 @@ function TodaysTasksCard() {
           </div>
         ) : tasks.length === 0 ? (
           <p className={`py-6 text-center text-sm ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
-            No tasks yet — add one to get started.
+            No tasks scheduled for today. Click + to open Study Planner.
           </p>
         ) : (
           <div className="scrollbar-thin max-h-[224px] overflow-y-auto pr-1">
@@ -277,4 +209,3 @@ function TodaysTasksCard() {
 }
 
 export default TodaysTasksCard;
-

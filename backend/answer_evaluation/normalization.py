@@ -173,6 +173,63 @@ def correct_typos(text: str, protected_terms: set = None) -> str:
     return re.sub(r"[a-zA-Z]+", _replace, text)
 
 
+def is_real_word(word: str, protected_terms: set = None) -> bool:
+    """
+    True if `word` is a real, recognized word: SymSpell finds at least one
+    suggestion for it within max edit distance (an exact dictionary hit is
+    itself returned as a distance-0 suggestion, so this covers both
+    "already correct" and "close enough to a known word" in one check) -
+    a word with ZERO suggestions at ANY edit distance is genuinely
+    unrecognized, not merely "wasn't auto-corrected".
+
+    Protected terms (the static _PROTECTED_TERMS set, plus an optional
+    per-question `protected_terms` set from extract_dynamic_protected_terms)
+    always count as real, matching correct_typos()'s protection behavior -
+    a correct technical term shouldn't be flagged just because a general-
+    English frequency dictionary has never seen it.
+
+    Very short words (<3 letters) and non-alphabetic tokens are treated as
+    real without a lookup - SymSpell isn't reliable at that length (same
+    floor _correct_word already uses), and short function words ("is",
+    "an", "to") would otherwise dilute the signal this exists to provide.
+
+    Returns True (assume real) if the SymSpell dictionary failed to load,
+    so anything built on this - e.g. evaluator.py's gibberish gate -
+    degrades to a no-op rather than misclassifying legitimate answers when
+    the optional dependency is unavailable.
+    """
+    if not word or not word.isalpha() or len(word) < 3:
+        return True
+    lower = word.lower()
+    if lower in _PROTECTED_TERMS or (protected_terms and lower in protected_terms):
+        return True
+    if not _HAS_SYMSPELL:
+        return True
+    suggestions = _sym_spell.lookup(lower, Verbosity.CLOSEST, max_edit_distance=_MAX_EDIT_DISTANCE)
+    return len(suggestions) > 0
+
+
+def real_word_ratio(text: str, protected_terms: set = None) -> float:
+    """
+    Fraction of `text`'s qualifying alphabetic words (length >= 3) that
+    are real per is_real_word(). Intended for a cheap, early "is this
+    even real language" gate (see evaluator.py) - run BEFORE any
+    semantic/embedding scoring, so gibberish never gets a chance to reach
+    signals that were designed to judge subtle wrongness in well-formed
+    text, not detect the absence of real text altogether.
+
+    Returns 1.0 (assume real - i.e. "don't flag") when there are no
+    qualifying words to judge (empty text, or only very short/non-
+    alphabetic tokens), since a ratio computed over zero words carries no
+    signal either way.
+    """
+    words = [w for w in re.findall(r"[a-zA-Z]+", text or "") if len(w) >= 3]
+    if not words:
+        return 1.0
+    real_count = sum(1 for w in words if is_real_word(w, protected_terms))
+    return real_count / len(words)
+
+
 def expand_contractions(text: str) -> str:
     """Expands contractions ("can't" -> "cannot"). No-ops if unavailable."""
     if not _HAS_CONTRACTIONS or not text:
