@@ -274,8 +274,8 @@ def _seconds_to_wait_from_error(error: Exception) -> float:
 
 
 _COMBINED_SYSTEM_PROMPT = """You are grading a student's answer against a reference answer for an \
-academic question. You are answering THREE SEPARATE questions about the SAME student \
-answer - do not let one influence the others. You are NOT grading writing quality, \
+academic question. You are answering two SEPARATE questions about the SAME student \
+answer - do not let one influence the other. You are NOT grading writing quality, \
 style, completeness, or brevity - those are handled elsewhere.
 
 QUESTION 1 - Contradiction / hallucination: does the student's answer contradict the \
@@ -292,19 +292,9 @@ prevents something the reference says X causes), draw a conclusion that doesn't 
 from its own stated premise, or reverse which of two things drives the other? A plain \
 factual restatement with no explicit reasoning chain has no logic to break - mark it valid.
 
-QUESTION 3 - Coherence: is the student's answer a coherent, real attempt to answer the \
-question - an actual claim or assertion, however short, terse, or informally worded - \
-rather than scrambled/garbled text, disconnected keyword fragments, or a sequence of \
-words with no real assertion being made? A short, terse, list-style, or even \
-ungrammatical answer can still be coherent - judge whether it expresses a real, \
-connected idea, not whether it is a complete or polished sentence. Mark \
-is_coherent_claim = false ONLY when the text genuinely fails to express any real \
-assertion (e.g. scrambled/garbled words, random fragments strung together, text that \
-reads as nonsense even after allowing for typos and informal phrasing).
-
 Respond with ONLY a JSON object (no prose, no markdown fences, no explanation outside \
 the JSON) in exactly this shape:
-{"contradicts_reference": <true|false>, "hallucinated_claim": <true|false>, "logic_valid": <true|false>, "is_coherent_claim": <true|false>, "reasoning": "<one to three sentences covering all three questions>"}"""
+{"contradicts_reference": <true|false>, "hallucinated_claim": <true|false>, "logic_valid": <true|false>, "reasoning": "<one to three sentences covering both questions>"}"""
 
 
 def _generate_with_retry(
@@ -602,7 +592,10 @@ def judge_answer(student_answer: str, reference_answer: str) -> dict:
 
 
 # ---------------------------------------------------------------------
-# Self-consistency polling - judge_answer() replacement for evaluate_answer()
+# Self-consistency polling - what evaluate_answer() calls INSTEAD of
+# judge_answer() for standard escalations. judge_answer() itself, its
+# three questions, and _COMBINED_SYSTEM_PROMPT are untouched by this -
+# see _to_verdict()'s docstring.
 # ---------------------------------------------------------------------
 # Confirmed via repeated live testing (2026-08-31, the "btirhs delasiph
 # ustm..." keyword-salad case): the SAME combined judge call, on the SAME
@@ -621,6 +614,59 @@ _POLL_COUNT = 3
 # incremented blindly, the same way _BATCH_TOKENS_PER_ITEM's value was
 # verified earlier today.
 _POLL_TOKENS_PER_ITEM = 400
+
+# Fully independent prompt - deliberately NOT built from
+# _COMBINED_SYSTEM_PROMPT or _BATCH_SYSTEM_PROMPT, and used nowhere else.
+# judge_answer() and judge_batch() must keep their exact original three-
+# question behavior untouched (see _to_verdict()'s docstring) - sharing
+# a base prompt string with either of them would silently change their
+# behavior too, which is exactly the mistake this prompt fixes by being
+# self-contained instead. Adds a fourth, coherence question (see
+# evaluator.py's POLL_PENALTY_MIN_FLAGGED_VOTES comment for why: a
+# scrambled/keyword-salad answer trivially passes the original three
+# questions, since none of them apply to text that isn't a coherent
+# claim in the first place).
+_POLL_SYSTEM_PROMPT = """You are grading a student's answer against a reference answer for an \
+academic question. You are answering FOUR SEPARATE questions about the SAME student answer - \
+do not let one influence the others. You are NOT grading writing quality, style, \
+completeness, or brevity - those are handled elsewhere.
+
+QUESTION 1 - Contradiction / hallucination: does the student's answer contradict the \
+reference, or state a specific mechanism, cause, number, or relationship that is \
+invented/fabricated rather than one that follows from or restates the reference? \
+Plausible-sounding technical vocabulary used incorrectly still counts as hallucination \
+even without an explicit contradiction. A reasonable paraphrase, partial answer, or \
+different-but-compatible wording is NOT a contradiction or hallucination.
+
+QUESTION 2 - Causal logic validity: if the student states a reasoning chain or causal \
+claim (e.g. using "because", "therefore", "leads to"), is that causal direction actually \
+consistent with the reference - or does it invert the relationship, draw a conclusion \
+that doesn't follow from its own stated premise, or reverse which of two things drives \
+the other? A plain factual restatement with no explicit reasoning chain has no logic to \
+break - mark it valid.
+
+QUESTION 3 - Coherence: is the student's answer a coherent, real attempt to answer the \
+question - an actual claim or assertion, however short, terse, or informally worded - \
+rather than scrambled/garbled text, disconnected keyword fragments, or a sequence of \
+words with no real assertion being made? A short, terse, list-style, or even ungrammatical \
+answer can still be coherent - judge whether it expresses a real, connected idea, not \
+whether it is a complete or polished sentence. Mark is_coherent_claim = false ONLY when \
+the text genuinely fails to express any real assertion (e.g. scrambled/garbled words, \
+random fragments strung together, text that reads as nonsense even after allowing for \
+typos and informal phrasing).
+
+You will be given one or more student/reference pairs, numbered. A given pair may appear \
+several times in a row (a repeat of the exact same pair, not a new one) - answer all four \
+questions independently for EVERY occurrence, even a repeat of an identical pair. Do not \
+let one occurrence's answer influence another occurrence of the same pair, and do not let \
+one pair influence a different pair. Keep each "reasoning" field to one short phrase (a few \
+words), not a full sentence - the output budget is shared across every occurrence in this \
+request.
+
+Respond with ONLY a JSON array (no prose, no markdown fences), with exactly one object per \
+occurrence IN THE SAME ORDER they were given, each shaped like:
+{"contradicts_reference": <true|false>, "hallucinated_claim": <true|false>, "logic_valid": <true|false>, "is_coherent_claim": <true|false>, "reasoning": "<a few words, not a full sentence>"}
+The array must have exactly as many objects as there were occurrences."""
 
 
 def judge_answer_polled(student_answer: str, reference_answer: str, poll_count: int = _POLL_COUNT) -> dict:
@@ -668,7 +714,7 @@ def judge_answer_polled(student_answer: str, reference_answer: str, poll_count: 
         # real budget for the actual JSON content. Not 0 - this model
         # rejects that value outright (see judge_batch()'s comment).
         raw_text = _generate_with_retry(
-            _BATCH_SYSTEM_PROMPT, user_prompt, max_output_tokens=max_tokens, thinking_budget=1
+            _POLL_SYSTEM_PROMPT, user_prompt, max_output_tokens=max_tokens, thinking_budget=1
         )
         cleaned_text = (raw_text or "").strip().strip("`")
         if cleaned_text.lower().startswith("json"):
@@ -720,6 +766,119 @@ def _to_poll_vote(raw_vote: dict) -> dict:
         "reasoning": raw_vote.get("reasoning"),
         "flagged": contradicts or hallucinated or logic_invalid or incoherent,
     }
+
+
+# ---------------------------------------------------------------------
+# Polled batch judging - judge_answer_polled(), extended to MANY DIFFERENT
+# pairs at once (the batch-path equivalent of judge_batch() above, but
+# self-consistency-polled and coherence-checked like judge_answer_polled()
+# instead of the original single-shot three-question path).
+# ---------------------------------------------------------------------
+# Deliberately its own, smaller chunk size - NOT _BATCH_SIZE (25). Each
+# chunked request now carries chunk_size * poll_count total verdicts
+# instead of chunk_size, so reusing 25 untested at this new scale would
+# repeat exactly the kind of blind multiplication that caused the
+# original truncation bug at a much smaller scale earlier. 5 pairs x 3
+# votes = 15 verdicts/request, close to _BATCH_SIZE's own historical
+# scale in verdict count rather than pair count.
+POLL_BATCH_CHUNK_SIZE = int(os.environ.get("JUDGE_POLL_BATCH_SIZE", "5"))
+
+
+def judge_batch_polled(pairs: list, poll_count: int = _POLL_COUNT) -> list:
+    """
+    Self-consistency polling for MANY DIFFERENT (student, reference)
+    pairs at once. Each pair gets its own `poll_count` votes; pairs are
+    chunked at POLL_BATCH_CHUNK_SIZE, and within a chunk every pair is
+    repeated poll_count times consecutively in one flat request
+    (pair1 x poll_count, pair2 x poll_count, ...) - reusing
+    _POLL_SYSTEM_PROMPT and _build_batch_prompt() exactly as
+    judge_answer_polled() does for its single pair, just generalized to
+    N pairs per request.
+
+    No persistent cache - same reasoning as judge_answer_polled():
+    polling exists to get fresh independent samples every call.
+
+    Returns: list of dicts, ONE PER INPUT PAIR (not one per vote), same
+    shape as judge_answer_polled()'s return - {"judge_available",
+    "votes", "poll_count", "clean_count", "flagged_count"} - in the same
+    order as `pairs`. evaluator.py's _finalize_result() already reads
+    this shape generically, so it needed no changes to support this
+    function.
+    """
+    if not pairs:
+        return []
+
+    if _BACKEND == "ollama":
+        backend_ready = _ollama_available()
+    else:
+        backend_ready = _get_client() is not None
+
+    results = [None] * len(pairs)
+
+    if not backend_ready:
+        for i in range(len(pairs)):
+            results[i] = {"judge_available": False, "votes": [], "poll_count": poll_count, "clean_count": 0, "flagged_count": 0}
+        return results
+
+    for chunk_start in range(0, len(pairs), POLL_BATCH_CHUNK_SIZE):
+        chunk_pairs = pairs[chunk_start:chunk_start + POLL_BATCH_CHUNK_SIZE]
+        chunk_size = len(chunk_pairs)
+
+        # [A, B] with poll_count=3 -> [A, A, A, B, B, B]. Same flat
+        # list-of-tuples shape _build_batch_prompt() already consumes
+        # for judge_answer_polled()'s single-pair case ([pair]*poll_count
+        # there) - no changes needed to that helper.
+        flat_pairs = [pair for pair in chunk_pairs for _ in range(poll_count)]
+        user_prompt = _build_batch_prompt(flat_pairs)
+        max_tokens = _POLL_TOKENS_PER_ITEM * chunk_size * poll_count
+
+        raw_text = None
+        try:
+            # thinking_budget=1: same reasoning as judge_answer_polled().
+            raw_text = _generate_with_retry(
+                _POLL_SYSTEM_PROMPT, user_prompt, max_output_tokens=max_tokens, thinking_budget=1
+            )
+            cleaned_text = (raw_text or "").strip().strip("`")
+            if cleaned_text.lower().startswith("json"):
+                cleaned_text = cleaned_text[4:].strip()
+            parsed_array = json.loads(cleaned_text)
+
+            expected_len = chunk_size * poll_count
+            if not isinstance(parsed_array, list) or len(parsed_array) != expected_len:
+                raise ValueError(
+                    f"expected a JSON array of {expected_len} poll verdicts "
+                    f"({chunk_size} pairs x {poll_count} votes), got "
+                    f"{type(parsed_array).__name__} of length "
+                    f"{len(parsed_array) if isinstance(parsed_array, list) else 'n/a'}"
+                )
+        except Exception as e:
+            logger.warning(
+                "llm_judge.py: polled batch call failed for %d pairs (%s); raw_text=%r; "
+                "those items fall back to ambiguous (no rescue, no penalty).",
+                chunk_size, e, raw_text,
+            )
+            for offset in range(chunk_size):
+                results[chunk_start + offset] = {
+                    "judge_available": False, "votes": [], "poll_count": poll_count,
+                    "clean_count": 0, "flagged_count": 0,
+                }
+            continue
+
+        # Regroup the flat array back into poll_count-sized groups, one
+        # group per pair, in the same order the pairs were sent.
+        for offset in range(chunk_size):
+            pair_votes_raw = parsed_array[offset * poll_count: (offset + 1) * poll_count]
+            votes = [_to_poll_vote(v) for v in pair_votes_raw]
+            flagged_count = sum(1 for v in votes if v["flagged"])
+            results[chunk_start + offset] = {
+                "judge_available": True,
+                "votes": votes,
+                "poll_count": poll_count,
+                "clean_count": poll_count - flagged_count,
+                "flagged_count": flagged_count,
+            }
+
+    return results
 
 
 # ---------------------------------------------------------------------
@@ -948,32 +1107,26 @@ def judge_batch(pairs: list) -> list:
 def _to_verdict(result: dict) -> dict:
     """
     Normalizes a raw judge result (single or batch) into the public
-    verdict shape returned by judge_answer/judge_batch. Includes
-    is_coherent_claim (see _COMBINED_SYSTEM_PROMPT's Question 3) in
-    override_to_incorrect alongside the original three - a text that
-    isn't a coherent claim at all shouldn't trivially pass just because
-    it also doesn't contradict/hallucinate/break logic (there's nothing
-    coherent enough to do any of those TO). Note: judge_answer() itself
-    is no longer called by evaluate_answer() (see
-    llm_judge.judge_answer_polled() and evaluator.py's POLL_* constants
-    for why a single verdict is no longer trusted there) - this
-    normalizer still backs judge_batch()/evaluate_answers_batch(), which
-    gets this coherence check for free via the shared prompt, without
-    the polling fix (that's still evaluate_answer()-only - see
-    evaluate_answers_batch()'s docstring for that known gap).
+    verdict shape returned by judge_answer/judge_batch.
+
+    Deliberately untouched by the coherence-question/polling work (see
+    llm_judge.judge_answer_polled() and evaluator.py's POLL_* constants) -
+    judge_answer() and judge_batch()/evaluate_answers_batch() keep their
+    exact original three-question shape and behavior; the coherence
+    question and self-consistency polling live entirely in
+    judge_answer_polled()'s own separate prompt/normalizer
+    (_POLL_SYSTEM_PROMPT / _to_poll_vote), not here.
     """
     available = result.get("available", False)
     contradicts = bool(result.get("contradicts_reference")) if available else False
     hallucinated = bool(result.get("hallucinated_claim")) if available else False
     logic_invalid = (result.get("logic_valid") is False) if available else False
-    incoherent = (result.get("is_coherent_claim") is False) if available else False
 
     return {
         "judge_available": available,
         "contradicts_reference": contradicts if available else None,
         "hallucinated_claim": hallucinated if available else None,
         "logic_valid": result.get("logic_valid") if available else None,
-        "is_coherent_claim": result.get("is_coherent_claim") if available else None,
         "reasoning": result.get("reasoning") if available else result.get("error"),
-        "override_to_incorrect": contradicts or hallucinated or logic_invalid or incoherent,
+        "override_to_incorrect": contradicts or hallucinated or logic_invalid,
     }
