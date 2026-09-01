@@ -32,4 +32,4 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 
-backend/.env
+backend/.envbackend/answer_evaluation/.llm_judge_cache.json

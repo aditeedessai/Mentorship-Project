@@ -621,6 +621,7 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
             "llm_judge_triggered": False,
             "llm_judge_reason": None,
             "llm_judge_verdict": None,
+            "judge_unavailable_unverified": False,
         }
 
     if stat.get("is_gibberish"):
@@ -648,6 +649,7 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
             "llm_judge_triggered": False,
             "llm_judge_reason": None,
             "llm_judge_verdict": None,
+            "judge_unavailable_unverified": False,
         }
 
     final_score = stat["final_score"]
@@ -710,6 +712,27 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
     # since the completeness verdict shape never sets it True either.
     logic_inversion_detected = bool(stat.get("logic_inversion_detected")) or bool(llm_forced_incorrect)
 
+    # Issue 1 / Problem B fix: an escalated item whose judge call never
+    # actually produced a verdict (quota exhaustion, network failure,
+    # parse failure, or the judge being unavailable altogether - anything
+    # where judge_available is falsy) leaves final_score exactly as the
+    # statistical pipeline computed it, above (deliberately - this is
+    # still the right behavior, matching the "never falsely rescue"
+    # principle everywhere else in this file). But that untouched score
+    # is NOT the same thing as a judge-confirmed one: the pipeline
+    # *decided* this case was ambiguous enough to need a second opinion,
+    # and never got one. This flag makes that distinction visible to
+    # callers instead of letting an unverified statistical score look
+    # identical to a genuinely judge-cleared or never-escalated one.
+    # True only when escalation was actually attempted AND no real
+    # verdict came back - never true for an item that didn't escalate at
+    # all (should_escalate=False), and never true once a real verdict
+    # comes back (judge_available=True), even an ambiguous split vote -
+    # a split vote is still a verdict, just an inconclusive one.
+    judge_unavailable_unverified = bool(stat["should_escalate"]) and not bool(
+        llm_judge_verdict and llm_judge_verdict.get("judge_available")
+    )
+
     return {
         "semantic_score": round(stat["semantic_score"], 3),
         "concept_score": round(stat["concept_score"], 3),
@@ -727,6 +750,7 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
         "llm_judge_triggered": stat["should_escalate"],
         "llm_judge_reason": stat["escalate_reason"],
         "llm_judge_verdict": llm_judge_verdict,
+        "judge_unavailable_unverified": judge_unavailable_unverified,
     }
 
 
@@ -828,8 +852,20 @@ def evaluate_answers_batch(
     of API round-trips instead of one call per escalated item. This is
     the main lever for making a large bulk grading run fast under a
     rate-limited free tier: instead of many individually throttled
-    calls, escalated items go out in a handful of grouped requests (see
-    llm_judge.judge_batch / JUDGE_BATCH_SIZE).
+    calls, escalated items go out in a handful of grouped requests.
+
+    Escalated items are routed by escalate_reason, the same way
+    evaluate_answer() already routes a single item:
+      - COMPLETENESS_ESCALATE_REASON items ask a different question
+        (is this different-but-non-wrong answer actually complete?) and
+        go to llm_judge.judge_completeness(), looped per item since no
+        batched/polled completeness judge exists.
+      - everything else goes to llm_judge.judge_batch_polled() (see
+        JUDGE_POLL_BATCH_SIZE / POLL_BATCH_CHUNK_SIZE), which asks the
+        same self-consistency-polled, coherence-checked question
+        evaluate_answer() asks via judge_answer_polled() for a single
+        item - grouped across pairs into a handful of requests instead
+        of one call per pair.
 
     Args:
         items: list of {"student": str, "reference": str} dicts, in the
@@ -848,15 +884,53 @@ def evaluate_answers_batch(
         if use_llm_judge and not s.get("empty") and s["should_escalate"]
     ]
 
+    # Split by escalate_reason BEFORE dispatching - completeness
+    # escalations ask a different question than the standard contra-
+    # diction/hallucination/logic/coherence one, the same distinction
+    # evaluate_answer() already makes for a single item. Previously this
+    # function ignored escalate_reason entirely and sent every escalated
+    # item (completeness-shaped ones included) through the standard
+    # judge, which meant completeness-shaped items in the batch/section-
+    # submission path were being asked the wrong question. Fixed here,
+    # kept separate from the polling swap below.
+    completeness_indices = [
+        i for i in escalate_indices if stats[i].get("escalate_reason") == COMPLETENESS_ESCALATE_REASON
+    ]
+    completeness_set = set(completeness_indices)
+    standard_indices = [i for i in escalate_indices if i not in completeness_set]
+
     verdicts = {}
-    if escalate_indices and llm_judge.is_available():
-        pairs = [(stats[i]["normalized_student"], stats[i]["normalized_reference"]) for i in escalate_indices]
-        batch_results = llm_judge.judge_batch(pairs)
-        for idx, verdict in zip(escalate_indices, batch_results):
-            verdicts[idx] = verdict
-    elif escalate_indices:
-        for i in escalate_indices:
-            verdicts[i] = {"judge_available": False, "error": "llm_judge_unavailable"}
+
+    if completeness_indices:
+        if llm_judge.is_available():
+            # No batched/polled completeness judge exists - looped, not
+            # batched together, matching evaluate_answer()'s own use of
+            # judge_completeness() (single-shot, no polling). Completeness
+            # escalations are expected to be rare relative to standard
+            # ones, so this doesn't need its own batching mechanism today.
+            for i in completeness_indices:
+                verdicts[i] = llm_judge.judge_completeness(
+                    stats[i]["normalized_student"], stats[i]["normalized_reference"]
+                )
+        else:
+            for i in completeness_indices:
+                verdicts[i] = {"judge_available": False, "error": "llm_judge_unavailable"}
+
+    # --- Self-consistency polling for the standard escalation path -------
+    # judge_batch() (unpolled, no coherence question) is no longer used
+    # here - it's replaced with judge_batch_polled(), the batch-path
+    # equivalent of judge_answer_polled(), so real quiz submissions get
+    # the same non-determinism protection evaluate_answer() already has.
+    # judge_batch() itself is untouched and still used elsewhere as-is.
+    if standard_indices:
+        if llm_judge.is_available():
+            pairs = [(stats[i]["normalized_student"], stats[i]["normalized_reference"]) for i in standard_indices]
+            batch_results = llm_judge.judge_batch_polled(pairs)
+            for idx, verdict in zip(standard_indices, batch_results):
+                verdicts[idx] = verdict
+        else:
+            for i in standard_indices:
+                verdicts[i] = {"judge_available": False, "error": "llm_judge_unavailable"}
 
     return [
         _finalize_result(stats[i], verdicts.get(i), max_marks, pass_threshold)
