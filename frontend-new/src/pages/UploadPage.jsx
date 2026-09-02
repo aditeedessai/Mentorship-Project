@@ -158,7 +158,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       newSet = await createStudySet(studySetName.trim());
 
       const newStudySetId = newSet.study_set_id;
-
       const fileCount = selectedFiles.length;
 
       const hasImages = selectedFiles.some(
@@ -232,7 +231,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         <div className="flex w-full max-w-xl flex-col items-center px-6 py-12 text-center">
           {/* JOJO */}
           <div className="relative mb-8 flex h-56 w-56 items-center justify-center">
-            {/* Soft glow */}
             <div
               className={`absolute inset-0 rounded-full blur-3xl ${
                 isDarkMode
@@ -253,7 +251,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             Jojo is reading...
           </h2>
 
-          {/* STATUS MESSAGE */}
+          {/* STATUS */}
           <p
             className={`mt-3 max-w-md text-sm leading-relaxed ${
               isDarkMode
@@ -326,9 +324,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
   return (
     <div>
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* ================= HEADER ================= */}
       <div
         className={`relative mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 ${
           isDarkMode
@@ -337,7 +333,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         }`}
       >
         <div className="relative z-10 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
-          {/* LEFT CONTENT */}
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
               Create Study Set
@@ -355,21 +350,16 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             </p>
           </div>
 
-          {/* =================================================
-              JOJO HEADER MASCOT
-          ================================================= */}
+          {/* JOJO HEADER MASCOT */}
           <div className="relative flex h-[145px] w-[320px] shrink-0 items-end">
-            {/* Soft glow */}
             <div className="pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl" />
 
-            {/* Jojo */}
             <img
               src={jojoReading}
               alt="Jojo reading"
               className="absolute bottom-0 left-0 z-10 h-[135px] w-[135px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px]"
             />
 
-            {/* Speech Bubble */}
             <div className="absolute left-[145px] top-[18px] z-20">
               <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
                 <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
@@ -380,7 +370,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   Send me your notes.
                 </p>
 
-                {/* Bubble tail */}
                 <div className="absolute left-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-b border-l border-[#8064C7]/15 bg-white" />
               </div>
             </div>
@@ -408,7 +397,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= MAIN UPLOAD AREA ================= */}
       <div className="grid items-stretch gap-6 lg:grid-cols-3">
-        {/* ================= UPLOAD CARD ================= */}
+
+        {/* UPLOAD CARD */}
         <div
           className={`flex h-full flex-col rounded-3xl border p-4 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 sm:p-6 ${
             isDarkMode
@@ -465,7 +455,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     />
                   </label>
 
-                  {/* Direct Mobile Camera Button */}
                   <label
                     className={`flex cursor-pointer items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
                       isDarkMode
@@ -474,7 +463,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     }`}
                   >
                     <Camera size={18} />
-
                     Take Photo
 
                     <input
@@ -524,13 +512,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                         />
                       </label>
 
-                      <span className="text-xs text-gray-400">
-                        |
-                      </span>
+                      <span className="text-xs text-gray-400">|</span>
 
                       <label className="flex cursor-pointer items-center gap-1 text-xs font-bold text-[#8064C7] transition hover:underline dark:text-[#A78BFA]">
                         <Camera size={14} />
-
                         photo
 
                         <input
@@ -570,10 +555,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                                 : "text-gray-500"
                             }`}
                           >
-                            {(file.size / (1024 * 1024)).toFixed(
-                              2
-                            )}{" "}
-                            MB
+                            {(file.size / (1024 * 1024)).toFixed(2)} MB
                           </p>
                         </div>
 
@@ -595,7 +577,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
         </div>
 
-        {/* ================= STUDY SET NAME & ACTIONS ================= */}
+        {/* STUDY SET NAME & ACTIONS */}
         <div
           className={`flex h-full flex-col justify-between rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 ${
             isDarkMode
@@ -648,7 +630,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload size={17} />
-
               {uploading
                 ? statusMessage || "Creating..."
                 : "Create Study Set →"}
