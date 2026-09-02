@@ -48,7 +48,7 @@ export default function DeleteConfirmModal({
         className={`relative w-[92vw] sm:w-[440px] max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-6 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
           isDarkMode
             ? "border-white/10 bg-[#17131F] text-white"
-            : "border-white/80 bg-white text-[#292530]"
+            : "border-white/80 bg-white text-[#231B33]"
         }`}
         role="alertdialog"
         aria-modal="true"

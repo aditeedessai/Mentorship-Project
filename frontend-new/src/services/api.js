@@ -403,26 +403,111 @@ export async function fetchResults(attemptId) {
 // ── Tasks ────────────────────────────────────────────────────────────
 
 /**
+ * Fetch tasks for the current user, optionally filtered by date or date range.
+ * GET /api/tasks
+ */
+export async function fetchTasks({ dueDate, startDate, endDate } = {}) {
+  const params = new URLSearchParams();
+  if (dueDate) params.append("due_date", dueDate);
+  if (startDate) params.append("start_date", startDate);
+  if (endDate) params.append("end_date", endDate);
+
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  const data = await request(`/api/tasks${queryString}`);
+  return data.tasks || [];
+}
+
+/**
  * Fetch today's tasks for the current user.
  * GET /api/tasks
  */
 export async function fetchTodaysTasks() {
-  const data = await request("/api/tasks");
-  return data.tasks;
+  return fetchTasks();
 }
 
 /**
  * Create a new task.
  * POST /api/tasks
  */
-export async function createTask(name, priority, dueDate) {
-  const payload = { name };
-  if (priority) payload.priority = priority;
-  if (dueDate) payload.due_date = dueDate;
+export async function createTask(
+  nameOrObject,
+  priorityArg,
+  dueDateArg,
+  studySetIdArg,
+  taskTypeArg,
+  dueTimeArg
+) {
+  let payload = {};
+
+  if (typeof nameOrObject === "object" && nameOrObject !== null) {
+    const { name, title, priority, dueDate, date, dueTime, time, studySetId, taskType, type } = nameOrObject;
+    payload = {
+      name: name || title,
+      priority: (priority || "medium").toLowerCase(),
+      due_date: dueDate || date || undefined,
+      due_time: dueTime || time || undefined,
+      study_set_id: studySetId || undefined,
+      task_type: (taskType || type || "study").toLowerCase(),
+    };
+  } else {
+    payload = {
+      name: nameOrObject,
+      priority: priorityArg ? priorityArg.toLowerCase() : "medium",
+      due_date: dueDateArg || undefined,
+      due_time: dueTimeArg || undefined,
+      study_set_id: studySetIdArg || undefined,
+      task_type: taskTypeArg ? taskTypeArg.toLowerCase() : "study",
+    };
+  }
+
+  Object.keys(payload).forEach((key) => {
+    if (payload[key] === undefined) delete payload[key];
+  });
 
   return request("/api/tasks", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Update an existing task.
+ * PATCH /api/tasks/{taskId}
+ */
+export async function updateTask(taskId, updates) {
+  const payload = { ...updates };
+  if (payload.priority) payload.priority = payload.priority.toLowerCase();
+  if (payload.taskType) {
+    payload.task_type = payload.taskType.toLowerCase();
+    delete payload.taskType;
+  }
+  if (payload.dueDate) {
+    payload.due_date = payload.dueDate;
+    delete payload.dueDate;
+  }
+  if (payload.dueTime) {
+    payload.due_time = payload.dueTime;
+    delete payload.dueTime;
+  }
+  if (payload.studySetId !== undefined) {
+    payload.study_set_id = payload.studySetId;
+    delete payload.studySetId;
+  }
+
+  return request(`/api/tasks/${taskId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Toggle completion status of a task without deleting it.
+ * PATCH /api/tasks/{taskId}/complete
+ */
+export async function toggleTaskCompletion(taskId, completed) {
+  return request(`/api/tasks/${taskId}/complete`, {
+    method: "PATCH",
+    body: JSON.stringify({ completed }),
   });
 }
 

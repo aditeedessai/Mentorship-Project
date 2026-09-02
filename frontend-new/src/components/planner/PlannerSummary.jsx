@@ -1,12 +1,11 @@
 import React from "react";
-import { CheckCircle2, Calendar, Award, Flame } from "lucide-react";
+import { CheckCircle2, Calendar, Award } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
 export default function PlannerSummary({
   tasksTodayCount = 0,
   completedTodayCount = 0,
   upcomingExamsCount = 0,
-  studyStreakDays = 5,
 }) {
   const { isDarkMode } = useTheme();
 
@@ -32,17 +31,10 @@ export default function PlannerSummary({
       icon: Award,
       color: "blue",
     },
-    {
-      title: "Study Streak",
-      value: `${studyStreakDays} days`,
-      subtitle: "Keep it going!",
-      icon: Flame,
-      color: "amber",
-    },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
 
@@ -93,3 +85,4 @@ export default function PlannerSummary({
     </div>
   );
 }
+

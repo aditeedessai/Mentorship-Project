@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, Circle, BookOpen, Target, RotateCcw, FileText, CheckSquare, Clock } from "lucide-react";
+import { CheckCircle2, Circle, BookOpen, Target, RotateCcw, FileText, CheckSquare, Clock, Trash2 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { TASK_TYPES, PRIORITIES } from "../../data/plannerData";
 
@@ -11,7 +11,7 @@ const TYPE_ICONS = {
   CheckSquare: CheckSquare,
 };
 
-export default function TaskItem({ task, onToggleComplete }) {
+export default function TaskItem({ task, onToggleComplete, onDeleteTask }) {
   const { isDarkMode } = useTheme();
 
   const typeConfig = TASK_TYPES[task.type] || TASK_TYPES.Study;
@@ -62,18 +62,40 @@ export default function TaskItem({ task, onToggleComplete }) {
             {task.title}
           </h4>
 
-          {/* Priority Pill */}
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-              task.priority === "High"
-                ? "bg-rose-500/15 text-rose-500 border border-rose-500/30"
-                : task.priority === "Medium"
-                ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
-                : "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
-            }`}
-          >
-            {task.priority}
-          </span>
+          <div className="flex items-center gap-2">
+            {/* Priority Pill */}
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                task.priority === "High"
+                  ? "bg-rose-500/15 text-rose-500 border border-rose-500/30"
+                  : task.priority === "Medium"
+                  ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                  : "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+              }`}
+            >
+              {task.priority}
+            </span>
+
+            {/* Mini Delete Icon Button */}
+            {onDeleteTask && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteTask(task.id);
+                }}
+                className={`p-1 rounded-lg transition cursor-pointer ${
+                  isDarkMode
+                    ? "text-white/40 hover:text-rose-400 hover:bg-rose-500/10"
+                    : "text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+                }`}
+                aria-label="Delete task"
+                title="Delete task"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Task Metadata row */}
@@ -119,3 +141,4 @@ export default function TaskItem({ task, onToggleComplete }) {
     </div>
   );
 }
+

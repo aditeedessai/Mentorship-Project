@@ -21,6 +21,7 @@ export default function DailySchedule({
   selectedDate,
   tasks = [],
   onToggleTaskComplete,
+  onDeleteTask,
   onAddTaskClick,
   filterStatus = "all",
   onFilterStatusChange,
@@ -172,6 +173,7 @@ export default function DailySchedule({
                 key={task.id}
                 task={task}
                 onToggleComplete={onToggleTaskComplete}
+                onDeleteTask={onDeleteTask}
               />
             ))
           )}
