@@ -12,7 +12,6 @@ import {
   Loader2,
   CheckCircle2,
   X,
-  Settings,
 } from "lucide-react";
 
 import { useTheme } from "../context/ThemeContext";
@@ -21,7 +20,6 @@ import { deleteAccount } from "../services/api";
 
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
-
 import jojoThinking from "../assets/jojo-thinking.png";
 
 const SettingsPage = ({
@@ -77,14 +75,12 @@ const SettingsPage = ({
 
     try {
       const { error } =
-        await supabase.auth.resetPasswordForEmail(
-          user.email
-        );
+        await supabase.auth.resetPasswordForEmail(user.email);
 
       if (error) {
         setChangePasswordError(
           error.message ||
-          "Failed to send verification code."
+            "Failed to send verification code."
         );
         return;
       }
@@ -93,7 +89,7 @@ const SettingsPage = ({
     } catch (err) {
       setChangePasswordError(
         err.message ||
-        "An unexpected error occurred."
+          "An unexpected error occurred."
       );
     } finally {
       setIsSendingResetEmail(false);
@@ -152,19 +148,19 @@ const SettingsPage = ({
   const confirmModalConfig =
     confirmAction === "account"
       ? {
-        title: "Delete Account?",
-        itemName: "your account",
-        warningText:
-          "This will permanently delete your account and all your data. This cannot be undone.",
-        confirmText: "Delete Account",
-      }
+          title: "Delete Account?",
+          itemName: "your account",
+          warningText:
+            "This will permanently delete your account and all your data. This cannot be undone.",
+          confirmText: "Delete Account",
+        }
       : {
-        title: "Delete All Study Sets?",
-        itemName: "all your study sets",
-        warningText:
-          "This will permanently delete all your study sets and cannot be undone.",
-        confirmText: "Delete All",
-      };
+          title: "Delete All Study Sets?",
+          itemName: "all your study sets",
+          warningText:
+            "This will permanently delete all your study sets and cannot be undone.",
+          confirmText: "Delete All",
+        };
 
   return (
     <div className="max-w-4xl space-y-6 pb-12 transition-all duration-300">
@@ -179,7 +175,8 @@ const SettingsPage = ({
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
         }`}
       >
-        <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+        <div className="relative z-10 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+
           {/* LEFT CONTENT */}
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
@@ -187,7 +184,7 @@ const SettingsPage = ({
             </h1>
 
             <p
-              className={`mt-2 text-xs font-medium sm:text-sm ${
+              className={`mt-2 text-xs sm:text-sm ${
                 isDarkMode
                   ? "text-white/50"
                   : "text-[#706A78]"
@@ -198,21 +195,22 @@ const SettingsPage = ({
           </div>
 
           {/* =================================================
-              JOJO HEADER
+              JOJO + SPEECH BUBBLE
           ================================================= */}
           <div className="relative flex h-[150px] w-[330px] shrink-0 items-end">
+
             {/* Soft glow */}
-            <div className="pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-1 left-[50px] h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl" />
 
             {/* Jojo */}
             <img
               src={jojoThinking}
               alt="Jojo thinking"
-              className="absolute bottom-0 left-0 z-10 h-[135px] w-[135px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px]"
+              className="absolute bottom-0 left-0 z-10 h-[145px] w-[145px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.14)]"
             />
 
             {/* Speech bubble */}
-            <div className="absolute left-[145px] top-[18px] z-20">
+            <div className="absolute left-[145px] top-[28px] z-20">
               <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
                 <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
                   Need a hand? 🤔
@@ -256,10 +254,11 @@ const SettingsPage = ({
             PROFILE
         ===================================================== */}
         <section
-          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${isDarkMode
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+            isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-            }`}
+          }`}
         >
           <div className="mb-6 flex items-center gap-3">
 
@@ -273,10 +272,11 @@ const SettingsPage = ({
               </h2>
 
               <p
-                className={`text-xs ${isDarkMode
+                className={`text-xs ${
+                  isDarkMode
                     ? "text-white/50"
                     : "text-gray-500"
-                  }`}
+                }`}
               >
                 Manage your personal information
               </p>
@@ -308,19 +308,21 @@ const SettingsPage = ({
               </h3>
 
               <p
-                className={`mt-0.5 break-all text-xs font-semibold ${isDarkMode
+                className={`mt-0.5 break-all text-xs font-semibold ${
+                  isDarkMode
                     ? "text-white/60"
                     : "text-gray-500"
-                  }`}
+                }`}
               >
                 {user?.email || "No email available"}
               </p>
 
               <p
-                className={`mt-1 text-[11px] ${isDarkMode
+                className={`mt-1 text-[11px] ${
+                  isDarkMode
                     ? "text-white/40"
                     : "text-gray-400"
-                  }`}
+                }`}
               >
                 Your account information
               </p>
@@ -340,10 +342,11 @@ const SettingsPage = ({
             APPEARANCE
         ===================================================== */}
         <section
-          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${isDarkMode
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+            isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-            }`}
+          }`}
         >
           <div className="mb-6 flex items-center gap-3">
 
@@ -357,10 +360,11 @@ const SettingsPage = ({
               </h2>
 
               <p
-                className={`text-xs ${isDarkMode
+                className={`text-xs ${
+                  isDarkMode
                     ? "text-white/50"
                     : "text-gray-500"
-                  }`}
+                }`}
               >
                 Choose how Jot looks
               </p>
@@ -368,10 +372,11 @@ const SettingsPage = ({
           </div>
 
           <div
-            className={`flex items-center justify-between rounded-2xl border p-4 ${isDarkMode
+            className={`flex items-center justify-between rounded-2xl border p-4 ${
+              isDarkMode
                 ? "border-white/5 bg-white/5"
                 : "border-gray-200/80 bg-white"
-              }`}
+            }`}
           >
             <div className="flex min-w-0 items-center gap-3">
 
@@ -389,10 +394,11 @@ const SettingsPage = ({
                 </p>
 
                 <p
-                  className={`text-[11px] ${isDarkMode
+                  className={`text-[11px] ${
+                    isDarkMode
                       ? "text-white/50"
                       : "text-gray-500"
-                    }`}
+                  }`}
                 >
                   Switch between light and dark mode
                 </p>
@@ -403,16 +409,18 @@ const SettingsPage = ({
               type="button"
               onClick={toggleDarkMode}
               aria-label="Toggle dark mode"
-              className={`relative ml-4 flex h-9 w-[68px] shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 ${isDarkMode
+              className={`relative ml-4 flex h-9 w-[68px] shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 ${
+                isDarkMode
                   ? "bg-[#8064C7]"
                   : "bg-gray-200"
-                }`}
+              }`}
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#8064C7] shadow-md transition-all duration-300 ${isDarkMode
+                className={`flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#8064C7] shadow-md transition-all duration-300 ${
+                  isDarkMode
                     ? "translate-x-[32px]"
                     : "translate-x-0"
-                  }`}
+                }`}
               >
                 {isDarkMode ? (
                   <Moon size={15} />
@@ -428,10 +436,11 @@ const SettingsPage = ({
             SECURITY & PRIVACY
         ===================================================== */}
         <section
-          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${isDarkMode
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+            isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-            }`}
+          }`}
         >
           <div className="mb-5 flex items-center gap-3">
 
@@ -445,10 +454,11 @@ const SettingsPage = ({
               </h2>
 
               <p
-                className={`text-xs ${isDarkMode
+                className={`text-xs ${
+                  isDarkMode
                     ? "text-white/50"
                     : "text-gray-500"
-                  }`}
+                }`}
               >
                 Manage your account security
               </p>
@@ -457,9 +467,7 @@ const SettingsPage = ({
 
           <div className="divide-y divide-inherit">
 
-            {/* =================================================
-                CHANGE PASSWORD
-            ================================================= */}
+            {/* CHANGE PASSWORD */}
             <button
               type="button"
               onClick={handleChangePasswordClick}
@@ -472,10 +480,11 @@ const SettingsPage = ({
                 </p>
 
                 <p
-                  className={`mt-0.5 text-[11px] ${isDarkMode
+                  className={`mt-0.5 text-[11px] ${
+                    isDarkMode
                       ? "text-white/50"
                       : "text-gray-500"
-                    }`}
+                  }`}
                 >
                   {isSendingResetEmail
                     ? "Sending verification code..."
@@ -503,9 +512,7 @@ const SettingsPage = ({
               </p>
             )}
 
-            {/* =================================================
-                ACTIVE SESSIONS
-            ================================================= */}
+            {/* ACTIVE SESSIONS */}
             <button
               type="button"
               className="flex w-full cursor-pointer items-center justify-between py-4 text-left transition hover:opacity-80"
@@ -516,10 +523,11 @@ const SettingsPage = ({
                 </p>
 
                 <p
-                  className={`mt-0.5 text-[11px] ${isDarkMode
+                  className={`mt-0.5 text-[11px] ${
+                    isDarkMode
                       ? "text-white/50"
                       : "text-gray-500"
-                    }`}
+                  }`}
                 >
                   Manage devices where you're signed in
                 </p>
@@ -531,9 +539,7 @@ const SettingsPage = ({
               />
             </button>
 
-            {/* =================================================
-                PRIVACY POLICY
-            ================================================= */}
+            {/* PRIVACY POLICY */}
             <button
               type="button"
               onClick={() => setIsPrivacyModalOpen(true)}
@@ -545,10 +551,11 @@ const SettingsPage = ({
                 </p>
 
                 <p
-                  className={`mt-0.5 text-[11px] ${isDarkMode
+                  className={`mt-0.5 text-[11px] ${
+                    isDarkMode
                       ? "text-white/50"
                       : "text-gray-500"
-                    }`}
+                  }`}
                 >
                   Learn how your information is handled
                 </p>
@@ -566,37 +573,41 @@ const SettingsPage = ({
             DANGER ZONE
         ===================================================== */}
         <section
-          className={`space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${isDarkMode
+          className={`space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+            isDarkMode
               ? "border-red-500/30 bg-red-500/10"
               : "border-red-200/80 bg-red-50/30 shadow-[0_4px_25px_rgba(239,68,68,0.02)]"
-            }`}
+          }`}
         >
           <div className="flex items-center gap-3">
 
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${isDarkMode
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
+                isDarkMode
                   ? "bg-red-500/20 text-red-400"
                   : "bg-red-100/80 text-red-500"
-                }`}
+              }`}
             >
               <Trash2 size={20} />
             </div>
 
             <div>
               <h2
-                className={`font-black tracking-tight ${isDarkMode
+                className={`font-black tracking-tight ${
+                  isDarkMode
                     ? "text-red-400"
                     : "text-red-600"
-                  }`}
+                }`}
               >
                 Danger Zone
               </h2>
 
               <p
-                className={`text-xs font-semibold ${isDarkMode
+                className={`text-xs font-semibold ${
+                  isDarkMode
                     ? "text-red-300/70"
                     : "text-red-600/60"
-                  }`}
+                }`}
               >
                 These actions cannot be easily undone
               </p>
@@ -605,9 +616,7 @@ const SettingsPage = ({
 
           <div className="space-y-3 pt-2">
 
-            {/* =================================================
-                SUCCESS MESSAGE
-            ================================================= */}
+            {/* DELETED MESSAGE */}
             {studySetsDeletedMessage && (
               <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
                 <CheckCircle2 size={16} />
@@ -615,34 +624,35 @@ const SettingsPage = ({
               </div>
             )}
 
-            {/* =================================================
-                DELETE ALL STUDY SETS
-            ================================================= */}
+            {/* DELETE ALL STUDY SETS */}
             <button
               type="button"
               onClick={() =>
                 openConfirm("all-study-sets")
               }
-              className={`flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${isDarkMode
+              className={`flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                isDarkMode
                   ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
                   : "border-red-200/60 bg-white/80 shadow-xs hover:bg-red-50/80"
-                }`}
+              }`}
             >
               <div>
                 <p
-                  className={`text-xs font-bold ${isDarkMode
+                  className={`text-xs font-bold ${
+                    isDarkMode
                       ? "text-red-400"
                       : "text-red-600"
-                    }`}
+                  }`}
                 >
                   Delete all study sets
                 </p>
 
                 <p
-                  className={`mt-0.5 text-[11px] ${isDarkMode
+                  className={`mt-0.5 text-[11px] ${
+                    isDarkMode
                       ? "text-red-300/70"
                       : "text-gray-500"
-                    }`}
+                  }`}
                 >
                   Permanently remove all your study sets
                 </p>
@@ -658,32 +668,33 @@ const SettingsPage = ({
               />
             </button>
 
-            {/* =================================================
-                DELETE ACCOUNT
-            ================================================= */}
+            {/* DELETE ACCOUNT */}
             <button
               type="button"
               onClick={() => openConfirm("account")}
-              className={`flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${isDarkMode
+              className={`flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                isDarkMode
                   ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
                   : "border-red-200/60 bg-white/80 shadow-xs hover:bg-red-50/80"
-                }`}
+              }`}
             >
               <div>
                 <p
-                  className={`text-xs font-bold ${isDarkMode
+                  className={`text-xs font-bold ${
+                    isDarkMode
                       ? "text-red-400"
                       : "text-red-600"
-                    }`}
+                  }`}
                 >
                   Delete account
                 </p>
 
                 <p
-                  className={`mt-0.5 text-[11px] ${isDarkMode
+                  className={`mt-0.5 text-[11px] ${
+                    isDarkMode
                       ? "text-red-300/70"
                       : "text-gray-500"
-                    }`}
+                  }`}
                 >
                   Permanently delete your account and data
                 </p>
@@ -699,16 +710,15 @@ const SettingsPage = ({
               />
             </button>
 
-            {/* =================================================
-                LOG OUT
-            ================================================= */}
+            {/* LOG OUT */}
             <button
               type="button"
               onClick={() => supabase.auth.signOut()}
-              className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition ${isDarkMode
+              className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition ${
+                isDarkMode
                   ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
                   : "border-red-200 bg-red-50/70 text-red-600 shadow-xs hover:bg-red-100/70"
-                }`}
+              }`}
             >
               <LogOut size={17} />
               Log Out
