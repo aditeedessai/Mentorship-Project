@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,6 +18,16 @@ class StartAttemptRequest(BaseModel):
     document_id: UUID | None = Field(
         None,
         description="Optional document ID if starting an attempt for a specific document"
+    )
+    question_type: Literal["mcq", "application", "long", "short"] = Field(
+        ...,
+        description=(
+            "Which question type to start (or resume) an attempt for - required. "
+            "Every attempt is locked to exactly one question type from creation; "
+            "there is no study-set-wide attempt spanning all 4. Subject to the "
+            "attempt gate (the pair is actually due, and it isn't flagged "
+            "needs_attention - see revision_service.is_attempt_allowed_now())."
+        )
     )
 
 
@@ -36,6 +47,10 @@ class AttemptResponse(BaseModel):
     status: AttemptStatus = Field(
         AttemptStatus.IN_PROGRESS,
         description="Status of the quiz attempt (in_progress, completed)"
+    )
+    question_type: str = Field(
+        ...,
+        description="The one question type this attempt is locked to."
     )
     total_marks: float = Field(
         0.0,
@@ -57,7 +72,7 @@ class AttemptResponse(BaseModel):
     )
     is_attempt_complete: bool = Field(
         False,
-        description="True if all 4 mandatory question-type sections have been evaluated"
+        description="True once this attempt's one question-type section has been evaluated"
     )
     created_at: datetime = Field(
         ...,

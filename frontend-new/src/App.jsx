@@ -114,6 +114,15 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
 
 function AppContent() {
   const location = useLocation();
+  // Pre-existing bug, unrelated to the revision-scheduler work - the
+  // mandatory profile-loading spinner below (hasProfile === null ||
+  // profileLoading) references isDarkMode, but nothing in this
+  // component ever called useTheme() to bring it into scope. This threw
+  // a ReferenceError and crashed to a blank white screen on every login
+  // (hasProfile starts null on every fresh session), discovered while
+  // trying to browser-verify the actual scoped fix. Flagging separately
+  // since it's a real, if trivial, unrelated fix.
+  const { isDarkMode } = useTheme();
 
   // ================= AUTH STATE =================
   const [authPage, setAuthPage] = useState("landing");

@@ -116,6 +116,10 @@ class PerformanceResponse(BaseModel):
         AttemptStatus.IN_PROGRESS,
         description="Status of the quiz attempt ('in_progress' or 'completed')"
     )
+    question_type: str | None = Field(
+        None,
+        description="The one question type this attempt is locked to."
+    )
     completed_sections: list[str] = Field(
         default_factory=list,
         description="List of completed section names"
@@ -155,6 +159,10 @@ class ResultResponse(BaseModel):
     status: AttemptStatus = Field(
         AttemptStatus.COMPLETED,
         description="Final attempt status ('in_progress' or 'completed')"
+    )
+    question_type: str | None = Field(
+        None,
+        description="The one question type this attempt is locked to."
     )
     completed_sections: list[str] = Field(
         default_factory=list,

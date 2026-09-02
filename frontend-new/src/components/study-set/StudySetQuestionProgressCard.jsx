@@ -27,7 +27,7 @@ const QUESTION_TYPES = [
     icon: <Lightbulb size={16} />,
   },
   {
-    id: "qna",
+    id: "long",
     title: "Long Answers",
     defaultTotal: 5,
     icon: <BookOpen size={16} />,
@@ -35,28 +35,39 @@ const QUESTION_TYPES = [
 ];
 
 function StudySetQuestionProgressCard({
-  completedSections = [],
+  revisionStatus = [],
   questionCounts = {},
 }) {
   const { isDarkMode } = useTheme();
 
+  const statusByType = {};
+  for (const s of revisionStatus) {
+    statusByType[s.question_type] = s;
+  }
+
   const progressItems = QUESTION_TYPES.map((typeMeta) => {
-    const isCompleted =
-      completedSections.includes(typeMeta.id) ||
-      (typeMeta.id === "qna" && completedSections.includes("long"));
+    const s = statusByType[typeMeta.id];
+    const attemptsTaken = s?.attempts_taken || 0;
+    const needsAttention = Boolean(s?.needs_attention);
+
+    // Every type is independently attempted/scheduled now - "done" just
+    // means it's been attempted at least once, same 0-or-100% binary
+    // this card always showed (a "section" is submitted as one atomic
+    // batch of answers, never partially), just sourced from the real
+    // per-type revision status instead of a now-nonexistent single
+    // study-set-wide attempt's completed_sections.
+    const isAttempted = attemptsTaken > 0;
 
     const total = questionCounts[typeMeta.id] || typeMeta.defaultTotal;
-    const answered = isCompleted ? total : 0;
-    const percentage = isCompleted ? 100 : 0;
-    const status = isCompleted ? "Completed" : "Pending";
+    const answered = isAttempted ? total : 0;
+    const percentage = isAttempted ? 100 : 0;
+    const status = needsAttention
+      ? "Needs Review"
+      : isAttempted
+      ? "Completed"
+      : "Pending";
 
-    return {
-      ...typeMeta,
-      answered,
-      total,
-      percentage,
-      status,
-    };
+    return { ...typeMeta, answered, total, percentage, status };
   });
 
   return (
@@ -113,6 +124,8 @@ function StudySetQuestionProgressCard({
                 className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ml-2 ${
                   item.status === "Completed"
                     ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                    : item.status === "Needs Review"
+                    ? "bg-amber-500/20 border-amber-500/30 text-amber-500"
                     : isDarkMode
                     ? "bg-white/5 border-white/10 text-white/40"
                     : "bg-gray-100 border-gray-200 text-gray-400"
@@ -125,7 +138,11 @@ function StudySetQuestionProgressCard({
             <div className={`w-full h-2 rounded-full overflow-hidden mt-3 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  item.status === "Completed" ? "bg-emerald-500" : "bg-[#8064C7]"
+                  item.status === "Completed"
+                    ? "bg-emerald-500"
+                    : item.status === "Needs Review"
+                    ? "bg-amber-500"
+                    : "bg-[#8064C7]"
                 }`}
                 style={{ width: `${item.percentage}%` }}
               />
@@ -138,4 +155,3 @@ function StudySetQuestionProgressCard({
 }
 
 export default StudySetQuestionProgressCard;
-
