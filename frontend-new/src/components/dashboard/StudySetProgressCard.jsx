@@ -36,7 +36,7 @@ function StudySetProgressCard() {
     >
       <div className="mb-5 flex items-center gap-2">
         <Layers size={22} className="text-[#8064C7]" />
-        <h2 className="text-xl font-black tracking-tight">
+        <h2 className="text-xl font-bold tracking-tight">
           Study Set Progress
         </h2>
       </div>

@@ -15,17 +15,17 @@ from backend.database.study_set_repository import create_study_set, create_docum
 
 def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) -> str:
     """
-    Process a study-material PDF/DOCX/PPTX file under a study set.
+    Process a study-material file (PDF/DOCX/PPTX/Image) under a study set.
 
     Workflow:
-    1. Validate file
+    1. Validate file existence and supported extension
     2. Ensure study_set exists (create if not provided)
-    3. Extract text
+    3. Extract text (Grayscale + PaddleOCR for images/scans, native text for docs)
     4. Clean text
     5. Create chunks
-    6. Register document record in SQLite
+    6. Register document record in database
     7. Generate SBERT embeddings
-    8. Store embeddings in Supabase (document_chunks) with document_id and study_set_id
+    8. Store embeddings in vector store with document_id and study_set_id
 
     Returns:
         document_id: Unique ID for the uploaded document.
@@ -39,13 +39,14 @@ def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) ->
 
     if not path.exists():
         raise FileNotFoundError(
-            f"PDF not found: {path}"
+            f"File not found: {path}"
         )
 
     allowed_extensions = SUPPORTED_EXTENSIONS
     if path.suffix.lower() not in allowed_extensions:
+        allowed_list = ", ".join(sorted(allowed_extensions))
         raise ValueError(
-            f"Unsupported file type '{path.suffix}'. Allowed formats: PDF, DOCX, PPTX."
+            f"Unsupported file type '{path.suffix}'. Allowed formats: {allowed_list}"
         )
 
     # Ensure study set exists
@@ -66,16 +67,16 @@ def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) ->
             )
 
     # ---------------------------------------------------------
-    # Extract text
+    # Extract text (Native or Grayscale + PaddleOCR)
     # ---------------------------------------------------------
 
-    print("\n[1/4] Extracting and preprocessing PDF...")
+    print(f"\n[1/4] Extracting text and preprocessing from '{path.name}'...")
 
     text = extract_text(str(path))
 
     if not text.strip():
         raise ValueError(
-            "No text could be extracted from the PDF."
+            "No text could be extracted from the uploaded file."
         )
 
     # ---------------------------------------------------------
@@ -123,7 +124,7 @@ def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) ->
     embeddings = generate_embeddings(chunks)
 
     # ---------------------------------------------------------
-    # Store in Supabase (document_chunks)
+    # Store in Vector Store (document_chunks)
     # ---------------------------------------------------------
 
     store_embeddings(

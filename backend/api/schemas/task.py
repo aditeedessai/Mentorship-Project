@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
+from typing import Literal
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,13 +12,65 @@ class CreateTaskRequest(BaseModel):
         description="Name of the task",
         examples=["Review Calculus notes"]
     )
-    priority: str = Field(
+    priority: Literal["low", "medium", "high"] = Field(
         "medium",
         description="Task priority: low, medium, or high"
     )
     due_date: date | None = Field(
         None,
         description="Due date for the task (defaults to today if omitted)"
+    )
+    due_time: time | None = Field(
+        None,
+        description="Optional due time for the task (HH:MM)"
+    )
+    study_set_id: UUID | None = Field(
+        None,
+        description="Optional associated study set UUID"
+    )
+    task_type: Literal["study", "review", "quiz", "assignment", "other"] = Field(
+        "study",
+        description="Type of task: study, review, quiz, assignment, or other"
+    )
+
+
+class UpdateTaskRequest(BaseModel):
+    name: str | None = Field(
+        None,
+        min_length=1,
+        max_length=255,
+        description="Updated name of the task"
+    )
+    priority: Literal["low", "medium", "high"] | None = Field(
+        None,
+        description="Task priority: low, medium, or high"
+    )
+    due_date: date | None = Field(
+        None,
+        description="Due date for the task"
+    )
+    due_time: time | None = Field(
+        None,
+        description="Optional due time for the task (HH:MM)"
+    )
+    study_set_id: UUID | None = Field(
+        None,
+        description="Optional associated study set UUID"
+    )
+    task_type: Literal["study", "review", "quiz", "assignment", "other"] | None = Field(
+        None,
+        description="Type of task: study, review, quiz, assignment, or other"
+    )
+    completed: bool | None = Field(
+        None,
+        description="Completion status"
+    )
+
+
+class CompleteTaskRequest(BaseModel):
+    completed: bool = Field(
+        ...,
+        description="Whether the task is completed"
     )
 
 
@@ -30,7 +83,7 @@ class TaskResponse(BaseModel):
         ...,
         description="Name of the task"
     )
-    user_id: str = Field(
+    user_id: UUID = Field(
         ...,
         description="ID of the user who owns the task"
     )
@@ -45,6 +98,22 @@ class TaskResponse(BaseModel):
     due_date: date = Field(
         ...,
         description="Due date for the task"
+    )
+    due_time: time | None = Field(
+        None,
+        description="Due time for the task if set"
+    )
+    task_type: str = Field(
+        "study",
+        description="Task type: study, review, quiz, assignment, or other"
+    )
+    study_set_id: UUID | None = Field(
+        None,
+        description="Associated study set ID if linked"
+    )
+    study_set_name: str | None = Field(
+        None,
+        description="Associated study set name if linked"
     )
     created_at: datetime = Field(
         ...,
@@ -61,7 +130,7 @@ class TaskResponse(BaseModel):
 class TaskListResponse(BaseModel):
     tasks: list[TaskResponse] = Field(
         default_factory=list,
-        description="List of today's tasks"
+        description="List of tasks"
     )
 
     model_config = ConfigDict(from_attributes=True)
@@ -78,3 +147,4 @@ class DeleteTaskResponse(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+

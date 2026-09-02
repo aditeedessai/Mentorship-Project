@@ -2,10 +2,7 @@
 backend.embeddings.vector_store
 
 Persists document chunk embeddings into Postgres (Supabase) via the
-document_chunks table, using pgvector. This replaces the previous
-ChromaDB-backed implementation - there is no separate vector database
-anymore, everything lives in the same Postgres instance as the rest of
-the app's data.
+document_chunks table, using pgvector.
 """
 
 from backend.database.database import get_connection
@@ -13,40 +10,41 @@ from backend.database.database import get_connection
 
 def store_embeddings(document_id: str, chunks: list, embeddings, study_set_id: str = None):
     """
-    Stores each chunk's text + embedding as one row in document_chunks.
-
-    `embeddings` is expected to be array-like (a numpy array from
-    SentenceTransformer.encode(), or a list of lists) with one row per
-    chunk, in the same order as `chunks`. get_connection() registers
-    pgvector's adapter, so each row can be passed straight through as
-    the `embedding` parameter without any manual formatting.
+    Stores all chunk texts + embeddings in a single batch database transaction.
     """
+    if not chunks:
+        return
+
     connection = get_connection()
 
+    # Prepare records with embeddings formatted as lists or numpy arrays
+    records = [
+        (
+            document_id,
+            study_set_id,
+            chunk_number,
+            chunk_text,
+            embedding if isinstance(embedding, list) else embedding.tolist(),
+        )
+        for chunk_number, (chunk_text, embedding) in enumerate(zip(chunks, embeddings))
+    ]
+
+    # Use %s placeholders for PostgreSQL / Supabase
+    insert_query = """
+    INSERT INTO document_chunks (
+        document_id,
+        study_set_id,
+        chunk_number,
+        content,
+        embedding
+    )
+    VALUES (%s, %s, %s, %s, %s)
+    """
+
     try:
-        for chunk_number, (chunk_text, embedding) in enumerate(zip(chunks, embeddings)):
-            connection.execute(
-                """
-                INSERT INTO document_chunks (
-                    document_id,
-                    study_set_id,
-                    chunk_number,
-                    content,
-                    embedding
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    document_id,
-                    study_set_id,
-                    chunk_number,
-                    chunk_text,
-                    embedding,
-                )
-            )
-
+        cursor = connection.cursor() if hasattr(connection, "cursor") else connection
+        cursor.executemany(insert_query, records)
         connection.commit()
-        print(f"Stored {len(chunks)} chunk embeddings in Supabase (document_chunks).")
-
+        print(f"Stored {len(chunks)} chunk embeddings in Supabase in 1 batch.")
     finally:
         connection.close()
