@@ -7,7 +7,10 @@ import jojoWaving from "../assets/jojo-waving.png";
 
 function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
+<<<<<<< HEAD
 
+=======
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -114,11 +117,14 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
               : "border-white/80 bg-white/70 text-purple-600 shadow-sm hover:bg-white"
           }`}
           aria-label="Toggle theme"
+<<<<<<< HEAD
           title={
             isDarkMode
               ? "Switch to light mode"
               : "Switch to dark mode"
           }
+=======
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
         >
           {isDarkMode ? (
             <Sun size={18} />
@@ -139,6 +145,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
         {/* =====================================================
             LEFT SECTION
         ===================================================== */}
+<<<<<<< HEAD
         <div className="relative hidden min-h-[650px] flex-col overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-10 text-white sm:p-12 lg:flex">
 
           {/* Decorative Glows */}
@@ -177,6 +184,47 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
               <div className="absolute left-[245px] top-1/2 z-20 -translate-y-1/2">
                 <div className="relative w-[175px] rounded-2xl border border-white/30 bg-white px-4 py-3 text-left shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
 
+=======
+        <div className="relative hidden min-h-[620px] flex-col justify-between overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-10 text-white sm:p-12 lg:flex">
+          {/* Decorative glows */}
+          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+
+          {/* Main content */}
+          <div className="relative z-10">
+            <div className="mb-10 flex items-center gap-3">
+              <div className="text-4xl font-black tracking-[-0.08em] text-white">
+                Jot<span className="text-purple-200">.</span>
+              </div>
+
+              <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+                your study buddy
+              </span>
+            </div>
+
+            <h1 className="max-w-md text-4xl font-black leading-tight tracking-tight">
+              Study without
+              <br />
+              <span className="text-purple-200">
+                the chaos.
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-md text-sm leading-6 text-purple-100/90">
+              Drop your notes into JOT and let Jojo turn them
+              into smart summaries, quizzes, flashcards and
+              quick revision material.
+            </p>
+          </div>
+
+          {/* ================= JOJO + SPEECH BUBBLE ================= */}
+          <div className="relative z-10 flex flex-1 items-end justify-center pt-8">
+            <div className="relative h-[285px] w-[300px]">
+
+              {/* Speech Bubble */}
+              <div className="absolute right-0 top-0 z-20">
+                <div className="relative max-w-[190px] rounded-2xl border border-white/30 bg-white px-5 py-3 text-left shadow-[0_12px_30px_rgba(0,0,0,0.14)]">
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
                   <p className="text-sm font-black leading-tight text-[#4F3A7D]">
                     Hey! I'm Jojo 👋
                   </p>
@@ -185,6 +233,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                     Ready to study with me?
                   </p>
 
+<<<<<<< HEAD
                   {/* Speech bubble tail */}
                   <div className="absolute left-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-b border-l border-white/30 bg-white" />
                 </div>
@@ -209,6 +258,27 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
           </div>
 
           {/* Bottom Tagline */}
+=======
+                  {/* Bubble tail */}
+                  <div className="absolute -bottom-2 left-8 h-4 w-4 rotate-45 border-b border-r border-white/30 bg-white" />
+                </div>
+              </div>
+
+              {/* Jojo */}
+              <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 items-end justify-center">
+                <div className="absolute bottom-5 h-44 w-44 rounded-full bg-white/10 blur-3xl" />
+
+                <img
+                  src={jojoWaving}
+                  alt="Jojo waving"
+                  className="relative z-10 h-[230px] w-[230px] object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.18)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Tagline */}
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
           <div className="relative z-10 flex items-center gap-2 text-xs font-semibold text-purple-200">
             <Sparkles size={16} />
             <span>Jot it. Organise it. Top it.</span>
@@ -227,13 +297,27 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* ================= MOBILE JOJO ================= */}
           <div className="mb-7 flex justify-center lg:hidden">
             <div className="relative flex h-[125px] w-[260px] items-end justify-center">
+=======
+          {/* Mobile Jojo */}
+          <div className="mb-7 flex justify-center lg:hidden">
+            <div className="relative">
+              <div
+                className={`absolute inset-0 rounded-full blur-2xl ${
+                  isDarkMode
+                    ? "bg-[#8064C7]/20"
+                    : "bg-[#8064C7]/10"
+                }`}
+              />
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
 
               <img
                 src={jojoWaving}
                 alt="Jojo waving"
+<<<<<<< HEAD
                 className="relative z-10 h-[115px] w-[115px] object-contain"
               />
 
@@ -241,21 +325,41 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
               <div className="absolute right-0 top-0 z-20 w-[145px]">
                 <div className="relative rounded-2xl border border-[#8064C7]/15 bg-white px-3 py-2.5 text-left shadow-lg">
 
+=======
+                className="relative h-28 w-28 object-contain"
+              />
+
+              {/* Mobile speech bubble */}
+              <div className="absolute -right-28 -top-2 z-10 w-40">
+                <div className="relative rounded-2xl border border-[#8064C7]/15 bg-white px-3.5 py-2.5 text-left shadow-lg">
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
                   <p className="text-[11px] font-black leading-tight text-[#4F3A7D]">
                     Hey! I'm Jojo 👋
                   </p>
 
+<<<<<<< HEAD
                   <p className="mt-0.5 text-[10px] font-semibold leading-4 text-[#75678E]">
                     Ready to study?
                   </p>
 
                   <div className="absolute -bottom-1.5 left-6 h-3 w-3 rotate-45 border-b border-r border-[#8064C7]/15 bg-white" />
+=======
+                  <p className="mt-0.5 text-[10px] font-semibold text-[#75678E]">
+                    Ready to study?
+                  </p>
+
+                  <div className="absolute -bottom-1.5 left-7 h-3 w-3 rotate-45 border-b border-r border-[#8064C7]/15 bg-white" />
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
                 </div>
               </div>
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* ================= HEADING ================= */}
+=======
+          {/* Heading */}
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
           <div className="mb-8">
             <h2 className="text-3xl font-black tracking-tight">
               Welcome back
@@ -273,10 +377,15 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
           </div>
 
           {/* ================= LOGIN FORM ================= */}
+<<<<<<< HEAD
           <form
             onSubmit={handleSubmit}
             className="space-y-5"
           >
+=======
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+>>>>>>> 534a7b9 (Added Jojo to login and signup pages)
             {/* Email */}
             <div>
               <label
