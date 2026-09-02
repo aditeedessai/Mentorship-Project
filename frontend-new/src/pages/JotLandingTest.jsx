@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
-import jojoImage from "../assets/jojo.png";
-import jojoDarkImage from "../assets/jojo-dark.jpg";
+import jojoImage from "../assets/jojo-waving.png";
 import JotFooter from "../components/JotFooter";
 
 /* =========================================================
@@ -94,7 +93,7 @@ const Jojo = ({ isDarkMode: propDarkMode }) => {
         `}
       >
         <img
-          src={isDarkMode ? jojoDarkImage : jojoImage}
+          src={jojoImage}
           alt="Jojo - JOT study buddy"
           className="h-full w-full object-contain p-5"
         />
@@ -124,13 +123,13 @@ const JotLandingTest = ({
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
+
     const mainElement = document.querySelector("main");
+
     if (mainElement) {
       mainElement.scrollTop = 0;
     }
   }, []);
-
-
 
   /* =======================================================
      NAVIGATION
@@ -349,7 +348,8 @@ const JotLandingTest = ({
             className="
               cursor-pointer
               transition
-              hover:text-[#A78BFA]"
+              hover:text-[#A78BFA]
+            "
           >
             About Us
           </button>
@@ -446,7 +446,9 @@ const JotLandingTest = ({
           {/* Mobile Hamburger Toggle Button */}
           <button
             type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() =>
+              setIsMobileMenuOpen(!isMobileMenuOpen)
+            }
             className={`
               flex
               h-9
@@ -468,7 +470,11 @@ const JotLandingTest = ({
             `}
             aria-label="Toggle mobile menu"
           >
-            {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            {isMobileMenuOpen ? (
+              <X size={18} />
+            ) : (
+              <Menu size={18} />
+            )}
           </button>
         </div>
 
@@ -503,29 +509,38 @@ const JotLandingTest = ({
               href="#home"
               onClick={() => setIsMobileMenuOpen(false)}
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               Home
             </a>
+
             <a
               href="#how"
               onClick={() => setIsMobileMenuOpen(false)}
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               How it works
             </a>
+
             <a
               href="#jojo"
               onClick={() => setIsMobileMenuOpen(false)}
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               Meet Jojo
             </a>
+
             <button
               type="button"
               onClick={() => {
@@ -533,13 +548,21 @@ const JotLandingTest = ({
                 handleAbout();
               }}
               className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm text-left transition ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-black/5"
+                isDarkMode
+                  ? "hover:bg-white/10"
+                  : "hover:bg-black/5"
               }`}
             >
               About Us
             </button>
 
-            <div className={`my-1 h-px w-full ${isDarkMode ? "bg-white/10" : "bg-black/5"}`} />
+            <div
+              className={`my-1 h-px w-full ${
+                isDarkMode
+                  ? "bg-white/10"
+                  : "bg-black/5"
+              }`}
+            />
 
             <div className="flex flex-col gap-2 pt-1">
               <button
@@ -651,9 +674,9 @@ const JotLandingTest = ({
                 }
               `}
             >
-
               Study
               <br />
+
               <span
                 className="
                   bg-gradient-to-r
@@ -666,7 +689,9 @@ const JotLandingTest = ({
               >
                 without
               </span>
+
               <br />
+
               the chaos.
             </h1>
 
@@ -774,14 +799,18 @@ const JotLandingTest = ({
                 }
               `}
             >
-              <span className="text-base sm:text-lg">✨</span>
+              <span className="text-base sm:text-lg">
+                ✨
+              </span>
+
               Jot it. Organise it. Top it.
             </div>
           </div>
 
-          {/* RIGHT HERO Visual Composition */}
+          {/* RIGHT HERO VISUAL */}
           <div className="relative h-[480px] min-[400px]:h-[520px] sm:h-[560px] md:h-[600px] lg:h-[680px] w-full max-w-[440px] sm:max-w-[480px] md:max-w-[540px] lg:max-w-[580px] mx-auto scale-[0.72] min-[400px]:scale-[0.8] sm:scale-[0.72] md:scale-[0.85] lg:scale-100 origin-center lg:origin-right my-[-30px] min-[400px]:my-[-20px] sm:my-0">
 
+            {/* Circle */}
             <div
               className={`
                 absolute
@@ -1008,7 +1037,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-center gap-2.5 sm:gap-3">
-                <span className="text-lg sm:text-xl">✨</span>
+                <span className="text-lg sm:text-xl">
+                  ✨
+                </span>
 
                 <div>
                   <p
@@ -1078,7 +1109,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-start gap-2.5 sm:gap-3">
-                <span className="text-lg sm:text-xl">✏️</span>
+                <span className="text-lg sm:text-xl">
+                  ✏️
+                </span>
 
                 <div>
                   <p
@@ -1132,7 +1165,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg">🧠</span>
+                <span className="text-base sm:text-lg">
+                  🧠
+                </span>
 
                 <span
                   className={`
@@ -1169,7 +1204,9 @@ const JotLandingTest = ({
               "
             >
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg">🃏</span>
+                <span className="text-base sm:text-lg">
+                  🃏
+                </span>
 
                 <span
                   className={`
@@ -1191,7 +1228,6 @@ const JotLandingTest = ({
         </div>
       </section>
 
-
       {/* =====================================================
           BEFORE / AFTER
       ===================================================== */}
@@ -1206,6 +1242,7 @@ const JotLandingTest = ({
             <h2 className="mt-5 text-5xl font-black leading-tight tracking-tight md:text-6xl">
               From messy notes
               <br />
+
               <span className="text-[#A78BFA]">
                 to study-ready.
               </span>
@@ -1235,7 +1272,9 @@ const JotLandingTest = ({
                   BEFORE JOT
                 </span>
 
-                <span className="text-3xl">😵‍💫</span>
+                <span className="text-3xl">
+                  😵‍💫
+                </span>
               </div>
 
               <h3 className="mt-6 text-3xl font-black">
@@ -1287,7 +1326,9 @@ const JotLandingTest = ({
                   AFTER JOT
                 </span>
 
-                <span className="text-3xl">✨</span>
+                <span className="text-3xl">
+                  ✨
+                </span>
               </div>
 
               <h3 className="mt-6 text-3xl font-black">
@@ -1314,7 +1355,9 @@ const JotLandingTest = ({
                       }
                     `}
                   >
-                    <span className="text-2xl">{icon}</span>
+                    <span className="text-2xl">
+                      {icon}
+                    </span>
 
                     <p className="mt-3 font-bold">
                       {title}
@@ -1374,6 +1417,7 @@ const JotLandingTest = ({
               <h2 className="mt-5 max-w-xl text-5xl font-black leading-tight text-white md:text-6xl">
                 Three steps.
                 <br />
+
                 <span className="text-purple-300">
                   Zero chaos.
                 </span>
@@ -1450,6 +1494,7 @@ const JotLandingTest = ({
             <h2 className="mt-6 text-5xl font-black leading-tight tracking-tight md:text-6xl">
               Meet
               <br />
+
               <span className="text-[#A78BFA]">
                 Jojo.
               </span>

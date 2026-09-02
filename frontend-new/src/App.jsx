@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -22,6 +22,7 @@ import LandingPage from "./pages/LandingPage";
 import AboutPage from "./pages/AboutPage";
 import SettingsPage from "./pages/SettingsPage";
 import PlannerPage from "./pages/PlannerPage";
+import StudentProfilePage from "./pages/StudentProfilePage";
 
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
@@ -121,6 +122,13 @@ function AppContent() {
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
   const [settingsNotice, setSettingsNotice] = useState("");
 
+  // ================= STUDENT PROFILE GATE =================
+  // null  = not yet checked
+  // true  = profile exists in student_profiles
+  // false = no profile → must show mandatory form
+  const [hasProfile, setHasProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   // ================= USER STATE =================
   const [user, setUser] = useState(null);
 
@@ -188,6 +196,7 @@ function AppContent() {
         });
       } else {
         setUser(null);
+        setHasProfile(null);
         setStudySets([]);
         setSelectedStudySetId(null);
         setAuthPage("landing");
@@ -197,9 +206,50 @@ function AppContent() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ================= FETCH STUDY SETS =================
+  // ================= CHECK STUDENT PROFILE =================
+  // Runs whenever the user object changes (login / logout / refresh).
+  // Sets `hasProfile` so the rendering gate knows whether to show
+  // the mandatory profile form or the main application.
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setHasProfile(null);
+      return;
+    }
+
+    const checkProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from("student_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (fetchErr) {
+          console.error("Failed to check student profile:", fetchErr);
+          // On error, assume no profile so the form stays visible
+          // (safe default — never silently grant access).
+          setHasProfile(false);
+        } else {
+          setHasProfile(!!data);
+        }
+      } catch (err) {
+        console.error("Unexpected error checking profile:", err);
+        setHasProfile(false);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    checkProfile();
+  }, [user]);
+
+  // ================= FETCH STUDY SETS =================
+  // Only fetch study sets once we know the profile exists —
+  // no point loading app data if the user is going to be
+  // stuck on the profile form.
+  useEffect(() => {
+    if (!user || !hasProfile) return;
 
     const loadStudySets = async () => {
       try {
@@ -218,7 +268,7 @@ function AppContent() {
     };
 
     loadStudySets();
-  }, [user]);
+  }, [user, hasProfile]);
 
   // ================= DELETE STUDY SET =================
   const handleDeleteStudySet = async (studySetId) => {
@@ -368,6 +418,39 @@ function AppContent() {
         />
       );
     }
+  }
+
+  // ================= MANDATORY PROFILE GATE =================
+  // If the user is authenticated but we haven't finished checking
+  // whether their profile exists, show a loading state — never
+  // flash the dashboard only to redirect a moment later.
+  if (hasProfile === null || profileLoading) {
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${
+          isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+        }`}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8064C7] border-t-transparent" />
+          <span className={`text-sm font-semibold ${isDarkMode ? "text-white/50" : "text-gray-400"}`}>
+            Loading your profile...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // If the profile doesn't exist yet, show the mandatory form.
+  // There is no skip, close, or back button — the user MUST
+  // complete this before accessing any authenticated page.
+  if (hasProfile === false) {
+    return (
+      <StudentProfilePage
+        user={user}
+        onProfileComplete={() => setHasProfile(true)}
+      />
+    );
   }
 
   // ================= QUIZ PAGES =================

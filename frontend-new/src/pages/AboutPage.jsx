@@ -22,8 +22,7 @@ import {
 
 import { useTheme } from "../context/ThemeContext";
 
-import jojo from "../assets/jojo.png";
-import jojoDark from "../assets/jojo-dark.jpg";
+import jojoWaving from "../assets/jojo-waving.png";
 
 import JotFooter from "../components/JotFooter";
 
@@ -36,18 +35,13 @@ export default function AboutPage({ onNavigate }) {
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
+
     const mainElement = document.querySelector("main");
+
     if (mainElement) {
       mainElement.scrollTop = 0;
     }
   }, []);
-
-  /* =======================================================
-     THEME-BASED JOJO
-  ======================================================= */
-
-
-  const currentJojo = isDarkMode ? jojoDark : jojo;
 
   /* =======================================================
      TEXT COLORS
@@ -201,7 +195,7 @@ export default function AboutPage({ onNavigate }) {
     {
       name: "Nyla",
       initials: "NY",
-      role: "Frontend Experience",
+      role: "Frontend Engineer",
       focus: "UI/UX & Experience",
     },
   ];
@@ -331,7 +325,7 @@ export default function AboutPage({ onNavigate }) {
           <div className="hidden items-center gap-3 sm:flex">
             <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl">
               <img
-                src={currentJojo}
+                src={jojoWaving}
                 alt="Jojo the JOT pencil"
                 className="h-full w-full object-contain"
               />
@@ -579,7 +573,7 @@ export default function AboutPage({ onNavigate }) {
               >
 
                 <img
-                  src={currentJojo}
+                  src={jojoWaving}
                   alt="Jojo the JOT pencil mascot"
                   className="h-[270px] w-[270px] object-contain"
                 />
@@ -1127,7 +1121,7 @@ export default function AboutPage({ onNavigate }) {
                 `}
               >
                 <img
-                  src={currentJojo}
+                  src={jojoWaving}
                   alt="Jojo"
                   className="h-24 w-24 object-contain"
                 />

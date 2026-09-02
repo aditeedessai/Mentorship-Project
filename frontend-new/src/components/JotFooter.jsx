@@ -1,8 +1,6 @@
 import React from "react";
 import { useTheme } from "../context/ThemeContext";
-
-import jojo from "../assets/jojo.png";
-import jojoDark from "../assets/jojo-dark.jpg";
+import jojoWaving from "../assets/jojo-waving.png";
 
 /* =========================================================
    GITHUB ICON
@@ -52,11 +50,6 @@ const LinkedinIcon = ({ size = 15 }) => (
 export default function JotFooter() {
   const { isDarkMode } = useTheme();
 
-  /* Light mode → jojo.png
-     Dark mode  → jojo-dark.jpg
-  */
-  const currentJojo = isDarkMode ? jojoDark : jojo;
-
   return (
     <footer
       className={`mt-10 border-t ${
@@ -74,7 +67,7 @@ export default function JotFooter() {
 
           <div className="flex items-center gap-3">
 
-            {/* Jojo instead of J */}
+            {/* Jojo waving */}
             <div
               className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl ${
                 isDarkMode
@@ -83,7 +76,7 @@ export default function JotFooter() {
               }`}
             >
               <img
-                src={currentJojo}
+                src={jojoWaving}
                 alt="Jojo"
                 className="h-10 w-10 object-contain"
               />
