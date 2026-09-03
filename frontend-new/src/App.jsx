@@ -152,6 +152,13 @@ function AppContent() {
   // ================= SELECTED STUDY SET =================
   const [selectedStudySetId, setSelectedStudySetId] = useState(null);
 
+  // Which question type ConfigureSession should land on already
+  // selected - set only when a navigation explicitly asks for one (e.g.
+  // clicking a "Revise: X - Y" item on the Planner), cleared on every
+  // other navigation so it never leaks into an unrelated later visit to
+  // Configure Session.
+  const [preselectType, setPreselectType] = useState(null);
+
   // ================= SCROLL TO TOP ON PAGE SWITCH =================
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -168,6 +175,8 @@ function AppContent() {
     } else if (state?.studySetId) {
       setSelectedStudySetId(state.studySetId);
     }
+
+    setPreselectType(state?.preselectType || null);
 
     setCurrentPage(page);
     window.scrollTo(0, 0);
@@ -463,18 +472,30 @@ function AppContent() {
   }
 
   // ================= QUIZ PAGES =================
+  // MCQPage/QnAPage are reached via react-router's own navigate() (not
+  // handleNavigate), so they're rendered here via a location.pathname
+  // check rather than currentPage - genuinely necessary, since nothing
+  // else sets currentPage to a quiz-page value before landing here.
+  // `onNavigate` is passed through so these pages can keep currentPage
+  // in sync with wherever they navigate NEXT (finish -> results, abort
+  // -> dashboard, anti-cheat terminate -> dashboard) - see the
+  // corresponding fix inside each page for why this matters: without
+  // it, currentPage stays "quiz" forever, and every page these quiz
+  // pages navigate to via react-router alone (bypassing onNavigate)
+  // would silently render whatever stale page currentPage still says,
+  // not the real destination.
   if (
     location.pathname === "/quiz/mcq" ||
     currentPage === "quiz-mcq"
   ) {
-    return <MCQPage />;
+    return <MCQPage onNavigate={handleNavigate} />;
   }
 
   if (
     location.pathname === "/quiz/qna" ||
     currentPage === "quiz-qna"
   ) {
-    return <QnAPage />;
+    return <QnAPage onNavigate={handleNavigate} />;
   }
 
   if (currentPage === "change-password-otp" && user) {
@@ -563,6 +584,7 @@ function AppContent() {
         currentPage === "progress") && (
           <ResultsPage
             onNavigate={handleNavigate}
+            studySetId={selectedStudySetId}
           />
         )}
 
@@ -576,6 +598,7 @@ function AppContent() {
                 s.study_set_id === selectedStudySetId
             )?.name
           }
+          preselectType={preselectType}
         />
       )}
 

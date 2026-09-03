@@ -1,14 +1,28 @@
 import { useEffect, useState } from "react";
-import { Plus, CheckCircle2, Circle, Loader2, AlertCircle } from "lucide-react";
+import { Plus, CheckCircle2, Circle, Loader2, AlertCircle, RotateCcw, ChevronRight } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { fetchTodaysTasks, toggleTaskCompletion } from "../../services/api";
+import { fetchTodaysTasks, toggleTaskCompletion, fetchRevisionsDue } from "../../services/api";
 
 const COMPLETED_HOLD_MS = 500;
 const COLLAPSE_DURATION_MS = 300;
 
+// Mirrors backend/services/evaluation_service.py's SECTION_TITLE_MAP -
+// same "section title" used on the Planner and Results page, kept
+// consistent rather than inventing a third label set here.
+const SECTION_TITLE_MAP = {
+  mcq: "MCQ",
+  application: "Application",
+  short: "Short Answer",
+  long: "Long Answer",
+};
+
+const toFrontendQuestionTypeId = (backendType) =>
+  backendType === "short" ? "short-answer" : backendType;
+
 function TodaysTasksCard({ onNavigate }) {
   const { isDarkMode } = useTheme();
   const [tasks, setTasks] = useState([]);
+  const [revisionsDue, setRevisionsDue] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -19,9 +33,19 @@ function TodaysTasksCard({ onNavigate }) {
     setIsLoading(true);
     setLoadError("");
     try {
-      const data = await fetchTodaysTasks();
+      const [tasksData, revisionsData] = await Promise.all([
+        fetchTodaysTasks(),
+        fetchRevisionsDue().catch(() => []),
+      ]);
       // Filter out tasks that are already marked completed from Today's active tasks list
-      setTasks((data || []).filter((t) => !t.completed));
+      setTasks((tasksData || []).filter((t) => !t.completed));
+      // fetchRevisionsDue() now returns every scheduled pair's real
+      // next_due_date (today, overdue, or future - see
+      // revision_service.get_due_revisions_for_user()'s docstring), so
+      // "Today's Tasks" filters down to today-or-overdue itself; a
+      // future-dated pair belongs on the Planner calendar, not here.
+      const todayStr = new Date().toISOString().split("T")[0];
+      setRevisionsDue((revisionsData || []).filter((r) => r.next_due_date <= todayStr));
     } catch {
       setLoadError("Couldn't load today's tasks. Please try again.");
     } finally {
@@ -32,6 +56,13 @@ function TodaysTasksCard({ onNavigate }) {
   useEffect(() => {
     loadTasks();
   }, []);
+
+  const handleStartRevision = (revision) => {
+    onNavigate?.("quiz", {
+      studySetId: revision.study_set_id,
+      preselectType: toFrontendQuestionTypeId(revision.question_type),
+    });
+  };
 
   const handleToggleComplete = async (task) => {
     const taskId = task.id;
@@ -124,12 +155,47 @@ function TodaysTasksCard({ onNavigate }) {
             Retry
           </button>
         </div>
-      ) : tasks.length === 0 ? (
+      ) : tasks.length === 0 && revisionsDue.length === 0 ? (
         <p className={`py-6 text-center text-sm ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
           No tasks scheduled for today. Click + to open Study Planner.
         </p>
       ) : (
         <div className="scrollbar-thin max-h-[224px] overflow-y-auto pr-1">
+          {revisionsDue.map((revision) => {
+            const sectionTitle =
+              SECTION_TITLE_MAP[revision.question_type] || revision.question_type;
+
+            return (
+              <button
+                key={`${revision.study_set_id}-${revision.question_type}`}
+                type="button"
+                onClick={() => handleStartRevision(revision)}
+                className={`mb-3 flex w-full items-center gap-3 rounded-2xl border border-dashed p-3.5 text-left transition-all cursor-pointer ${
+                  isDarkMode
+                    ? "border-emerald-500/30 bg-emerald-500/[0.06] text-white hover:border-emerald-500/50 hover:bg-emerald-500/10"
+                    : "border-emerald-400/50 bg-emerald-50/60 text-[#231B33] hover:border-emerald-500/70 hover:bg-emerald-50"
+                }`}
+              >
+                <span
+                  className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full ${
+                    isDarkMode ? "bg-emerald-500/20 text-emerald-400" : "bg-emerald-500/15 text-emerald-600"
+                  }`}
+                >
+                  <RotateCcw size={13} />
+                </span>
+
+                <span className="min-w-0 flex-1 text-sm font-semibold opacity-90">
+                  Revision: {sectionTitle} &ndash; {revision.study_set_name}
+                </span>
+
+                <ChevronRight
+                  size={16}
+                  className={`shrink-0 ${isDarkMode ? "text-white/30" : "text-gray-400"}`}
+                />
+              </button>
+            );
+          })}
+
           {tasks.map((task) => {
             const isCompleting = completingId === task.id || task.completed;
             const isRemoving = removingId === task.id;

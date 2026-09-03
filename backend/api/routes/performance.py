@@ -1,13 +1,18 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.performance import (
     PerformanceResponse,
     ResultResponse,
+    StudySetResultsSummaryResponse,
 )
+from backend.database import study_set_repository
 from backend.database.attempt_repository import get_attempt
 from backend.services.evaluation_service import (
     get_attempt_performance_summary,
+    get_study_set_results_summary,
 )
 
 router = APIRouter(tags=["Performance"])
@@ -69,4 +74,33 @@ def get_attempt_results(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
+
+
+@router.get(
+    "/study-sets/{study_set_id}/results-summary",
+    response_model=StudySetResultsSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get cumulative cross-attempt results for a study set",
+    description=(
+        "Retrieves cumulative, cross-attempt performance per question type "
+        "for a study set - every attempt of a type rolled into one summary "
+        "row, not just the most recent. Backs the study set's 'View "
+        "Results' entry point, which has no single attempt_id to scope to."
+    )
+)
+def get_study_set_results(
+    study_set_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user)
+) -> StudySetResultsSummaryResponse:
+    study_set_id_str = str(study_set_id)
+
+    study_set = study_set_repository.get_study_set(study_set_id_str, user_id=current_user.user_id)
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Study set with ID '{study_set_id}' not found"
+        )
+
+    summary = get_study_set_results_summary(study_set_id_str)
+    return StudySetResultsSummaryResponse(**summary)
 

@@ -19,7 +19,16 @@ import {
   toggleTaskCompletion,
   deleteTask,
   fetchStudiedDays,
+  fetchRevisionsDue,
 } from "../services/api";
+
+// Backend question_type ('mcq'/'application'/'long'/'short') -> the
+// frontend type id ConfigureSession's questionTypes array keys off of.
+// Mirrors api.js's fromBackendType convention (kept local here since
+// that helper isn't exported).
+function toFrontendQuestionTypeId(backendType) {
+  return backendType === "short" ? "short-answer" : backendType;
+}
 
 function formatBackendTask(t) {
   const priority = t.priority ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1) : "Medium";
@@ -49,6 +58,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
 
   const [exams, setExams] = useState([]);
   const [userStudySets, setUserStudySets] = useState(studySets);
+  const [revisionsDue, setRevisionsDue] = useState([]);
 
   const [isLoadingExams, setIsLoadingExams] = useState(true);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
@@ -110,7 +120,20 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         if (isMounted) setIsLoadingTasks(false);
       });
 
-    // 4. Fetch studied days for study streak
+    // 4. Fetch revision due-dates across all study sets, for the Daily
+    // Schedule's "Revise: X - Y" items. One aggregated call - see
+    // fetchRevisionsDue()'s docstring for why this isn't done per
+    // study set.
+    fetchRevisionsDue()
+      .then((due) => {
+        if (isMounted) setRevisionsDue(due);
+      })
+      .catch((err) => {
+        console.warn("Could not load revisions due:", err);
+        if (isMounted) setRevisionsDue([]);
+      });
+
+    // 5. Fetch studied days for study streak
     const now = new Date();
     fetchStudiedDays(now.getFullYear(), now.getMonth() + 1)
       .then((studiedDays) => {
@@ -244,6 +267,17 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
     }
   };
 
+  // Click-through from a "Revise: X - Y" planner item straight into
+  // ConfigureSession, with that exact type pre-selected (see App.jsx's
+  // handleNavigate/preselectType plumbing) so the student doesn't have
+  // to click the type card again themselves.
+  const handleStartRevision = (revision) => {
+    onNavigate?.("quiz", {
+      studySetId: revision.study_set_id,
+      preselectType: toFrontendQuestionTypeId(revision.question_type),
+    });
+  };
+
   // Open confirmation modal for deleting a task
   const handleOpenDeleteTaskConfirm = (taskId) => {
     const targetTask = tasks.find((t) => t.id === taskId);
@@ -295,6 +329,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
             onSelectDate={setSelectedDate}
             tasks={tasks}
             exams={exams}
+            revisionsDue={revisionsDue}
           />
         </div>
 
@@ -303,8 +338,10 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
           <DailySchedule
             selectedDate={selectedDate}
             tasks={tasks}
+            revisionsDue={revisionsDue}
             onToggleTaskComplete={handleToggleTaskComplete}
             onDeleteTask={handleOpenDeleteTaskConfirm}
+            onStartRevision={handleStartRevision}
             onAddTaskClick={() => setIsAddModalOpen(true)}
             filterStatus={filterStatus}
             onFilterStatusChange={setFilterStatus}

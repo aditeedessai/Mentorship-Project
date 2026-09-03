@@ -359,6 +359,17 @@ export async function fetchRevisionStatus(studySetId) {
   return request(`/api/study-sets/${studySetId}/revision-status`);
 }
 
+/**
+ * Fetch every (study_set, question_type) pair currently due for
+ * revision across ALL of the current user's study sets, for the
+ * Planner's daily schedule. One aggregated call, not one per study set.
+ * GET /api/planner/revisions-due
+ */
+export async function fetchRevisionsDue() {
+  const data = await request("/api/planner/revisions-due");
+  return data.revisions_due || [];
+}
+
 // ── Answer Submission ────────────────────────────────────────────────
 
 /**
@@ -418,6 +429,17 @@ export async function fetchPerformance(attemptId) {
  */
 export async function fetchResults(attemptId) {
   return request(`/api/attempts/${attemptId}/results`);
+}
+
+/**
+ * Fetch cumulative, cross-attempt results for a study set - every
+ * attempt of every question type rolled into one summary row each, not
+ * scoped to a single attempt_id. Backs the "View Results" entry point
+ * reached from a study set's own page (no specific attempt in hand).
+ * GET /api/study-sets/{studySetId}/results-summary
+ */
+export async function fetchStudySetResultsSummary(studySetId) {
+  return request(`/api/study-sets/${studySetId}/results-summary`);
 }
 
 // ── Tasks ────────────────────────────────────────────────────────────

@@ -150,6 +150,116 @@ def compute_next_due(study_set_id: str, question_type: str, user_id: str) -> dic
     }
 
 
+def _compute_next_due_from_schedule(schedule: dict, user_id: str) -> dict:
+    """
+    Same rule as compute_next_due() (not touched, not rewritten - this is
+    a separate, additive helper), for a schedule row the caller already
+    has in hand. get_due_revisions_for_user() below loops over every one
+    of a user's schedule rows, and calling compute_next_due() per row
+    would redundantly re-fetch that exact same row over a brand new
+    remote DB connection (get_connection() opens a fresh connection per
+    call, uncached, project-wide) - purely wasted round trips when the
+    row is already sitting in memory. Only the initial
+    revision_repository.get_schedule() re-fetch is skipped; the exam
+    lookup still runs per pair, since that's genuinely per-study-set
+    data this loop doesn't already have.
+    """
+    attempts_taken = schedule["attempts_taken"]
+    needs_attention = schedule["needs_attention"]
+    last_accuracy = schedule["last_accuracy"]
+    study_set_id = schedule["study_set_id"]
+
+    if needs_attention:
+        return {
+            "available": False,
+            "reason": "needs_attention",
+            "next_due_date": None,
+            "attempts_taken": attempts_taken,
+            "needs_attention": needs_attention,
+            "last_accuracy": last_accuracy,
+        }
+
+    if attempts_taken >= MAX_ATTEMPTS:
+        return {
+            "available": False,
+            "reason": "attempts_exhausted",
+            "next_due_date": None,
+            "attempts_taken": attempts_taken,
+            "needs_attention": needs_attention,
+            "last_accuracy": last_accuracy,
+        }
+
+    today = date.today()
+
+    last_attempt_date = schedule["last_attempt_at"].date()
+    tier_wait_days = _tier_wait_days(last_accuracy)
+    next_due_date = last_attempt_date + timedelta(days=tier_wait_days)
+
+    exam = exam_repository.get_nearest_upcoming_exam_for_study_set(study_set_id, user_id)
+    if exam is not None:
+        days_until_exam = (exam["exam_date"] - today).days
+        effective_days_until_exam = days_until_exam - EXAM_BUFFER_DAYS
+
+        if tier_wait_days <= effective_days_until_exam:
+            pass
+        elif effective_days_until_exam >= EXAM_CRUNCH_MIN_DAYS_FOR_SPACING:
+            remaining_attempts = MAX_ATTEMPTS - attempts_taken
+            attempts_that_fit = min(remaining_attempts, effective_days_until_exam)
+            interval = max(1, effective_days_until_exam // attempts_that_fit)
+            next_due_date = last_attempt_date + timedelta(days=interval)
+        else:
+            next_due_date = today
+
+    return {
+        "available": next_due_date <= today,
+        "reason": None if next_due_date <= today else "not_yet_due",
+        "next_due_date": next_due_date,
+        "attempts_taken": attempts_taken,
+        "needs_attention": needs_attention,
+        "last_accuracy": last_accuracy,
+    }
+
+
+def get_due_revisions_for_user(user_id: str) -> list[dict]:
+    """
+    Every (study_set, question_type) pair with a scheduled next_due_date
+    for this user, across ALL of their study sets - what the planner's
+    /planner/revisions-due endpoint returns, for BOTH the calendar
+    (marking the actual day a pair becomes due, even if that's in the
+    future) and the daily-schedule/dashboard views (which filter this
+    same list down to next_due_date <= today on the frontend). Only
+    pairs with a real revision_schedules row are considered (a type
+    that's never been attempted has no scheduling signal, so it's never
+    "due" in the planner sense - see compute_next_due()'s docstring on
+    the same point).
+
+    Deliberately NOT filtered to available=True here - that would only
+    ever return already-due-or-overdue pairs, which is exactly why a
+    freshly-scored pair (e.g. due tomorrow, not yet due today) used to
+    never appear anywhere on the planner until the day it became due.
+    next_due_date being non-None already excludes needs_attention and
+    attempts_exhausted pairs (compute_next_due() sets it to None for
+    both), so that exclusion still holds.
+
+    Computed fresh on every call, same as compute_next_due() itself -
+    nothing about this is cached or persisted separately for the
+    planner.
+    """
+    schedules = revision_repository.get_schedules_for_user(user_id)
+
+    due = []
+    for schedule in schedules:
+        info = _compute_next_due_from_schedule(schedule, user_id)
+        if info["next_due_date"] is not None:
+            due.append({
+                "study_set_id": schedule["study_set_id"],
+                "question_type": schedule["question_type"],
+                **info,
+            })
+
+    return due
+
+
 def is_attempt_allowed_now(study_set_id: str, question_type: str, user_id: str) -> tuple[bool, str | None]:
     """
     The full attempt-start gate for one (study_set_id, question_type)

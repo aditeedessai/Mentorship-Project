@@ -404,6 +404,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
 
             <StudySetQuestionProgressCard
               revisionStatus={revisionStatus}
+              loading={loading}
             />
           </div>
         </div>

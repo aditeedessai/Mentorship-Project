@@ -1,3 +1,4 @@
+import traceback
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -57,6 +58,13 @@ def generate_questions(
             detail=str(e)
         )
     except Exception as e:
+        # quiz_service.run_quiz -> generate_quiz can fail deep inside the
+        # Gemini call or the JSON parse of its response - str(e) alone
+        # (still included below, in the HTTP response) is often too thin
+        # to diagnose which one it was, so the full traceback goes to the
+        # server log here too.
+        print("===== /questions/generate failed =====")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate questions: {str(e)}"

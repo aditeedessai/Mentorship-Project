@@ -568,12 +568,21 @@ function StudySetsPage({
 
                         <span
                           className={`text-xs font-bold ${
-                            progress >= 75
+                            meta.loaded && progress >= 75
                               ? "text-emerald-500 dark:text-emerald-400"
+                              : !meta.loaded
+                              ? "opacity-50"
                               : ""
                           }`}
                         >
-                          {progress}%
+                          {/* Distinct from "0%" - a real 0% (genuinely
+                              untouched study set) and "still fetching
+                              revision-status" must never render
+                              identically, or a real user sees 0% for the
+                              several real seconds a cold dev-server load
+                              can take and reasonably concludes progress
+                              isn't being tracked at all. */}
+                          {meta.loaded ? `${progress}%` : "Loading…"}
                         </span>
                       </div>
 
@@ -586,12 +595,14 @@ function StudySetsPage({
                       >
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
-                            progress >= 75
+                            !meta.loaded
+                              ? "bg-white/20 animate-pulse"
+                              : progress >= 75
                               ? "bg-emerald-500"
                               : "bg-emerald-500/80"
                           }`}
                           style={{
-                            width: `${progress}%`,
+                            width: meta.loaded ? `${progress}%` : "100%",
                           }}
                         />
                       </div>

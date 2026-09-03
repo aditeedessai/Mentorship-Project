@@ -21,7 +21,8 @@ from backend.database.attempt_repository import (
 from backend.database.evaluation_repository import (
     save_evaluation,
     get_evaluations_with_question_details,
-    get_evaluated_question_types_by_study_set
+    get_evaluated_question_types_by_study_set,
+    get_results_summary_by_study_set
 )
 
 from backend.database.quiz_repository import (
@@ -42,6 +43,49 @@ SECTION_TITLE_MAP = {
     "long": "Long Answer",
     "short": "Short Answer"
 }
+
+
+def get_study_set_results_summary(study_set_id: str) -> dict:
+    """
+    Cumulative, cross-attempt results for a study set's "View Results"
+    entry point (StudySetHeroHeaderCard) - unlike
+    get_attempt_performance_summary(), which is scoped to one attempt_id,
+    this has no single attempt to key off, since every question type is
+    independently attempted up to 4 separate times now (see
+    revision_service.py's pivot). Rolls every evaluation ever recorded
+    for each question_type in this study set into one row each, so a
+    type attempted 3 times shows the total across all 3, not just the
+    latest.
+
+    Returns {"study_set_id": str, "sections": [{"question_type",
+    "section_title", "total_attempted", "total_correct",
+    "accuracy_percentage", "attempts_taken", "last_attempt_at", "remark"},
+    ...]} - one entry per question_type that has at least one recorded
+    evaluation. A type never attempted simply has no entry (nothing to
+    summarize), same "row presence = attempted" convention
+    revision_repository.get_schedule() already uses.
+    """
+    rows = get_results_summary_by_study_set(study_set_id)
+
+    sections = []
+    for row in rows:
+        q_type = row["question_type"]
+        total_attempted = int(row["total_attempted"] or 0)
+        total_correct = int(row["total_correct"] or 0)
+        accuracy = round((total_correct / total_attempted) * 100, 2) if total_attempted > 0 else 0.0
+
+        sections.append({
+            "question_type": q_type,
+            "section_title": SECTION_TITLE_MAP.get(q_type, q_type.capitalize()),
+            "total_attempted": total_attempted,
+            "total_correct": total_correct,
+            "accuracy_percentage": accuracy,
+            "attempts_taken": int(row["attempts_taken"] or 0),
+            "last_attempt_at": row["last_attempt_at"],
+            "remark": grade_for_percentage(accuracy).remark,
+        })
+
+    return {"study_set_id": study_set_id, "sections": sections}
 
 
 def print_performance_summary(performance: dict, topic_performance: dict):

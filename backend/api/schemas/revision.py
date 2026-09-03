@@ -67,3 +67,27 @@ class RevisionStatusListResponse(BaseModel):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlannerRevisionDueItem(BaseModel):
+    """One (study_set, question_type) pair currently due for revision -
+    what GET /planner/revisions-due returns, aggregated across every
+    study set the user owns."""
+    study_set_id: str = Field(..., description="Study set this due revision belongs to")
+    study_set_name: str = Field(..., description="Study set's display name, for planner labeling")
+    question_type: str = Field(..., description="Question type this revision is for ('mcq', 'application', 'long', 'short')")
+    next_due_date: date = Field(..., description="The date this became (or remains) due")
+    attempts_taken: int = Field(..., ge=0, le=4, description="Attempts taken so far for this pair")
+    last_accuracy: float | None = Field(None, description="Accuracy percentage (0-100) from the most recent attempt")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PlannerRevisionsDueResponse(BaseModel):
+    """Response schema for GET /planner/revisions-due."""
+    revisions_due: list[PlannerRevisionDueItem] = Field(
+        default_factory=list,
+        description="Every (study_set, question_type) pair currently due, across all of the user's study sets"
+    )
+
+    model_config = ConfigDict(from_attributes=True)

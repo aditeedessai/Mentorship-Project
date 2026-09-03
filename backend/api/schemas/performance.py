@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 from backend.api.schemas.attempt import AttemptStatus
 
@@ -187,6 +189,68 @@ class ResultResponse(BaseModel):
     topics: list[TopicPerformance] = Field(
         default_factory=list,
         description="Topic-by-topic performance breakdown"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StudySetSectionSummary(BaseModel):
+    """
+    Cumulative, cross-attempt performance for one question_type within a
+    study set - every attempt of that type rolled into one row, not just
+    the most recent. See evaluation_service.get_study_set_results_summary().
+    """
+    question_type: str = Field(
+        ...,
+        description="Raw question type ('mcq', 'application', 'long', 'short')"
+    )
+    section_title: str = Field(
+        ...,
+        description="Human-readable section title (e.g. 'MCQ', 'Long Answer')"
+    )
+    total_attempted: int = Field(
+        ...,
+        ge=0,
+        description="Total questions attempted across every attempt of this type"
+    )
+    total_correct: int = Field(
+        ...,
+        ge=0,
+        description="Total questions answered correctly across every attempt of this type"
+    )
+    accuracy_percentage: float = Field(
+        ...,
+        ge=0.0,
+        le=100.0,
+        description="total_correct / total_attempted as a percentage"
+    )
+    attempts_taken: int = Field(
+        ...,
+        ge=0,
+        le=4,
+        description="Number of separate completed attempt sessions for this type"
+    )
+    last_attempt_at: datetime = Field(
+        ...,
+        description="Timestamp of the most recent evaluation recorded for this type"
+    )
+    remark: str = Field(
+        ...,
+        description="Plain-English qualitative remark for the cumulative accuracy"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StudySetResultsSummaryResponse(BaseModel):
+    """Response schema for GET /study-sets/{study_set_id}/results-summary."""
+    study_set_id: str = Field(
+        ...,
+        description="Study set these results belong to"
+    )
+    sections: list[StudySetSectionSummary] = Field(
+        default_factory=list,
+        description="One entry per question_type with at least one recorded attempt"
     )
 
     model_config = ConfigDict(from_attributes=True)

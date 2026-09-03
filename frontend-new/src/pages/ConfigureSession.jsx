@@ -68,6 +68,7 @@ const formatDueDate = (isoDate) => {
 export default function ConfigureSession({
   studySetId: propStudySetId,
   studySetName: propStudySetName,
+  preselectType,
 }) {
   const { isDarkMode } = useTheme()
 
@@ -141,17 +142,29 @@ export default function ConfigureSession({
         }
         setStatusByType(byType)
 
-        // Auto-select the first genuinely startable type, mirroring the
-        // old auto-select-first-uncompleted behavior.
-        const firstAvailable = questionTypes.find((t) => {
-          const s = byType[t.id]
-          return s && s.available && !s.needs_attention
-        })
+        // A caller can ask for one specific type to land pre-selected
+        // (e.g. clicking a "Revise: X - Y" item on the Planner) - honor
+        // it as long as that type is actually startable right now,
+        // otherwise fall back to the normal first-available pick below
+        // rather than landing on a disabled card.
+        const preselected =
+          preselectType &&
+          byType[preselectType]?.available &&
+          !byType[preselectType]?.needs_attention
+            ? preselectType
+            : null
 
-        if (firstAvailable) {
-          setSelectedType(firstAvailable.id)
+        if (preselected) {
+          setSelectedType(preselected)
         } else {
-          setSelectedType(null)
+          // Auto-select the first genuinely startable type, mirroring the
+          // old auto-select-first-uncompleted behavior.
+          const firstAvailable = questionTypes.find((t) => {
+            const s = byType[t.id]
+            return s && s.available && !s.needs_attention
+          })
+
+          setSelectedType(firstAvailable ? firstAvailable.id : null)
         }
       } catch (err) {
         console.error('Failed to load revision status:', err)
@@ -171,7 +184,7 @@ export default function ConfigureSession({
     return () => {
       isMounted = false
     }
-  }, [studySetId])
+  }, [studySetId, preselectType])
 
   const handleStart = async () => {
     if (loading || loadingStatus || !selectedType) return
@@ -433,6 +446,13 @@ export default function ConfigureSession({
                 statusLabel = `Attempt ${s.attempts_taken + 1} of 4`
               }
 
+              // Plain-language, real-numbers explanation for a capped-
+              // and-still-weak type - attempts_taken comes straight off
+              // this same status entry, never restated/recomputed.
+              const explanation = needsAttention
+                ? `${s.attempts_taken} attempt${s.attempts_taken === 1 ? '' : 's'}, still below 50% - let's try a different approach.`
+                : null
+
               return (
                 <QuestionTypeCard
                   key={type.id}
@@ -442,6 +462,7 @@ export default function ConfigureSession({
                   isMastered={isMastered}
                   needsAttention={needsAttention}
                   statusLabel={statusLabel}
+                  explanation={explanation}
                   onSelect={() => setSelectedType(type.id)}
                 />
               )

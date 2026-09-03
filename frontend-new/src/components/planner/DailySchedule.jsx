@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { CalendarCheck, Plus, ChevronDown } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import TaskItem from "./TaskItem";
+import RevisionDueItem from "./RevisionDueItem";
 
 function formatHeaderDate(dateKey) {
   const todayStr = new Date().toISOString().split("T")[0];
@@ -20,8 +21,10 @@ function formatHeaderDate(dateKey) {
 export default function DailySchedule({
   selectedDate,
   tasks = [],
+  revisionsDue = [],
   onToggleTaskComplete,
   onDeleteTask,
+  onStartRevision,
   onAddTaskClick,
   filterStatus = "all",
   onFilterStatusChange,
@@ -43,6 +46,28 @@ export default function DailySchedule({
 
     return true;
   });
+
+  // revisionsDue carries every scheduled pair's real next_due_date -
+  // today, overdue, or a future date (e.g. a fresh low-accuracy attempt
+  // due tomorrow, not yet due today). An overdue pair (next_due_date <
+  // today) carries forward onto TODAY rather than staying pinned to the
+  // day it first became due; a future pair shows only on its own actual
+  // due date, matching how tasks are dated. Never mixed into the
+  // "Completed" tab (a revision-due item isn't a completable checkbox).
+  const revisionMatchesDate = (revision, dateKey) => {
+    if (!revision.next_due_date) return false;
+    if (dateKey === todayStr) return revision.next_due_date <= todayStr;
+    return revision.next_due_date === dateKey;
+  };
+
+  const revisionsToShow =
+    filterStatus === "today"
+      ? revisionsDue.filter((r) => revisionMatchesDate(r, todayStr))
+      : filterStatus === "upcoming"
+      ? revisionsDue.filter((r) => r.next_due_date > todayStr)
+      : filterStatus === "all"
+      ? revisionsDue.filter((r) => revisionMatchesDate(r, selectedDate))
+      : [];
 
   const formattedDateTitle = formatHeaderDate(selectedDate);
 
@@ -141,7 +166,7 @@ export default function DailySchedule({
 
         {/* Task List Container */}
         <div className="flex-1 space-y-3 overflow-y-auto max-h-[420px] pr-1 scrollbar-thin">
-          {dateTasks.length === 0 ? (
+          {dateTasks.length === 0 && revisionsToShow.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
@@ -168,14 +193,23 @@ export default function DailySchedule({
               </div>
             </div>
           ) : (
-            dateTasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                onToggleComplete={onToggleTaskComplete}
-                onDeleteTask={onDeleteTask}
-              />
-            ))
+            <>
+              {revisionsToShow.map((revision) => (
+                <RevisionDueItem
+                  key={`${revision.study_set_id}-${revision.question_type}`}
+                  revision={revision}
+                  onStart={onStartRevision}
+                />
+              ))}
+              {dateTasks.map((task) => (
+                <TaskItem
+                  key={task.id}
+                  task={task}
+                  onToggleComplete={onToggleTaskComplete}
+                  onDeleteTask={onDeleteTask}
+                />
+              ))}
+            </>
           )}
         </div>
       </div>

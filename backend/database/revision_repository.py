@@ -67,6 +67,32 @@ def get_schedules_for_study_set(study_set_id: str) -> list[dict]:
         connection.close()
 
 
+def get_schedules_for_user(user_id: str) -> list[dict]:
+    """
+    Retrieve every revision_schedules row across ALL of a user's study
+    sets in one query - used by the planner's revisions-due aggregation
+    (backend/services/revision_service.get_due_revisions_for_user()) so
+    it doesn't need one query per study set. A row's mere existence means
+    that (study_set, question_type) pair has been completed at least
+    once - see get_schedules_for_study_set()'s docstring.
+    """
+    connection = get_connection()
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, user_id, study_set_id, question_type, attempts_taken,
+                   last_attempt_id, last_accuracy, last_attempt_at,
+                   needs_attention, created_at, updated_at
+            FROM revision_schedules
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchall()
+        return [_format_schedule_dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
 def record_attempt_result(
     user_id: str,
     study_set_id: str,

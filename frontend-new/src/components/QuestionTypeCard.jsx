@@ -8,6 +8,7 @@ export default function QuestionTypeCard({
   isMastered = false,
   needsAttention = false,
   statusLabel,
+  explanation,
   onSelect,
 }) {
   const { isDarkMode } = useTheme()
@@ -104,8 +105,14 @@ export default function QuestionTypeCard({
       {/* Title */}
       <h3 className="text-base font-black mb-1.5 tracking-tight">{title}</h3>
 
-      {/* Description */}
-      <p className={`text-xs leading-relaxed flex-1 ${isDarkMode ? 'text-white/60' : 'text-[#706A78]'}`}>{description}</p>
+      {/* Description - replaced with the real-numbers explanation once
+          a type needs review, since the generic marketing copy is less
+          useful than the actual reason at that point. */}
+      <p className={`text-xs leading-relaxed flex-1 ${
+        needsAttention
+          ? 'font-semibold text-amber-500'
+          : isDarkMode ? 'text-white/60' : 'text-[#706A78]'
+      }`}>{needsAttention && explanation ? explanation : description}</p>
 
       {/* Badge */}
       <div className="mt-auto pt-2">
