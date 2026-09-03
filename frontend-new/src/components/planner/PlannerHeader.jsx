@@ -1,6 +1,7 @@
 import React from "react";
-import { Plus, CalendarDays } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import jojoCalendar from "../../assets/jojo-calendar.png";
 
 export default function PlannerHeader({ onAddTask, onAddExam }) {
   const { isDarkMode } = useTheme();
@@ -17,6 +18,7 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
         <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-bold tracking-tight">
           Study Planner
         </h1>
+
         <p
           className={`mt-2 text-xs sm:text-sm font-medium ${
             isDarkMode ? "text-white/60" : "text-[#706A78]"
@@ -51,15 +53,14 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
         </div>
       </div>
 
-      <div
-        className={`flex h-16 w-16 sm:h-20 sm:w-20 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-xl ${
-          isDarkMode
-            ? "border-white/10 bg-white/5 text-[#A78BFA]"
-            : "border-black/5 bg-white/80 text-[#8064C7] shadow-xs"
-        }`}
-      >
-        <CalendarDays size={36} />
-      </div>
+      {/* Jojo - Planner Mascot */}
+    <div className="flex h-40 w-40 sm:h-44 sm:w-44 md:h-52 md:w-52 shrink-0 items-center justify-center">
+     <img
+    src={jojoCalendar}
+    alt="Jojo planning your study schedule"
+    className="h-full w-full object-contain drop-shadow-lg"
+     />
+    </div>
     </div>
   );
 }
