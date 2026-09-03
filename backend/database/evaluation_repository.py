@@ -125,6 +125,50 @@ def get_evaluated_question_types_by_study_set(user_id: str):
         connection.close()
 
 
+def get_results_summary_by_study_set(study_set_id: str) -> list[dict]:
+    """
+    Cumulative, cross-attempt performance per question_type for one study
+    set - every evaluation ever recorded across EVERY attempt of that
+    type, not just the most recent one. Backs the study set's "View
+    Results" entry point (StudySetHeroHeaderCard), which has no single
+    attempt_id to scope to - unlike get_evaluations_with_question_details()
+    (one attempt) or attempt_section_scores (still one row per attempt),
+    this rolls ALL of a type's attempts into one row so no historical
+    section ever goes missing from the breakdown.
+
+    total_attempted counts every evaluation row (a skipped question still
+    got a row written for it - see evaluation_service.py's skip handling -
+    so it counts as "attempted", consistent with how the rest of the app
+    treats skipped questions as 0-scoring attempts, not absences).
+    total_correct uses the same >= 0.55 final_score threshold the
+    /attempts/{id}/evaluations route already uses to derive is_correct,
+    so this list's numbers agree with what a student sees on a per-attempt
+    results page.
+    """
+    connection = get_connection()
+    try:
+        rows = connection.execute(
+            """
+            SELECT
+                q.question_type AS question_type,
+                COUNT(*) AS total_attempted,
+                COUNT(*) FILTER (WHERE e.final_score >= 0.55) AS total_correct,
+                COUNT(DISTINCT qa.attempt_id) AS attempts_taken,
+                MAX(e.created_at) AS last_attempt_at
+            FROM evaluations e
+            JOIN questions q ON q.question_id = e.question_id
+            JOIN quiz_attempts qa ON qa.attempt_id = e.attempt_id
+            WHERE qa.study_set_id = ?
+            GROUP BY q.question_type
+            ORDER BY q.question_type
+            """,
+            (study_set_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
 def get_studied_dates(user_id: str, year: int, month: int) -> list[int]:
     """
     Return the distinct day-of-month numbers (1-31) within the given

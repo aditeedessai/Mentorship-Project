@@ -3,9 +3,10 @@ from backend.database.database import get_connection
 
 def ensure_attempt_exists(
     attempt_id: str,
+    question_type: str,
     study_set_id: str = None,
     document_id: str = None,
-    user_id: str = None
+    user_id: str = None,
 ):
     """
     Creates a placeholder quiz_attempts row if one doesn't already exist,
@@ -16,6 +17,18 @@ def ensure_attempt_exists(
     save_attempt() with real totals once, at the end. Without this, the
     very first evaluation saved for a brand-new attempt_id fails the FK
     check, since the parent row doesn't exist yet.
+
+    `question_type` is now REQUIRED, no default - every quiz_attempts
+    row is scoped to exactly one question type from creation (the
+    attempt_kind='initial'/'revision' distinction that used to make this
+    optional is gone; see the 20260902150000 migration, which also made
+    the column itself NOT NULL). The one existing caller of this function
+    - evaluation_service.run_evaluation(), the CLI-only path behind
+    backend/run_main.py, confirmed unreachable from the real app/API - is
+    deliberately left uncalled-through-with-a-question_type as-is; it
+    will now raise a TypeError if actually invoked, an accepted
+    consequence of leaving that legacy path untouched rather than a
+    default silently papering over it.
 
     `user_id` must come from the authenticated Supabase user (never from
     the frontend/request body) and is stored directly on the row, not
@@ -44,12 +57,13 @@ def ensure_attempt_exists(
                 user_id,
                 total_marks,
                 marks_awarded,
-                status
+                status,
+                question_type
             )
-            VALUES (?, ?, ?, ?, 0, 0, 'in_progress')
+            VALUES (?, ?, ?, ?, 0, 0, 'in_progress', ?)
             ON CONFLICT (attempt_id) DO NOTHING
             """,
-            (attempt_id, set_id, doc_id, usr_id)
+            (attempt_id, set_id, doc_id, usr_id, question_type)
         )
 
         connection.commit()
@@ -62,10 +76,11 @@ def save_attempt(
     attempt_id: str,
     total_marks: float,
     marks_awarded: float,
+    question_type: str,
     study_set_id: str = None,
     document_id: str = None,
     status: str = "in_progress",
-    user_id: str = None
+    user_id: str = None,
 ):
     """
     Save the result of one quiz attempt.
@@ -74,6 +89,18 @@ def save_attempt(
     still being completed keeps it as-is. Callers should only pass
     status='completed' once the student has finished every section
     (see evaluation_service.run_evaluation's status parameter).
+
+    `question_type` is now REQUIRED, no default - every quiz_attempts row
+    is scoped to exactly one question type from creation (see
+    ensure_attempt_exists()'s docstring for the same change and why).
+    Still deliberately left OUT of the ON CONFLICT DO UPDATE SET clause -
+    it's immutable after creation, so a later call (updating totals/
+    status on an attempt that already exists) still has to pass SOME
+    value here since there's no default, but it's harmless: Postgres
+    leaves an unmentioned column untouched on conflict, so whatever an
+    UPDATE-only call passes is ignored in favor of what INSERT originally
+    set. Callers doing an update-only call should just pass through
+    whatever they already fetched via get_attempt().
 
     `user_id` must come from the authenticated Supabase user, never the
     frontend/request body. COALESCE in the ON CONFLICT clause means a
@@ -97,9 +124,10 @@ def save_attempt(
                 user_id,
                 total_marks,
                 marks_awarded,
-                status
+                status,
+                question_type
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (attempt_id) DO UPDATE SET
                 study_set_id = COALESCE(EXCLUDED.study_set_id, quiz_attempts.study_set_id),
                 document_id = COALESCE(EXCLUDED.document_id, quiz_attempts.document_id),
@@ -116,7 +144,8 @@ def save_attempt(
                 usr_id,
                 total_marks,
                 marks_awarded,
-                status
+                status,
+                question_type,
             )
         )
 
@@ -162,6 +191,7 @@ def get_attempt(attempt_id: str, user_id: str = None) -> dict | None:
                 total_marks,
                 marks_awarded,
                 status,
+                question_type,
                 created_at,
                 updated_at
             FROM quiz_attempts
@@ -236,35 +266,45 @@ def list_attempts(study_set_id=None, document_id=None, user_id=None):
         connection.close()
 
 
-def get_active_attempt_by_study_set(study_set_id: str, user_id: str = None) -> dict | None:
+def get_active_attempt_by_study_set(
+    study_set_id: str,
+    question_type: str,
+    user_id: str = None,
+) -> dict | None:
     """
-    Retrieve the current active ('in_progress') attempt for a given study set and user.
-    Returns None if no active attempt exists (e.g. no attempt started yet, or previous attempt was completed).
+    Retrieve the current active ('in_progress') attempt for a given study
+    set, question_type, and user. Returns None if no active attempt
+    exists (e.g. no attempt started yet for this type, or the previous
+    one was completed).
+
+    `question_type` is now REQUIRED - "the active attempt for a study
+    set" is no longer a well-formed question on its own, since every type
+    is independently attempted/scheduled and more than one can be
+    genuinely in-progress at once (a student can start MCQ, leave it
+    mid-way, and separately start Short - both legitimately active). This
+    used to default to resolving a single study-set-wide 'initial'
+    attempt; that concept no longer exists (see the 20260902150000
+    migration).
     """
     connection = get_connection()
     try:
+        params = [study_set_id, question_type]
+        where_clauses = ["study_set_id = ?", "question_type = ?", "status = 'in_progress'"]
+
         if user_id:
-            row = connection.execute(
-                """
-                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
-                FROM quiz_attempts
-                WHERE study_set_id = ? AND user_id = ? AND status = 'in_progress'
-                ORDER BY created_at DESC
-                LIMIT 1
-                """,
-                (study_set_id, user_id),
-            ).fetchone()
-        else:
-            row = connection.execute(
-                """
-                SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, created_at, updated_at
-                FROM quiz_attempts
-                WHERE study_set_id = ? AND status = 'in_progress'
-                ORDER BY created_at DESC
-                LIMIT 1
-                """,
-                (study_set_id,),
-            ).fetchone()
+            where_clauses.append("user_id = ?")
+            params.append(user_id)
+
+        row = connection.execute(
+            f"""
+            SELECT attempt_id, study_set_id, document_id, user_id, total_marks, marks_awarded, status, question_type, created_at, updated_at
+            FROM quiz_attempts
+            WHERE {" AND ".join(where_clauses)}
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            tuple(params),
+        ).fetchone()
 
         if row is None:
             return None

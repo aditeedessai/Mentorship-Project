@@ -11,6 +11,7 @@ import {
   getOrCreateAttempt,
   generateQuestions,
   fetchStudySets,
+  fetchRevisionStatus,
 } from '../services/api'
 import { classifyQuestionGenerationError } from '../utils/errorClassification'
 import jojoThinking from '../assets/jojo-thinking.png'
@@ -57,15 +58,28 @@ const questionTypes = [
 const toFrontendTypeId = (bType) =>
   bType === 'short' ? 'short-answer' : bType
 
+const formatDueDate = (isoDate) => {
+  if (!isoDate) return null
+  const d = new Date(`${isoDate}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return isoDate
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 export default function ConfigureSession({
   studySetId: propStudySetId,
   studySetName: propStudySetName,
+  preselectType,
 }) {
   const { isDarkMode } = useTheme()
 
-  const [selectedType, setSelectedType] = useState('mcq')
-  const [attempt, setAttempt] = useState(null)
-  const [loadingAttempt, setLoadingAttempt] = useState(true)
+  // Per-type status (available/attempts_taken/needs_attention/
+  // next_due_date/last_accuracy), keyed by FRONTEND type id - every
+  // type is independently scoped from its very first attempt now, so
+  // there is no single study-set-wide "the attempt" left to track. This
+  // replaces the old `attempt` state entirely.
+  const [statusByType, setStatusByType] = useState({})
+  const [selectedType, setSelectedType] = useState(null)
+  const [loadingStatus, setLoadingStatus] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -101,74 +115,79 @@ export default function ConfigureSession({
     }
   }, [studySetName, studySetId])
 
-  // Fetch or resume the active attempt for this study set on mount
+  // Load per-type status on mount (and whenever the study set changes) -
+  // replaces the old single "fetch or create the one active attempt"
+  // effect. Nothing is created here; starting an attempt only happens
+  // when the student actually picks a type and presses Start.
   useEffect(() => {
     let isMounted = true
 
-    async function initAttempt() {
+    async function loadStatus() {
       if (!studySetId) {
-        setLoadingAttempt(false)
+        setLoadingStatus(false)
         return
       }
 
       try {
-        setLoadingAttempt(true)
+        setLoadingStatus(true)
 
-        const att = await getOrCreateAttempt(studySetId)
+        const result = await fetchRevisionStatus(studySetId)
+        const statuses = result?.statuses || []
 
-        if (isMounted && att) {
-          setAttempt(att)
+        if (!isMounted) return
 
-          const completedFrontend = (
-            att.completed_sections || []
-          ).map(toFrontendTypeId)
+        const byType = {}
+        for (const s of statuses) {
+          byType[toFrontendTypeId(s.question_type)] = s
+        }
+        setStatusByType(byType)
 
-          // Auto-select first available (uncompleted) section type
-          const available = questionTypes.find(
-            (t) => !completedFrontend.includes(t.id)
-          )
+        // A caller can ask for one specific type to land pre-selected
+        // (e.g. clicking a "Revise: X - Y" item on the Planner) - honor
+        // it as long as that type is actually startable right now,
+        // otherwise fall back to the normal first-available pick below
+        // rather than landing on a disabled card.
+        const preselected =
+          preselectType &&
+          byType[preselectType]?.available &&
+          !byType[preselectType]?.needs_attention
+            ? preselectType
+            : null
 
-          if (available) {
-            setSelectedType(available.id)
-          }
+        if (preselected) {
+          setSelectedType(preselected)
+        } else {
+          // Auto-select the first genuinely startable type, mirroring the
+          // old auto-select-first-uncompleted behavior.
+          const firstAvailable = questionTypes.find((t) => {
+            const s = byType[t.id]
+            return s && s.available && !s.needs_attention
+          })
+
+          setSelectedType(firstAvailable ? firstAvailable.id : null)
         }
       } catch (err) {
-        console.error('Failed to load active attempt:', err)
+        console.error('Failed to load revision status:', err)
 
         if (isMounted) {
           setError(classifyQuestionGenerationError(err))
         }
       } finally {
         if (isMounted) {
-          setLoadingAttempt(false)
+          setLoadingStatus(false)
         }
       }
     }
 
-    initAttempt()
+    loadStatus()
 
     return () => {
       isMounted = false
     }
-  }, [studySetId])
-
-  const completedFrontendSections = (
-    attempt?.completed_sections || []
-  ).map(toFrontendTypeId)
-
-  const isAttemptComplete =
-    attempt?.is_attempt_complete ||
-    completedFrontendSections.length === 4
+  }, [studySetId, preselectType])
 
   const handleStart = async () => {
-    if (loading || loadingAttempt) return
-
-    if (isAttemptComplete) {
-      setError(
-        'All 4 question sections for this quiz attempt have been completed.'
-      )
-      return
-    }
+    if (loading || loadingStatus || !selectedType) return
 
     const selected = questionTypes.find(
       (t) => t.id === selectedType
@@ -176,9 +195,11 @@ export default function ConfigureSession({
 
     if (!selected) return
 
-    if (completedFrontendSections.includes(selectedType)) {
+    const selectedStatus = statusByType[selectedType]
+
+    if (!selectedStatus?.available || selectedStatus?.needs_attention) {
       setError(
-        `The ${selected.title} section is already completed and locked.`
+        `${selected.title} isn't available to start right now.`
       )
       return
     }
@@ -194,17 +215,17 @@ export default function ConfigureSession({
     setError(null)
 
     try {
-      // Re-verify active attempt without creating a duplicate
-      let currentAttempt = attempt
-
-      if (!currentAttempt?.attempt_id) {
-        currentAttempt = await getOrCreateAttempt(studySetId)
-        setAttempt(currentAttempt)
-      }
+      // Resolve (or create) the attempt for THIS type only - every type
+      // resolves independently now, there is no shared attempt to reuse
+      // across types.
+      const currentAttempt = await getOrCreateAttempt(
+        studySetId,
+        selectedType
+      )
 
       if (!currentAttempt?.attempt_id) {
         throw new Error(
-          'Could not establish an active attempt for this study set.'
+          'Could not establish an active attempt for this question type.'
         )
       }
 
@@ -391,20 +412,11 @@ export default function ConfigureSession({
                 : 'text-[#706A78]'
             }`}
           >
-            Select the question formats you'd like to tackle
-            in this study block. AI Study Engine will generate
-            a tailored set based on your recent mastery levels.
+            Select the question format you'd like to tackle
+            next. Each type keeps its own independent schedule -
+            AI Study Engine will generate a tailored set based
+            on your recent mastery level for that type.
           </p>
-
-          {/* Attempt status notice */}
-          {isAttemptComplete && (
-            <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/20 p-3 text-xs font-bold text-emerald-400">
-              <span>
-                All 4 section types in this quiz attempt are
-                completed!
-              </span>
-            </div>
-          )}
 
           {/* Error message card */}
           {error && (
@@ -418,19 +430,40 @@ export default function ConfigureSession({
           {/* Question Type Cards */}
           <div className="mt-7 flex flex-wrap gap-4">
             {questionTypes.map((type) => {
-              const isCompleted =
-                completedFrontendSections.includes(type.id)
+              const s = statusByType[type.id]
+
+              const needsAttention = Boolean(s?.needs_attention)
+              const isMastered =
+                !needsAttention && s?.reason === 'attempts_exhausted'
+              const isLocked =
+                !needsAttention && !isMastered && s?.available === false
+
+              let statusLabel
+              if (isLocked) {
+                const dueText = formatDueDate(s?.next_due_date)
+                statusLabel = dueText ? `Due ${dueText}` : 'Not yet due'
+              } else if (s && s.attempts_taken > 0 && !needsAttention && !isMastered) {
+                statusLabel = `Attempt ${s.attempts_taken + 1} of 4`
+              }
+
+              // Plain-language, real-numbers explanation for a capped-
+              // and-still-weak type - attempts_taken comes straight off
+              // this same status entry, never restated/recomputed.
+              const explanation = needsAttention
+                ? `${s.attempts_taken} attempt${s.attempts_taken === 1 ? '' : 's'}, still below 50% - let's try a different approach.`
+                : null
 
               return (
                 <QuestionTypeCard
                   key={type.id}
                   type={type}
                   isSelected={selectedType === type.id}
-                  isCompleted={isCompleted}
-                  onSelect={() =>
-                    !isCompleted &&
-                    setSelectedType(type.id)
-                  }
+                  isLocked={isLocked}
+                  isMastered={isMastered}
+                  needsAttention={needsAttention}
+                  statusLabel={statusLabel}
+                  explanation={explanation}
+                  onSelect={() => setSelectedType(type.id)}
                 />
               )
             })}
@@ -441,7 +474,7 @@ export default function ConfigureSession({
       {/* Bottom Action Bar */}
       <SessionActionBar
         onStart={handleStart}
-        loading={loading || loadingAttempt}
+        loading={loading || loadingStatus || !selectedType}
       />
     </div>
   )

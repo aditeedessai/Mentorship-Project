@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
+from typing import Literal
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.schemas.answer import (
@@ -26,6 +27,7 @@ from backend.services.evaluation_service import (
     evaluate_and_save_attempt_answers,
     get_attempt_section_completion_status,
 )
+from backend.services import revision_service
 
 router = APIRouter(prefix="/attempts", tags=["Attempts"])
 
@@ -41,8 +43,18 @@ def start_attempt(
     payload: StartAttemptRequest,
     current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> AttemptResponse:
+    """
+    Starts (or resumes) an attempt for one (study_set, question_type)
+    pair. There is no other kind of attempt anymore - every attempt is
+    independently scoped to exactly one question type from the very
+    first one, so there's no separate "start the whole study set" flow
+    to branch around; this used to be two paths (an initial, study-set-
+    wide flow plus a revision-specific one bolted on beside it) that have
+    since collapsed into this single one.
+    """
     study_set_id_str = str(payload.study_set_id)
     doc_id_str = str(payload.document_id) if payload.document_id else None
+    question_type = payload.question_type
 
     # 1. Verify study set exists and belongs to current_user.user_id
     study_set = study_set_repository.get_study_set(study_set_id_str, user_id=current_user.user_id)
@@ -60,18 +72,35 @@ def start_attempt(
                 detail=f"Document with ID '{payload.document_id}' not found"
             )
 
-    # 2. Check if an active 'in_progress' attempt already exists for this user + study set
-    active_att = get_active_attempt_by_study_set(study_set_id_str, user_id=current_user.user_id)
+    # 2. Gate: is this (study_set, question_type) pair allowed to start
+    # an attempt right now? (4-attempt cap, scheduled due-date, and
+    # needs_attention are all covered here - see
+    # revision_service.is_attempt_allowed_now().)
+    allowed, reason = revision_service.is_attempt_allowed_now(
+        study_set_id_str, question_type, current_user.user_id
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=reason
+        )
+
+    # 3. Resume an already-in-progress attempt of this exact type, if one
+    # exists, instead of creating a duplicate.
+    active_att = get_active_attempt_by_study_set(
+        study_set_id_str, question_type=question_type, user_id=current_user.user_id
+    )
     if active_att:
         completion_info = get_attempt_section_completion_status(active_att["attempt_id"])
         active_att.update(completion_info)
         return AttemptResponse(**active_att)
 
-    # 3. Create new attempt if no in_progress attempt exists
+    # 4. Create a new attempt if no in_progress attempt exists for this type
     attempt_id = str(uuid.uuid4())
 
     save_attempt(
         attempt_id=attempt_id,
+        question_type=question_type,
         total_marks=0.0,
         marks_awarded=0.0,
         study_set_id=study_set_id_str,
@@ -95,11 +124,15 @@ def start_attempt(
     "/study-sets/{study_set_id}/active-attempt",
     response_model=AttemptResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get current active in-progress attempt for a study set",
-    description="Retrieves active in-progress quiz attempt metadata and section completion status for a study set."
+    summary="Get current active in-progress attempt for a study set and question type",
+    description="Retrieves active in-progress quiz attempt metadata and section completion status for one question type under a study set."
 )
 def get_active_attempt_for_study_set(
     study_set_id: uuid.UUID,
+    question_type: Literal["mcq", "application", "long", "short"] = Query(
+        ...,
+        description="Which question type to look up the active attempt for - required, since more than one type can be independently in-progress at once."
+    ),
     current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> AttemptResponse:
     study_set_id_str = str(study_set_id)
@@ -110,11 +143,13 @@ def get_active_attempt_for_study_set(
             detail=f"Study set with ID '{study_set_id}' not found"
         )
 
-    active_att = get_active_attempt_by_study_set(study_set_id_str, user_id=current_user.user_id)
+    active_att = get_active_attempt_by_study_set(
+        study_set_id_str, question_type=question_type, user_id=current_user.user_id
+    )
     if not active_att:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No active in-progress attempt found for study set '{study_set_id}'"
+            detail=f"No active in-progress attempt found for study set '{study_set_id}' and question_type '{question_type}'"
         )
 
     completion_info = get_attempt_section_completion_status(active_att["attempt_id"])
@@ -222,8 +257,18 @@ def finish_attempt(
             detail=f"Cannot finish attempt: incomplete sections: {rem}"
         )
 
+    # Pure status transition, nothing else - the revision_schedules side
+    # effect that used to belong here is gone. There's no longer a
+    # separate "the study set's initial attempt finishes" event distinct
+    # from "this attempt's one section finishes": the schedule row for a
+    # (study_set, question_type) pair is created/updated the moment its
+    # answers are saved, unconditionally, for every attempt (see
+    # evaluation_service.evaluate_and_save_attempt_answers() and
+    # revision_service.record_attempt_result()) - well before this route
+    # is ever called.
     save_attempt(
         attempt_id=attempt_id,
+        question_type=att.get("question_type"),
         total_marks=float(att.get("total_marks", 0.0)),
         marks_awarded=float(att.get("marks_awarded", 0.0)),
         study_set_id=att.get("study_set_id"),
@@ -231,6 +276,7 @@ def finish_attempt(
         status=AttemptStatus.COMPLETED.value,
         user_id=current_user.user_id
     )
+
     updated_att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not updated_att:
         raise HTTPException(

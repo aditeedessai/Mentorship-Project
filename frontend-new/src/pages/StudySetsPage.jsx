@@ -12,7 +12,7 @@ import { useTheme } from "../context/ThemeContext";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import {
   fetchStudySetDocuments,
-  fetchActiveAttempt,
+  fetchRevisionStatus,
 } from "../services/api";
 import jojoWaving from "../assets/jojo-waving.png";
 
@@ -41,9 +41,13 @@ function StudySetsPage({
         const id = ss.study_set_id;
 
         try {
-          const [docs, attempt] = await Promise.allSettled([
+          // Every question type is independently scoped/scheduled now -
+          // there is no single study-set-wide "active attempt" left to
+          // ask about. revision-status gives real per-type progress
+          // (has this type ever been completed) in one call instead.
+          const [docs, revStatus] = await Promise.allSettled([
             fetchStudySetDocuments(id),
-            fetchActiveAttempt(id),
+            fetchRevisionStatus(id),
           ]);
 
           const docList =
@@ -51,23 +55,22 @@ function StudySetsPage({
               ? docs.value || []
               : [];
 
-          const activeAttempt =
-            attempt.status === "fulfilled"
-              ? attempt.value
-              : null;
+          const statuses =
+            revStatus.status === "fulfilled"
+              ? revStatus.value?.statuses || []
+              : [];
 
           results[id] = {
             docCount: docList.length,
-            hasProgress: Boolean(activeAttempt),
-            completedSections:
-              activeAttempt?.completed_sections || [],
+            hasProgress: statuses.some((s) => s.attempts_taken > 0),
+            statuses,
             loaded: true,
           };
         } catch {
           results[id] = {
             docCount: 0,
             hasProgress: false,
-            completedSections: [],
+            statuses: [],
             loaded: true,
           };
         }
@@ -118,9 +121,10 @@ function StudySetsPage({
 
     if (!meta || !meta.loaded) return 0;
 
-    const sections = meta.completedSections || [];
+    const statuses = meta.statuses || [];
+    const touchedCount = statuses.filter((s) => s.attempts_taken > 0).length;
 
-    return Math.min(sections.length * 25, 100);
+    return Math.min(touchedCount * 25, 100);
   };
 
   const getCtaLabel = (id) => {
@@ -564,12 +568,21 @@ function StudySetsPage({
 
                         <span
                           className={`text-xs font-bold ${
-                            progress >= 75
+                            meta.loaded && progress >= 75
                               ? "text-emerald-500 dark:text-emerald-400"
+                              : !meta.loaded
+                              ? "opacity-50"
                               : ""
                           }`}
                         >
-                          {progress}%
+                          {/* Distinct from "0%" - a real 0% (genuinely
+                              untouched study set) and "still fetching
+                              revision-status" must never render
+                              identically, or a real user sees 0% for the
+                              several real seconds a cold dev-server load
+                              can take and reasonably concludes progress
+                              isn't being tracked at all. */}
+                          {meta.loaded ? `${progress}%` : "Loading…"}
                         </span>
                       </div>
 
@@ -582,12 +595,14 @@ function StudySetsPage({
                       >
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
-                            progress >= 75
+                            !meta.loaded
+                              ? "bg-white/20 animate-pulse"
+                              : progress >= 75
                               ? "bg-emerald-500"
                               : "bg-emerald-500/80"
                           }`}
                           style={{
-                            width: `${progress}%`,
+                            width: meta.loaded ? `${progress}%` : "100%",
                           }}
                         />
                       </div>

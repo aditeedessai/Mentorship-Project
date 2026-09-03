@@ -4,6 +4,7 @@ import {
   FileText,
   Lightbulb,
   BookOpen,
+  Loader2,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -27,7 +28,7 @@ const QUESTION_TYPES = [
     icon: <Lightbulb size={16} />,
   },
   {
-    id: "qna",
+    id: "long",
     title: "Long Answers",
     defaultTotal: 5,
     icon: <BookOpen size={16} />,
@@ -35,20 +36,47 @@ const QUESTION_TYPES = [
 ];
 
 function StudySetQuestionProgressCard({
-  completedSections = [],
+  revisionStatus = [],
   questionCounts = {},
+  loading = false,
 }) {
   const { isDarkMode } = useTheme();
 
+  const statusByType = {};
+  for (const s of revisionStatus) {
+    statusByType[s.question_type] = s;
+  }
+
   const progressItems = QUESTION_TYPES.map((typeMeta) => {
-    const isCompleted =
-      completedSections.includes(typeMeta.id) ||
-      (typeMeta.id === "qna" && completedSections.includes("long"));
+    const s = statusByType[typeMeta.id];
+    const attemptsTaken = s?.attempts_taken || 0;
+    const needsAttention = Boolean(s?.needs_attention);
+    const lastAccuracy = s?.last_accuracy;
+
+    // Every type is independently attempted/scheduled now - "done" just
+    // means it's been attempted at least once, same 0-or-100% binary
+    // this card always showed (a "section" is submitted as one atomic
+    // batch of answers, never partially), just sourced from the real
+    // per-type revision status instead of a now-nonexistent single
+    // study-set-wide attempt's completed_sections.
+    const isAttempted = attemptsTaken > 0;
 
     const total = questionCounts[typeMeta.id] || typeMeta.defaultTotal;
-    const answered = isCompleted ? total : 0;
-    const percentage = isCompleted ? 100 : 0;
-    const status = isCompleted ? "Completed" : "Pending";
+    const answered = isAttempted ? total : 0;
+    const percentage = isAttempted ? 100 : 0;
+    const status = needsAttention
+      ? "Needs Review"
+      : isAttempted
+      ? "Completed"
+      : "Pending";
+
+    // Plain-language, real-numbers explanation for a capped-and-still-
+    // weak pair - the accuracy tier and attempt count both come straight
+    // off the same revision-status entry this row already renders from,
+    // never restated/recomputed here.
+    const explanation = needsAttention
+      ? `${attemptsTaken} attempt${attemptsTaken === 1 ? "" : "s"}, still below 50% - let's try a different approach.`
+      : null;
 
     return {
       ...typeMeta,
@@ -56,6 +84,8 @@ function StudySetQuestionProgressCard({
       total,
       percentage,
       status,
+      lastAccuracy,
+      explanation,
     };
   });
 
@@ -84,58 +114,84 @@ function StudySetQuestionProgressCard({
         </span>
       </div>
 
-      <div className="space-y-3.5">
-        {progressItems.map((item) => (
-          <div
-            key={item.id}
-            className={`p-4 border rounded-2xl transition-all backdrop-blur-xl group ${
-              isDarkMode
-                ? "border-white/5 bg-white/5 hover:border-white/10"
-                : "border-gray-200/80 bg-white hover:border-[#8064C7]"
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2.5 rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] shrink-0">
-                  {item.icon}
+      {loading ? (
+        // Distinct from "0/5 Answered, Pending" for every row - that
+        // markup is indistinguishable from a genuinely untouched type,
+        // so while the real revision-status fetch is still in flight
+        // (which, on a cold dev-server load, real-world tested at up to
+        // ~8s) this must never render as if it were the final answer.
+        <div className="flex flex-1 items-center justify-center gap-2 py-10 text-sm opacity-50">
+          <Loader2 size={16} className="animate-spin" />
+          Loading progress...
+        </div>
+      ) : (
+        <div className="space-y-3.5">
+          {progressItems.map((item) => (
+            <div
+              key={item.id}
+              className={`p-4 border rounded-2xl transition-all backdrop-blur-xl group ${
+                isDarkMode
+                  ? "border-white/5 bg-white/5 hover:border-white/10"
+                  : "border-gray-200/80 bg-white hover:border-[#8064C7]"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2.5 rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] shrink-0">
+                    {item.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-bold truncate group-hover:text-[#8064C7] dark:group-hover:text-[#A78BFA] transition-colors">
+                      {item.title}
+                    </h4>
+                    <p className={`text-xs mt-0.5 font-mono font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
+                      {item.answered}/{item.total} Answered
+                      {item.lastAccuracy !== undefined && item.lastAccuracy !== null && (
+                        <> · {Math.round(item.lastAccuracy * 100) / 100}% last accuracy</>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h4 className="text-sm font-bold truncate group-hover:text-[#8064C7] dark:group-hover:text-[#A78BFA] transition-colors">
-                    {item.title}
-                  </h4>
-                  <p className={`text-xs mt-0.5 font-mono font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
-                    {item.answered}/{item.total} Answered
-                  </p>
-                </div>
+
+                <span
+                  className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ml-2 ${
+                    item.status === "Completed"
+                      ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
+                      : item.status === "Needs Review"
+                      ? "bg-amber-500/20 border-amber-500/30 text-amber-500"
+                      : isDarkMode
+                      ? "bg-white/5 border-white/10 text-white/40"
+                      : "bg-gray-100 border-gray-200 text-gray-400"
+                  }`}
+                >
+                  {item.status}
+                </span>
               </div>
 
-              <span
-                className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ml-2 ${
-                  item.status === "Completed"
-                    ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400"
-                    : isDarkMode
-                    ? "bg-white/5 border-white/10 text-white/40"
-                    : "bg-gray-100 border-gray-200 text-gray-400"
-                }`}
-              >
-                {item.status}
-              </span>
-            </div>
+              {item.explanation && (
+                <p className="mt-1 text-xs font-semibold text-amber-500">
+                  {item.explanation}
+                </p>
+              )}
 
-            <div className={`w-full h-2 rounded-full overflow-hidden mt-3 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  item.status === "Completed" ? "bg-emerald-500" : "bg-[#8064C7]"
-                }`}
-                style={{ width: `${item.percentage}%` }}
-              />
+              <div className={`w-full h-2 rounded-full overflow-hidden mt-3 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    item.status === "Completed"
+                      ? "bg-emerald-500"
+                      : item.status === "Needs Review"
+                      ? "bg-amber-500"
+                      : "bg-[#8064C7]"
+                  }`}
+                  style={{ width: `${item.percentage}%` }}
+                />
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
 
 export default StudySetQuestionProgressCard;
-
