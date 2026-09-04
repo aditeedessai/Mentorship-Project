@@ -73,7 +73,7 @@ export default function MCQPage({ onNavigate } = {}) {
   const [showNavDrawer, setShowNavDrawer] = useState(false)
   const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
 
-  // NEW: controls the celebration screen
+  // Controls the celebration screen
   const [showCelebration, setShowCelebration] = useState(false)
 
   // ── Anti-Cheating ──────────────────────────────────────────────
@@ -213,8 +213,6 @@ export default function MCQPage({ onNavigate } = {}) {
     setIsSubmitting(true)
 
     try {
-      // Build answers array for ALL section questions
-      // (answered + skipped)
       const answersPayload = []
 
       for (let i = 1; i <= questionCount; i++) {
@@ -237,7 +235,6 @@ export default function MCQPage({ onNavigate } = {}) {
         }
       }
 
-      // 1. Submit section answers
       if (answersPayload.length > 0) {
         await submitAnswers(
           attemptId,
@@ -246,13 +243,9 @@ export default function MCQPage({ onNavigate } = {}) {
         )
       }
 
-      // 2. Cleanup anti-cheating
       antiCheatCleanup()
-
-      // 3. Show celebration AFTER successful submission
       setShowCelebration(true)
 
-      // 4. Wait briefly so the user can see the celebration
       const studySetId = location.state?.studySetId
 
       setTimeout(() => {
@@ -260,12 +253,14 @@ export default function MCQPage({ onNavigate } = {}) {
           attemptId,
           studySetId,
           questionType: 'mcq',
+          questions,
         })
         navigate('/results', {
           state: {
             attemptId,
             studySetId,
             questionType: 'mcq',
+            questions,
           },
         })
       }, 2500)
@@ -316,11 +311,10 @@ export default function MCQPage({ onNavigate } = {}) {
     }))
   }, [currentQuestion])
 
-  // Don't render if no questions or quiz was terminated
   if (questionCount === 0 || quizTerminated) return null
 
   /* =========================================================
-     JOJO CELEBRATION SCREEN
+      JOJO CELEBRATION SCREEN
   ========================================================= */
 
   if (showCelebration) {
@@ -332,7 +326,6 @@ export default function MCQPage({ onNavigate } = {}) {
             : 'bg-[#F6F3FC] text-[#292530]'
         }`}
       >
-        {/* Celebration glow */}
         <div
           className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
             isDarkMode
@@ -341,7 +334,6 @@ export default function MCQPage({ onNavigate } = {}) {
           }`}
         />
 
-        {/* Confetti */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {confettiPieces.map((piece, index) => (
             <span
@@ -371,8 +363,6 @@ export default function MCQPage({ onNavigate } = {}) {
         </div>
 
         <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
-
-          {/* Jojo */}
           <div className="relative mb-7 flex h-64 w-64 items-center justify-center">
             <div
               className={`absolute inset-0 rounded-full blur-3xl ${
@@ -389,7 +379,6 @@ export default function MCQPage({ onNavigate } = {}) {
             />
           </div>
 
-          {/* Heading */}
           <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
             Quiz completed! 🎉
           </h1>
@@ -404,7 +393,6 @@ export default function MCQPage({ onNavigate } = {}) {
             Great job! Jojo is celebrating your progress.
           </p>
 
-          {/* Progress message */}
           <div
             className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
               isDarkMode
@@ -433,18 +421,15 @@ export default function MCQPage({ onNavigate } = {}) {
             </p>
           </div>
 
-          {/* Celebration dots */}
           <div className="mt-6 flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: '0ms' }}
             />
-
             <span
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: '150ms' }}
             />
-
             <span
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: '300ms' }}
@@ -466,7 +451,6 @@ export default function MCQPage({ onNavigate } = {}) {
           : 'bg-[#F6F3FC] text-[#292530]'
       }`}
     >
-      {/* Fullscreen gate — blocks quiz until fullscreen is confirmed */}
       {!isFullscreenReady && (
         <div
           className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${
@@ -514,7 +498,6 @@ export default function MCQPage({ onNavigate } = {}) {
         </div>
       )}
 
-      {/* Anti-cheating warning system */}
       <AntiCheatingWarning
         warnings={warnings}
         activeViolation={activeViolation}
