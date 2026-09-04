@@ -25,6 +25,13 @@ class GenerateQuestionsRequest(BaseModel):
         None,
         description="Optional document UUID to generate quiz from"
     )
+    attempt_id: str | None = Field(
+        None,
+        description="Attempt this batch of questions is being generated for - "
+                     "scopes the newly generated questions to this attempt so a "
+                     "revision attempt gets its own fresh set instead of every "
+                     "question ever generated for this study set + type"
+    )
 
 
 class QuestionResponse(BaseModel):

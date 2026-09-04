@@ -229,23 +229,35 @@ export default function ConfigureSession({
         )
       }
 
-      // 1. Check if questions already exist for the selected type and study set
+      // 1. Check if questions already exist for THIS SPECIFIC ATTEMPT -
+      // not "does this study set + type have any questions ever
+      // generated", which used to silently serve a revision attempt
+      // every question left over from a prior (already-completed)
+      // attempt instead of a fresh set. A resumed in_progress attempt
+      // reuses the same attempt_id (see getOrCreateAttempt ->
+      // start_attempt's resume path) and so still finds its own
+      // questions here; a new revision attempt gets a brand-new
+      // attempt_id and so correctly finds none yet.
       let questions = await fetchQuestions(
         studySetId,
-        selectedType
+        selectedType,
+        currentAttempt.attempt_id
       )
 
-      // 2. Only generate new questions if none exist yet
+      // 2. Only generate new questions if this attempt doesn't have its
+      // own set yet.
       if (!questions || questions.length === 0) {
         await generateQuestions(
           studySetId,
           selectedType,
-          documentId
+          documentId,
+          currentAttempt.attempt_id
         )
 
         questions = await fetchQuestions(
           studySetId,
-          selectedType
+          selectedType,
+          currentAttempt.attempt_id
         )
       }
 

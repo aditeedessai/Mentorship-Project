@@ -619,6 +619,22 @@ def evaluate_and_save_attempt_answers(
     earned_marks = sum(float(rec.get("marks_awarded", 0.0)) for rec in eval_records)
     percentage = round((earned_marks / total_marks * 100.0), 2) if total_marks > 0 else 0.0
 
+    # status="completed" (not attempt.get("status", ...), which just
+    # re-saved whatever it already was and left it stuck on
+    # 'in_progress' forever): every attempt is scoped to exactly one
+    # question_type/section now, so THIS call finishing IS the whole
+    # attempt finishing - there is no later "all sections done" event
+    # to wait for. Marking it completed here, synchronously, is also
+    # what makes the lockout below actually take effect immediately:
+    # attempt_repository.get_active_attempt_by_study_set() (the
+    # "resume an in-progress attempt" check inside start_attempt) only
+    # matches status='in_progress' rows - leaving this attempt
+    # in_progress meant a student revisiting this (study_set,
+    # question_type) pair before finish_attempt happened to run (it's
+    # only ever called from ResultsPage's useEffect, best-effort, and
+    # was never guaranteed to run at all) would silently resume THIS
+    # already-answered/locked attempt instead of the revision gate
+    # (is_attempt_allowed_now, below) ever being consulted for a new one.
     save_attempt(
         attempt_id=attempt_id,
         question_type=attempt.get("question_type"),
@@ -626,7 +642,7 @@ def evaluate_and_save_attempt_answers(
         document_id=attempt.get("document_id"),
         total_marks=total_marks,
         marks_awarded=earned_marks,
-        status=attempt.get("status", "in_progress")
+        status="completed"
     )
 
     # Write-time revision_schedules update - runs unconditionally for

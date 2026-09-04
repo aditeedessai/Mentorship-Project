@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import QuizHeader from '../components/quiz/QuizHeader'
@@ -76,6 +76,24 @@ export default function MCQPage({ onNavigate } = {}) {
   // NEW: controls the celebration screen
   const [showCelebration, setShowCelebration] = useState(false)
 
+  // NEW: controls the timeout screen
+  const [isTimedOut, setIsTimedOut] = useState(false)
+
+  // Holds the live countdown interval so it can be cleared imperatively
+  // (from a click handler, not just effect cleanup) the instant the quiz ends.
+  const timerIntervalRef = useRef(null)
+
+  // Guards manual submission and timer-expiry from both firing — whichever
+  // reaches this first "wins" and the other becomes a no-op.
+  const quizEndedRef = useRef(false)
+
+  const clearQuizTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+  }, [])
+
   // ── Anti-Cheating ──────────────────────────────────────────────
   const {
     isFullscreenReady,
@@ -103,28 +121,55 @@ export default function MCQPage({ onNavigate } = {}) {
     }
   }, [questionCount, navigate, onNavigate, location.state?.studySetId])
 
+  // Auto-abort triggered when the countdown reaches zero. Guarded by
+  // quizEndedRef so a manual submit that lands in the same tick wins
+  // instead of both handlers running.
+  const handleTimeExpired = useCallback(() => {
+    if (quizEndedRef.current) return
+    quizEndedRef.current = true
+
+    clearQuizTimer()
+    antiCheatCleanup()
+    setIsTimedOut(true)
+
+    setTimeout(() => {
+      onNavigate?.('dashboard')
+      navigate('/')
+    }, 2500)
+  }, [antiCheatCleanup, clearQuizTimer, navigate, onNavigate])
+
   // Timer — only ticks when fullscreen is established and no active violation
   useEffect(() => {
     if (
       remainingSeconds <= 0 ||
       !isFullscreenReady ||
       isViolationActive ||
-      showCelebration
+      showCelebration ||
+      quizEndedRef.current
     ) {
       return
     }
 
-    const interval = setInterval(() => {
+    timerIntervalRef.current = setInterval(() => {
       setRemainingSeconds((prev) => Math.max(0, prev - 1))
     }, 1000)
 
-    return () => clearInterval(interval)
+    return () => clearQuizTimer()
   }, [
     remainingSeconds,
     isFullscreenReady,
     isViolationActive,
     showCelebration,
+    clearQuizTimer,
   ])
+
+  // Auto-abort the instant the countdown reaches zero — races against a
+  // manual submit via quizEndedRef, so only one of the two can win.
+  useEffect(() => {
+    if (questionCount > 0 && remainingSeconds === 0 && !showCelebration) {
+      handleTimeExpired()
+    }
+  }, [questionCount, remainingSeconds, showCelebration, handleTimeExpired])
 
   const goToQuestion = useCallback(
     (num) => {
@@ -208,7 +253,9 @@ export default function MCQPage({ onNavigate } = {}) {
   }, [currentQuestion, selectedAnswers])
 
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || !attemptId) return
+    if (quizEndedRef.current || isSubmitting || !attemptId) return
+    quizEndedRef.current = true
+    clearQuizTimer()
 
     setIsSubmitting(true)
 
@@ -271,6 +318,9 @@ export default function MCQPage({ onNavigate } = {}) {
       }, 2500)
     } catch (err) {
       console.error('Failed to submit quiz:', err)
+      // Submission failed — allow the user to retry rather than stranding
+      // them on a dead "Submit" button (the timer stays stopped either way).
+      quizEndedRef.current = false
     } finally {
       setIsSubmitting(false)
     }
@@ -284,13 +334,18 @@ export default function MCQPage({ onNavigate } = {}) {
     onNavigate,
     location.state,
     antiCheatCleanup,
+    clearQuizTimer,
   ])
 
   const handleAbortConfirm = useCallback(() => {
+    if (quizEndedRef.current) return
+    quizEndedRef.current = true
+    clearQuizTimer()
+
     antiCheatCleanup()
     onNavigate?.('dashboard')
     navigate('/')
-  }, [navigate, onNavigate, antiCheatCleanup])
+  }, [navigate, onNavigate, antiCheatCleanup, clearQuizTimer])
 
   const toggleBookmark = useCallback(() => {
     setBookmarkedQuestions((prev) => ({
@@ -449,6 +504,84 @@ export default function MCQPage({ onNavigate } = {}) {
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: '300ms' }}
             />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* =========================================================
+     TIME'S UP / AUTO-ABORT SCREEN
+  ========================================================= */
+
+  if (isTimedOut) {
+    return (
+      <div
+        className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${
+          isDarkMode
+            ? 'bg-[#0E0B15] text-white'
+            : 'bg-[#F6F3FC] text-[#292530]'
+        }`}
+      >
+        <div
+          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
+            isDarkMode ? 'bg-red-500/15' : 'bg-red-500/10'
+          }`}
+        />
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
+          <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-3xl bg-red-500/15 text-red-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+            Time&apos;s up!
+          </h1>
+
+          <p
+            className={`mt-3 max-w-md text-sm leading-relaxed ${
+              isDarkMode ? 'text-white/55' : 'text-gray-500'
+            }`}
+          >
+            The countdown reached 00:00 before you submitted, so this quiz
+            session has been automatically aborted.
+          </p>
+
+          <div
+            className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
+              isDarkMode
+                ? 'border-white/10 bg-white/5'
+                : 'border-red-500/10 bg-white/70'
+            }`}
+          >
+            <p
+              className={`text-sm font-bold ${
+                isDarkMode ? 'text-white/80' : 'text-[#514863]'
+              }`}
+            >
+              Your progress on this attempt was not saved.
+            </p>
+
+            <p
+              className={`mt-1 text-xs ${
+                isDarkMode ? 'text-white/35' : 'text-gray-400'
+              }`}
+            >
+              Taking you back to your dashboard...
+            </p>
           </div>
         </div>
       </div>

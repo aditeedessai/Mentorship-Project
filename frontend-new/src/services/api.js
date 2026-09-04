@@ -232,11 +232,16 @@ export async function uploadDocument(studySetId, fileOrFormData) {
 /**
  * Generate questions for a study set.
  * POST /api/study-sets/{studySetId}/questions/generate
+ *
+ * `attemptId` (optional) tags the freshly-generated batch as belonging
+ * to that specific attempt, so a revision attempt's questions never mix
+ * with a prior attempt's - see fetchQuestions()'s own `attemptId` param.
  */
 export async function generateQuestions(
   studySetId,
   frontendType,
-  documentId = null
+  documentId = null,
+  attemptId = null
 ) {
   const backendType = toBackendType(frontendType);
 
@@ -248,6 +253,10 @@ export async function generateQuestions(
     payload.document_id = documentId;
   }
 
+  if (attemptId) {
+    payload.attempt_id = attemptId;
+  }
+
   return request(`/api/study-sets/${studySetId}/questions/generate`, {
     method: "POST",
     body: JSON.stringify(payload),
@@ -256,11 +265,22 @@ export async function generateQuestions(
 
 /**
  * Fetch questions for a study set.
+ *
+ * `attemptId` (optional): when given, scopes the result to ONLY the
+ * questions generated for that specific attempt, instead of every
+ * question ever generated for this study set + type across every past
+ * attempt - pass the current attempt's ID whenever fetching questions
+ * to actually show/take (a resumed in-progress attempt reuses its own
+ * ID and so still sees its own questions; a new revision attempt gets a
+ * fresh ID and so correctly sees none until it generates its own).
  */
-export async function fetchQuestions(studySetId, frontendType) {
+export async function fetchQuestions(studySetId, frontendType, attemptId = null) {
   const backendType = toBackendType(frontendType);
 
-  const url = `/api/study-sets/${studySetId}/questions?question_type=${backendType}`;
+  let url = `/api/study-sets/${studySetId}/questions?question_type=${backendType}`;
+  if (attemptId) {
+    url += `&attempt_id=${encodeURIComponent(attemptId)}`;
+  }
 
   const data = await request(url);
 

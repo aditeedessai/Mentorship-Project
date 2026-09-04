@@ -10,6 +10,7 @@ from backend.api.schemas.question import (
     QuestionType,
 )
 from backend.database import quiz_repository, study_set_repository
+from backend.database.attempt_repository import get_attempt as get_attempt_from_db
 from backend.services import quiz_service
 
 router = APIRouter(tags=["Questions"])
@@ -45,12 +46,52 @@ def generate_questions(
                 detail=f"Document with ID '{payload.document_id}' not found"
             )
 
+    # 2b. If payload specifies attempt_id, verify it belongs to this user,
+    # this study set, and this question type - the generated batch below
+    # gets tagged with it, so a mismatched/foreign attempt_id must never
+    # be accepted silently.
+    if payload.attempt_id:
+        attempt = get_attempt_from_db(payload.attempt_id, user_id=current_user.user_id)
+        if (
+            not attempt
+            or attempt.get("study_set_id") != str(study_set_id)
+            or attempt.get("question_type") != payload.question_type.value
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Attempt with ID '{payload.attempt_id}' not found for this study set and question type"
+            )
+
+    # 2c. Idempotency guard: if this attempt already has its own generated
+    # questions of this type, return that existing set instead of
+    # generating (and appending) a second batch on top of it. Without
+    # this, two requests for the same attempt_id - a double-click before
+    # the "Start" button's disabled state paints, a network retry after a
+    # response was lost, two browser tabs - each independently see zero
+    # existing questions for this brand-new attempt and each generate a
+    # full fresh batch, since generate_quiz() always assigns new UUIDs
+    # and never checks for a prior generation itself. This makes the
+    # endpoint safe to call more than once for the same attempt no matter
+    # the cause, instead of relying on the frontend to never do so.
+    if payload.attempt_id:
+        already_generated = quiz_repository.get_questions_by_study_set(
+            str(study_set_id), attempt_id=payload.attempt_id
+        )
+        already_generated = [
+            q for q in already_generated if q.get("question_type") == payload.question_type.value
+        ]
+        if already_generated:
+            return QuestionListResponse(
+                questions=[QuestionResponse(**q) for q in already_generated]
+            )
+
     # 3. Call quiz_service.run_quiz
     try:
         raw_questions = quiz_service.run_quiz(
             study_set_id=str(study_set_id),
             question_type=payload.question_type.value,
-            document_ids=doc_id_str
+            document_ids=doc_id_str,
+            attempt_id=payload.attempt_id
         )
     except ValueError as e:
         raise HTTPException(
@@ -88,6 +129,13 @@ def list_questions(
         None,
         description="Optional filter by question type (mcq, application, long, short)"
     ),
+    attempt_id: str | None = Query(
+        None,
+        description="Optional attempt ID to scope results to ONLY the questions "
+                     "generated for that specific attempt (e.g. the quiz page for "
+                     "an in-progress or just-started attempt). Omit to get every "
+                     "question ever generated for this study set (+ type)."
+    ),
     current_user: AuthenticatedUser = Depends(get_current_user)
 ) -> QuestionListResponse:
     # 1. Verify study set exists and belongs to current_user.user_id
@@ -98,9 +146,27 @@ def list_questions(
             detail=f"Study set with ID '{study_set_id}' not found"
         )
 
+    # Guards against calling this function directly (bypassing FastAPI's
+    # dependency-injection layer, as several tests in this repo do) -
+    # in that case `attempt_id` is still the raw Query(None, ...)
+    # sentinel object, not a real None, so `if attempt_id:` alone would
+    # be true for it. Same defensive pattern question_type already uses
+    # below (hasattr(..., "value") / isinstance(..., str)).
+    attempt_id_str = attempt_id if isinstance(attempt_id, str) else None
+
+    # 1b. If attempt_id is given, verify it belongs to this user and this
+    # study set before using it to scope the query below.
+    if attempt_id_str:
+        attempt = get_attempt_from_db(attempt_id_str, user_id=current_user.user_id)
+        if not attempt or attempt.get("study_set_id") != str(study_set_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Attempt with ID '{attempt_id_str}' not found for this study set"
+            )
+
     # 2. Query questions from Supabase quiz_repository
     try:
-        db_questions = quiz_repository.get_questions_by_study_set(str(study_set_id))
+        db_questions = quiz_repository.get_questions_by_study_set(str(study_set_id), attempt_id=attempt_id_str)
         if question_type and hasattr(question_type, "value"):
             target_val = question_type.value
             db_questions = [
