@@ -5,11 +5,13 @@ import {
   fetchResults,
   fetchPerformance,
   fetchEvaluations,
+  fetchStudySetResultsSummary,
   finishAttempt,
 } from '../services/api';
 import {
   CheckCircle2,
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   RotateCcw,
   Sparkles,
@@ -18,7 +20,18 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
+  Clock,
 } from 'lucide-react';
+
+// Mirrors backend/services/evaluation_service.py's SECTION_TITLE_MAP -
+// the same "section title" this codebase already uses elsewhere for
+// these types, kept consistent rather than inventing a new label set.
+const SECTION_TITLE_MAP = {
+  mcq: 'MCQ',
+  application: 'Application',
+  long: 'Long Answer',
+  short: 'Short Answer',
+};
 
 import jojoEvaluating from '../assets/jojo-evaluating.png';
 
@@ -62,12 +75,30 @@ export default function ResultsPage({
   const [evaluations, setEvaluations] = useState([]);
   const [error, setError] = useState(null);
   const [activeSection, setActiveSection] = useState(null);
+  const [aggregateSummary, setAggregateSummary] = useState(null);
 
   const finishedAttemptRef = useRef(null);
+
+  // Reached via StudySetHeroHeaderCard's "View Results" button, which
+  // has no specific attempt in hand - only a studySetId. That path shows
+  // a cumulative, cross-attempt breakdown instead of one attempt's
+  // evaluation, since there's no single attempt_id to scope to.
+  const isAggregateMode =
+    !passedAttemptId &&
+    Boolean(studySetId) &&
+    studySetId !== 'default-set';
 
   const handleGoDashboard = () => {
     if (typeof onNavigate === 'function') {
       onNavigate('dashboard');
+    }
+
+    navigate('/');
+  };
+
+  const handleBackToStudySet = () => {
+    if (typeof onNavigate === 'function') {
+      onNavigate('study-set', { studySetId });
     }
 
     navigate('/');
@@ -198,6 +229,47 @@ export default function ResultsPage({
     passedAttemptId,
     location.state?.questionType,
   ]);
+
+  useEffect(() => {
+    if (!isAggregateMode) return;
+
+    let isMounted = true;
+
+    async function loadAggregateResults() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const summary = await fetchStudySetResultsSummary(studySetId);
+
+        if (isMounted) {
+          setAggregateSummary(summary);
+        }
+      } catch (err) {
+        console.error(
+          'Error loading study set results summary:',
+          err
+        );
+
+        if (isMounted) {
+          setError(
+            err.message ||
+              'Failed to load results'
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadAggregateResults();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAggregateMode, studySetId]);
 
   const isAttemptComplete = useMemo(() => {
     if (
@@ -449,6 +521,102 @@ export default function ResultsPage({
     resultsData,
     evaluations,
   ]);
+
+  // Cross-attempt breakdown for aggregate mode - one card per question
+  // type that has ever been attempted for this study set, each rolling
+  // ALL of that type's attempts together (see
+  // evaluation_service.get_study_set_results_summary()), so a type
+  // attempted 3 times shows the true cumulative total, not just its
+  // latest attempt.
+  const aggregateSectionsList = useMemo(() => {
+    const sections = aggregateSummary?.sections || [];
+
+    return sections.map((s) => ({
+      questionType: s.question_type,
+      name: s.section_title,
+      totalAttempted: s.total_attempted,
+      totalCorrect: s.total_correct,
+      percentage: Math.round(s.accuracy_percentage),
+      attemptsTaken: s.attempts_taken,
+      lastAttemptAt: s.last_attempt_at,
+      remark: s.remark,
+    }));
+  }, [aggregateSummary]);
+
+  const aggregateTotals = useMemo(() => {
+    if (aggregateSectionsList.length === 0) {
+      return { totalAttempted: 0, totalCorrect: 0, overallPercentage: 0 };
+    }
+
+    const totalAttempted = aggregateSectionsList.reduce(
+      (sum, s) => sum + s.totalAttempted,
+      0
+    );
+    const totalCorrect = aggregateSectionsList.reduce(
+      (sum, s) => sum + s.totalCorrect,
+      0
+    );
+
+    return {
+      totalAttempted,
+      totalCorrect,
+      overallPercentage:
+        totalAttempted > 0
+          ? Math.round((totalCorrect / totalAttempted) * 100)
+          : 0,
+    };
+  }, [aggregateSectionsList]);
+
+  const aggregateStrongestWeakest = useMemo(() => {
+    if (aggregateSectionsList.length === 0) {
+      return { strongest: null, weakest: null };
+    }
+
+    const sorted = [...aggregateSectionsList].sort(
+      (a, b) => b.percentage - a.percentage
+    );
+
+    return {
+      strongest: sorted[0],
+      weakest: sorted[sorted.length - 1],
+    };
+  }, [aggregateSectionsList]);
+
+  const aggregateStrengths = useMemo(() => {
+    const { strongest } = aggregateStrongestWeakest;
+    if (!strongest) return ['No results recorded yet for this study set.'];
+
+    return [
+      `Strongest Section: ${strongest.name} — ${strongest.totalCorrect}/${strongest.totalAttempted} Correct (${strongest.percentage}%, Remark: ${strongest.remark})`,
+    ];
+  }, [aggregateStrongestWeakest]);
+
+  const aggregateImprovements = useMemo(() => {
+    const { weakest } = aggregateStrongestWeakest;
+    const list = [];
+
+    if (weakest) {
+      list.push(
+        `Weakest Section: ${weakest.name} — ${weakest.totalCorrect}/${weakest.totalAttempted} Correct (${weakest.percentage}%, Remark: ${weakest.remark})`
+      );
+    }
+
+    const attemptedTypes = new Set(aggregateSectionsList.map((s) => s.questionType));
+    const neverAttempted = ['mcq', 'application', 'short', 'long'].filter(
+      (t) => !attemptedTypes.has(t)
+    );
+
+    if (neverAttempted.length > 0) {
+      const formatted = neverAttempted.map((t) => SECTION_TITLE_MAP[t] || t).join(', ');
+      list.push(`Not yet attempted: ${formatted}`);
+    }
+
+    if (list.length === 0) {
+      list.push('No backend improvement recommendations available.');
+    }
+
+    return list;
+  }, [aggregateStrongestWeakest, aggregateSectionsList]);
 
   const activeQuestions = useMemo(() => {
     if (
@@ -872,7 +1040,8 @@ export default function ResultsPage({
   if (
     error &&
     !performanceData &&
-    evaluations.length === 0
+    evaluations.length === 0 &&
+    !aggregateSummary
   ) {
     return (
       <div className="mx-auto mt-20 max-w-md rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-center text-red-400">
@@ -909,6 +1078,25 @@ export default function ResultsPage({
 
       {/* 1. Header Banner */}
       <div className="space-y-3">
+        {/* Back button - reuses the same bordered/rounded button
+            language as the rest of this page's controls (see the
+            bottom nav's "Return to Dashboard" button below), placed at
+            the top so it reads as the page's primary way back, distinct
+            from "Return to Dashboard" (which goes to the global
+            dashboard, not this specific study set). */}
+        <button
+          type="button"
+          onClick={handleBackToStudySet}
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+            isDarkMode
+              ? 'border-white/10 bg-white/5 text-white/80 hover:bg-white/10'
+              : 'border-gray-200 bg-white/80 text-[#292530] hover:bg-white'
+          }`}
+        >
+          <ArrowLeft size={14} />
+          Back
+        </button>
+
         <div
           className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1 text-xs font-bold ${
             isDarkMode
@@ -919,7 +1107,9 @@ export default function ResultsPage({
           <span className="flex h-2 w-2 animate-pulse rounded-full bg-[#8064C7]" />
 
           <span>
-            {isAttemptComplete
+            {isAggregateMode
+              ? `Study Set Results • ${aggregateSectionsList.length} Section${aggregateSectionsList.length === 1 ? '' : 's'} Attempted`
+              : isAttemptComplete
               ? 'Evaluation Completed • Final Assessment'
               : `Section Completed (${completedSectionsCount}/4 Sections Done)`}
           </span>
@@ -932,7 +1122,9 @@ export default function ResultsPage({
 
           <div>
             <h1 className="text-3xl font-black tracking-tight">
-              {isAttemptComplete
+              {isAggregateMode
+                ? 'Study Set Results'
+                : isAttemptComplete
                 ? 'Overall Performance'
                 : 'Section Evaluation Snapshot'}
             </h1>
@@ -944,7 +1136,9 @@ export default function ResultsPage({
                   : 'text-gray-500'
               }`}
             >
-              {isAttemptComplete
+              {isAggregateMode
+                ? 'Cumulative performance across every attempt of every question type in this study set.'
+                : isAttemptComplete
                 ? 'Detailed breakdown of questions answered right vs wrong across all completed sections.'
                 : 'Performance snapshot for your recent section submission and cumulative quiz progress.'}
             </p>
@@ -953,6 +1147,59 @@ export default function ResultsPage({
       </div>
 
       {/* 2. Hero Overall Performance Banner */}
+      {isAggregateMode ? (
+      <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-5 text-white shadow-xl sm:p-8">
+        <div className="relative z-10 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
+              <CheckCircle2 size={14} />
+              {aggregateSectionsList.length} of 4 Sections Attempted
+            </span>
+
+            <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
+              Cumulative Performance
+            </h1>
+
+            <p className="mt-1 text-xs text-purple-100 sm:text-sm">
+              Combined across every attempt ever completed for this study set.
+            </p>
+          </div>
+
+          <div className="flex w-full flex-wrap items-center justify-around gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md sm:justify-center sm:gap-4 sm:p-5 lg:w-auto">
+            <div className="px-2 text-center sm:px-3">
+              <div className="text-2xl font-black text-white sm:text-3xl">
+                {aggregateTotals.overallPercentage}%
+              </div>
+              <div className="mt-0.5 text-[10px] font-bold text-purple-200 sm:text-xs">
+                Overall %
+              </div>
+            </div>
+
+            <div className="hidden h-8 w-px bg-white/20 sm:block" />
+
+            <div className="px-2 text-center sm:px-3">
+              <div className="text-2xl font-black text-emerald-300 sm:text-3xl">
+                {aggregateTotals.totalCorrect}
+              </div>
+              <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 sm:text-xs">
+                Correct
+              </div>
+            </div>
+
+            <div className="hidden h-8 w-px bg-white/20 sm:block" />
+
+            <div className="px-2 text-center sm:px-3">
+              <div className="text-2xl font-black sm:text-3xl">
+                {aggregateTotals.totalAttempted}
+              </div>
+              <div className="mt-0.5 text-[10px] font-bold text-purple-200 sm:text-xs">
+                Total Attempted
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      ) : (
       <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-5 text-white shadow-xl sm:p-8">
         <div className="relative z-10 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
           <div>
@@ -1054,9 +1301,109 @@ export default function ResultsPage({
           </div>
         </div>
       </div>
+      )}
 
       {/* 3. Section-Wise Breakdown */}
-      {sectionsList.length > 0 && (
+      {isAggregateMode ? (
+        aggregateSectionsList.length > 0 && (
+          <div
+            className={`space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+              isDarkMode
+                ? 'border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]'
+                : 'border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-black tracking-tight">
+                Section-Wise Breakdown
+              </h2>
+
+              <span
+                className={`text-xs ${
+                  isDarkMode ? 'text-white/50' : 'text-gray-400'
+                }`}
+              >
+                Cumulative performance for every attempted section
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+              {aggregateSectionsList.map((sec) => (
+                <div
+                  key={sec.questionType}
+                  className={`rounded-2xl border p-5 transition-all duration-300 ${
+                    isDarkMode
+                      ? 'border-white/5 bg-white/5'
+                      : 'border-gray-200/80 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#8064C7] dark:text-[#A78BFA]">
+                      {sec.name}
+                    </span>
+
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                        isDarkMode
+                          ? 'bg-[#8064C7]/30 text-[#A78BFA]'
+                          : 'bg-[#8064C7]/10 text-[#8064C7]'
+                      }`}
+                    >
+                      {sec.percentage}%
+                    </span>
+                  </div>
+
+                  <div className="mt-3 text-2xl font-black tracking-tight">
+                    {sec.totalCorrect}{' '}
+                    <span
+                      className={`text-xs font-semibold ${
+                        isDarkMode ? 'text-white/50' : 'text-gray-500'
+                      }`}
+                    >
+                      / {sec.totalAttempted} Correct
+                    </span>
+                  </div>
+
+                  <div className="mt-1 text-xs font-bold text-[#8064C7] dark:text-[#A78BFA]">
+                    Remark: <span>{sec.remark}</span>
+                  </div>
+
+                  <div className="mt-3">
+                    <div
+                      className={`h-1.5 w-full overflow-hidden rounded-full ${
+                        isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                      }`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-[#8064C7] transition-all duration-500"
+                        style={{
+                          width: `${Math.min(Math.max(sec.percentage, 0), 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    className={`mt-3 flex items-center gap-1.5 text-[11px] font-semibold ${
+                      isDarkMode ? 'text-white/50' : 'text-gray-500'
+                    }`}
+                  >
+                    <Clock size={12} />
+                    <span>
+                      {sec.attemptsTaken} attempt{sec.attemptsTaken === 1 ? '' : 's'} · last{' '}
+                      {new Date(sec.lastAttemptAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      ) : (
+      sectionsList.length > 0 && (
         <div
           className={`space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
             isDarkMode
@@ -1367,6 +1714,7 @@ export default function ResultsPage({
               </div>
             )}
         </div>
+      )
       )}
 
       {/* 5. Key Strengths & Areas for Improvement */}
@@ -1386,7 +1734,7 @@ export default function ResultsPage({
           </div>
 
           <ul className="space-y-2">
-            {strengths.map(
+            {(isAggregateMode ? aggregateStrengths : strengths).map(
               (item, idx) => (
                 <li
                   key={idx}
@@ -1419,7 +1767,7 @@ export default function ResultsPage({
           </div>
 
           <ul className="space-y-2">
-            {improvements.map(
+            {(isAggregateMode ? aggregateImprovements : improvements).map(
               (item, idx) => (
                 <li
                   key={idx}
@@ -1437,7 +1785,9 @@ export default function ResultsPage({
         </div>
       </div>
 
-      {/* 6. Navigation Controls */}
+      {/* 6. Navigation Controls - not shown in aggregate mode, which
+          already has its one Back control in the header above. */}
+      {!isAggregateMode && (
       <div
         className={`flex flex-col items-center justify-between gap-4 rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-300 sm:flex-row ${
           isDarkMode
@@ -1503,6 +1853,7 @@ export default function ResultsPage({
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

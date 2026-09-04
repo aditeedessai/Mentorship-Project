@@ -78,6 +78,53 @@ def get_exams(user_id: str) -> list[dict]:
         connection.close()
 
 
+def get_nearest_upcoming_exam_for_study_set(study_set_id: str, user_id: str) -> dict | None:
+    """
+    The single nearest upcoming exam linked to a study set, or None if
+    none is linked (or every linked exam has already passed).
+
+    Mirrors get_exams()'s "delete past exams, then select" pattern for
+    the same reason - no scheduler prunes past exams elsewhere in this
+    project. A plain live SELECT against the exams table, executed fresh
+    on every call, with no caching or memoization anywhere in this
+    function or its call path - this is deliberate: revision_service's
+    due-date computation depends on this reflecting an exam the instant
+    it's linked (or its date changed), even mid-schedule, not a snapshot
+    from whenever this was first called.
+
+    Ownership enforced directly (not via RLS - see get_exams()'s
+    docstring for why).
+    """
+    connection = get_connection()
+    try:
+        connection.execute(
+            """
+            DELETE FROM exams
+            WHERE user_id = ? AND exam_date < CURRENT_DATE
+            """,
+            (user_id,)
+        )
+        connection.commit()
+
+        row = connection.execute(
+            """
+            SELECT id, user_id, study_set_id, subject, exam_type, exam_date, created_at, updated_at
+            FROM exams
+            WHERE user_id = ? AND study_set_id = ? AND exam_date >= CURRENT_DATE
+            ORDER BY exam_date ASC
+            LIMIT 1
+            """,
+            (user_id, study_set_id)
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return dict(row)
+    finally:
+        connection.close()
+
+
 def delete_exam(exam_id: str, user_id: str) -> bool:
     """
     Delete an exam by ID with user ownership check.

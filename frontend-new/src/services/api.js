@@ -300,13 +300,21 @@ export async function fetchQuestions(studySetId, frontendType) {
 // ── Attempts ─────────────────────────────────────────────────────────
 
 /**
- * Fetch the active in-progress attempt for a study set if one exists.
- * GET /api/attempts/study-sets/{studySetId}/active-attempt
+ * Fetch the active in-progress attempt for one (study set, question type)
+ * pair if one exists. GET /api/attempts/study-sets/{studySetId}/active-attempt?question_type=
  * Returns null if no active attempt exists (404).
+ *
+ * `frontendType` is required now - every attempt is independently scoped
+ * to exactly one question type from creation, so "the active attempt for
+ * a study set" is no longer a well-formed question on its own (more than
+ * one type can be genuinely in-progress at once).
  */
-export async function fetchActiveAttempt(studySetId) {
+export async function fetchActiveAttempt(studySetId, frontendType) {
+  const backendType = toBackendType(frontendType);
   try {
-    return await request(`/api/attempts/study-sets/${studySetId}/active-attempt`);
+    return await request(
+      `/api/attempts/study-sets/${studySetId}/active-attempt?question_type=${backendType}`
+    );
   } catch (err) {
     if (err.message && err.message.includes("404")) {
       return null;
@@ -316,27 +324,50 @@ export async function fetchActiveAttempt(studySetId) {
 }
 
 /**
- * Get the active in-progress attempt for a study set, or create a new attempt if none exists.
+ * Get the active in-progress attempt for one (study set, question type)
+ * pair, or create a new attempt if none exists.
  */
-export async function getOrCreateAttempt(studySetId) {
-  const active = await fetchActiveAttempt(studySetId);
+export async function getOrCreateAttempt(studySetId, frontendType) {
+  const active = await fetchActiveAttempt(studySetId, frontendType);
   if (active) {
     return active;
   }
-  return createAttempt(studySetId);
+  return createAttempt(studySetId, frontendType);
 }
 
 /**
- * Create a new attempt.
+ * Create a new attempt for one (study set, question type) pair.
  * POST /api/attempts
  */
-export async function createAttempt(studySetId) {
+export async function createAttempt(studySetId, frontendType) {
+  const backendType = toBackendType(frontendType);
   return request("/api/attempts", {
     method: "POST",
     body: JSON.stringify({
       study_set_id: studySetId,
+      question_type: backendType,
     }),
   });
+}
+
+/**
+ * Fetch per-question-type revision/attempt status for a study set -
+ * available/attempts_taken/needs_attention/next_due_date/last_accuracy
+ * for each of the 4 types. GET /api/study-sets/{studySetId}/revision-status
+ */
+export async function fetchRevisionStatus(studySetId) {
+  return request(`/api/study-sets/${studySetId}/revision-status`);
+}
+
+/**
+ * Fetch every (study_set, question_type) pair currently due for
+ * revision across ALL of the current user's study sets, for the
+ * Planner's daily schedule. One aggregated call, not one per study set.
+ * GET /api/planner/revisions-due
+ */
+export async function fetchRevisionsDue() {
+  const data = await request("/api/planner/revisions-due");
+  return data.revisions_due || [];
 }
 
 // ── Answer Submission ────────────────────────────────────────────────
@@ -398,6 +429,17 @@ export async function fetchPerformance(attemptId) {
  */
 export async function fetchResults(attemptId) {
   return request(`/api/attempts/${attemptId}/results`);
+}
+
+/**
+ * Fetch cumulative, cross-attempt results for a study set - every
+ * attempt of every question type rolled into one summary row each, not
+ * scoped to a single attempt_id. Backs the "View Results" entry point
+ * reached from a study set's own page (no specific attempt in hand).
+ * GET /api/study-sets/{studySetId}/results-summary
+ */
+export async function fetchStudySetResultsSummary(studySetId) {
+  return request(`/api/study-sets/${studySetId}/results-summary`);
 }
 
 // ── Tasks ────────────────────────────────────────────────────────────

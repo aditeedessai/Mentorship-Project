@@ -21,7 +21,8 @@ from backend.database.attempt_repository import (
 from backend.database.evaluation_repository import (
     save_evaluation,
     get_evaluations_with_question_details,
-    get_evaluated_question_types_by_study_set
+    get_evaluated_question_types_by_study_set,
+    get_results_summary_by_study_set
 )
 
 from backend.database.quiz_repository import (
@@ -33,6 +34,8 @@ from backend.database import study_set_repository
 
 from backend.answer_evaluation.grading import grade_for_percentage
 
+from backend.services import revision_service
+
 
 SECTION_TITLE_MAP = {
     "mcq": "MCQ",
@@ -40,6 +43,49 @@ SECTION_TITLE_MAP = {
     "long": "Long Answer",
     "short": "Short Answer"
 }
+
+
+def get_study_set_results_summary(study_set_id: str) -> dict:
+    """
+    Cumulative, cross-attempt results for a study set's "View Results"
+    entry point (StudySetHeroHeaderCard) - unlike
+    get_attempt_performance_summary(), which is scoped to one attempt_id,
+    this has no single attempt to key off, since every question type is
+    independently attempted up to 4 separate times now (see
+    revision_service.py's pivot). Rolls every evaluation ever recorded
+    for each question_type in this study set into one row each, so a
+    type attempted 3 times shows the total across all 3, not just the
+    latest.
+
+    Returns {"study_set_id": str, "sections": [{"question_type",
+    "section_title", "total_attempted", "total_correct",
+    "accuracy_percentage", "attempts_taken", "last_attempt_at", "remark"},
+    ...]} - one entry per question_type that has at least one recorded
+    evaluation. A type never attempted simply has no entry (nothing to
+    summarize), same "row presence = attempted" convention
+    revision_repository.get_schedule() already uses.
+    """
+    rows = get_results_summary_by_study_set(study_set_id)
+
+    sections = []
+    for row in rows:
+        q_type = row["question_type"]
+        total_attempted = int(row["total_attempted"] or 0)
+        total_correct = int(row["total_correct"] or 0)
+        accuracy = round((total_correct / total_attempted) * 100, 2) if total_attempted > 0 else 0.0
+
+        sections.append({
+            "question_type": q_type,
+            "section_title": SECTION_TITLE_MAP.get(q_type, q_type.capitalize()),
+            "total_attempted": total_attempted,
+            "total_correct": total_correct,
+            "accuracy_percentage": accuracy,
+            "attempts_taken": int(row["attempts_taken"] or 0),
+            "last_attempt_at": row["last_attempt_at"],
+            "remark": grade_for_percentage(accuracy).remark,
+        })
+
+    return {"study_set_id": study_set_id, "sections": sections}
 
 
 def print_performance_summary(performance: dict, topic_performance: dict):
@@ -459,6 +505,21 @@ def evaluate_and_save_attempt_answers(
                 f"Answer exceeds the maximum allowed word limit of {max_limit} words."
             )
 
+        # 4. Question-type lock validation - every attempt is locked to
+        # exactly ONE question_type from creation (quiz_attempts.
+        # question_type is NOT NULL - see the 20260902150000 migration),
+        # so every submitted answer must match it. This applies to every
+        # attempt uniformly now, not just a "revision" subset - there is
+        # no other kind left. Section locking above already prevents a
+        # SECOND submission to an attempt's one section, but nothing
+        # above stops a mismatched question_type from being submitted to
+        # it in the first place.
+        if q_type != attempt.get("question_type"):
+            raise ValueError(
+                f"Question type '{q_type}' does not match this attempt's "
+                f"locked question type '{attempt.get('question_type')}'."
+            )
+
     # -----------------------------------------------------------------
     # Evaluate. Skipped (empty) and MCQ answers are graded immediately
     # inline below - MCQ via evaluate_mcq(), which is fast, local, and
@@ -560,12 +621,25 @@ def evaluate_and_save_attempt_answers(
 
     save_attempt(
         attempt_id=attempt_id,
+        question_type=attempt.get("question_type"),
         study_set_id=attempt.get("study_set_id"),
         document_id=attempt.get("document_id"),
         total_marks=total_marks,
         marks_awarded=earned_marks,
         status=attempt.get("status", "in_progress")
     )
+
+    # Write-time revision_schedules update - runs unconditionally for
+    # every attempt now (there's no other kind left). Every attempt has
+    # exactly one section, so this single
+    # evaluate_and_save_attempt_answers() call IS the completion of that
+    # attempt's only section - no separate "is this attempt done yet"
+    # check is needed. This is also what CREATES the schedule row the
+    # first time this (study_set, question_type) pair is ever completed
+    # (see revision_repository.record_attempt_result()) - there's no
+    # separate "initial attempt finishes" event that pre-creates it
+    # anymore.
+    revision_service.record_attempt_result(attempt | {"attempt_id": attempt_id})
 
     eval_responses = []
     for rec in eval_records:
@@ -597,35 +671,45 @@ def evaluate_and_save_attempt_answers(
     }
 
 
-MANDATORY_SECTIONS = ["mcq", "short", "application", "long"]
+# The 4 canonical question types. No longer "mandatory" in the old
+# sense (an attempt no longer has to complete all 4 together - every
+# attempt is independently scoped to exactly one type from creation) -
+# this is now just the enumerated set of valid types, still needed for
+# get_study_set_progress()'s cross-attempt aggregate below.
+QUESTION_TYPES = ["mcq", "short", "application", "long"]
 
 
 def get_attempt_section_completion_status(attempt_id: str) -> dict:
     """
-    Derives section completion status for an attempt based on evaluations recorded.
-    A section is completed when evaluations exist for that question type for this attempt.
+    Derives section completion status for an attempt based on evaluations
+    recorded. Every attempt is locked to exactly one question_type from
+    creation, so "complete" always means just that one section - as soon
+    as it has evaluations, the attempt is complete, full stop. There is
+    no other kind of attempt to branch on anymore.
 
     Returns dict:
       {
-        "completed_sections": ["mcq", "application"],
-        "remaining_sections": ["short", "long"],
-        "is_attempt_complete": False
+        "completed_sections": ["mcq"],
+        "remaining_sections": [],
+        "is_attempt_complete": True
       }
     """
     attempt = get_attempt(attempt_id)
     if not attempt:
         raise ValueError(f"Attempt with ID '{attempt_id}' not found")
 
+    sections_to_check = [attempt["question_type"]]
+
     eval_records = get_evaluations_with_question_details(attempt_id)
 
     completed_set = set()
     for rec in eval_records:
         raw_type = str(rec.get("question_type") or "short").lower().strip()
-        q_type = raw_type if raw_type in MANDATORY_SECTIONS else "short"
+        q_type = raw_type if raw_type in QUESTION_TYPES else "short"
         completed_set.add(q_type)
 
-    completed_sections = [s for s in MANDATORY_SECTIONS if s in completed_set]
-    remaining_sections = [s for s in MANDATORY_SECTIONS if s not in completed_set]
+    completed_sections = [s for s in sections_to_check if s in completed_set]
+    remaining_sections = [s for s in sections_to_check if s not in completed_set]
     is_attempt_complete = len(remaining_sections) == 0
 
     return {
@@ -638,12 +722,13 @@ def get_attempt_section_completion_status(attempt_id: str) -> dict:
 def get_study_set_progress(user_id: str) -> list[dict]:
     """
     Returns, for every study set owned by the user, how many of the 4
-    mandatory sections (MANDATORY_SECTIONS) have at least one recorded
-    evaluation - the exact same "completed" rule
-    get_attempt_section_completion_status() uses per attempt, applied
-    here across every attempt ever taken under a study set (not just
-    whichever one is currently 'in_progress') so the dashboard can show
-    progress without creating or mutating any attempt.
+    question types (QUESTION_TYPES) have at least one recorded
+    evaluation - applied across every attempt ever taken under a study
+    set (not just whichever one is currently 'in_progress'), so the
+    dashboard can show progress without creating or mutating any
+    attempt. Purely a cross-attempt aggregate for the dashboard's
+    StudySetProgressCard - unrelated to (and unaffected by) any single
+    attempt's own completion status above.
     """
     study_sets = study_set_repository.list_study_sets(user_id=user_id)
     eval_rows = get_evaluated_question_types_by_study_set(user_id)
@@ -651,7 +736,7 @@ def get_study_set_progress(user_id: str) -> list[dict]:
     completed_by_set = defaultdict(set)
     for row in eval_rows:
         raw_type = str(row.get("question_type") or "short").lower().strip()
-        q_type = raw_type if raw_type in MANDATORY_SECTIONS else "short"
+        q_type = raw_type if raw_type in QUESTION_TYPES else "short"
         completed_by_set[row["study_set_id"]].add(q_type)
 
     return [
@@ -659,7 +744,7 @@ def get_study_set_progress(user_id: str) -> list[dict]:
             "study_set_id": study_set["study_set_id"],
             "name": study_set["name"],
             "sections_completed": len(completed_by_set.get(study_set["study_set_id"], set())),
-            "total_sections": len(MANDATORY_SECTIONS),
+            "total_sections": len(QUESTION_TYPES),
         }
         for study_set in study_sets
     ]
@@ -682,6 +767,7 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
         return {
             "attempt_id": attempt_id,
             "status": attempt.get("status", "in_progress"),
+            "question_type": attempt.get("question_type"),
             "completed_sections": completion_info["completed_sections"],
             "remaining_sections": completion_info["remaining_sections"],
             "is_attempt_complete": completion_info["is_attempt_complete"],
@@ -766,6 +852,7 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
     return {
         "attempt_id": attempt_id,
         "status": attempt.get("status", "in_progress"),
+        "question_type": attempt.get("question_type"),
         "completed_sections": completion_info["completed_sections"],
         "remaining_sections": completion_info["remaining_sections"],
         "is_attempt_complete": completion_info["is_attempt_complete"],

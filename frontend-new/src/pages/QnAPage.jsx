@@ -10,7 +10,7 @@ import { submitAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
 
-export default function QnAPage() {
+export default function QnAPage({ onNavigate } = {}) {
   const { isDarkMode } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
@@ -49,14 +49,18 @@ export default function QnAPage() {
     cleanup: antiCheatCleanup,
   } = useQuizAntiCheating({
     enabled: questionCount > 0,
-    onTerminate: () => navigate('/'),
+    onTerminate: () => {
+      onNavigate?.('dashboard')
+      navigate('/')
+    },
   })
 
   useEffect(() => {
     if (questionCount === 0) {
+      onNavigate?.('quiz', { studySetId: location.state?.studySetId })
       navigate('/quiz')
     }
-  }, [questionCount, navigate])
+  }, [questionCount, navigate, onNavigate, location.state?.studySetId])
 
   useEffect(() => {
     if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive) return
@@ -129,6 +133,11 @@ export default function QnAPage() {
       antiCheatCleanup()
 
       const studySetId = location.state?.studySetId
+      onNavigate?.('results', {
+        attemptId,
+        studySetId,
+        questionType,
+      })
       navigate('/results', {
         state: {
           attemptId,
@@ -141,7 +150,7 @@ export default function QnAPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, location.state, antiCheatCleanup])
+  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup])
 
   const toggleBookmark = useCallback(() => {
     setBookmarkedQuestions(prev => ({
@@ -160,8 +169,9 @@ export default function QnAPage() {
 
   const handleAbortConfirm = useCallback(() => {
     antiCheatCleanup()
+    onNavigate?.('dashboard')
     navigate('/')
-  }, [navigate, antiCheatCleanup])
+  }, [navigate, onNavigate, antiCheatCleanup])
 
   if (questionCount === 0 || quizTerminated) return null
 

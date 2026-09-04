@@ -13,7 +13,9 @@ from backend.api.routes import (
     exams,
     health,
     performance,
+    planner,
     questions,
+    revision,
     study_sets,
     tasks,
 )
@@ -62,6 +64,8 @@ api_router.include_router(documents.router)
 api_router.include_router(questions.router)
 api_router.include_router(attempts.router)
 api_router.include_router(performance.router)
+api_router.include_router(revision.router)
+api_router.include_router(planner.router)
 api_router.include_router(tasks.router)
 api_router.include_router(exams.router)
 api_router.include_router(activity.router)

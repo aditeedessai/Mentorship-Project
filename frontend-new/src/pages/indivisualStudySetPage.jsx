@@ -4,7 +4,7 @@ import { useTheme } from "../context/ThemeContext";
 import {
   fetchStudySet,
   fetchStudySetDocuments,
-  fetchActiveAttempt,
+  fetchRevisionStatus,
   fetchStudySetSummary,
   fetchStudySetFlashcards,
   generateStudySetSummary,
@@ -24,7 +24,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   const { isDarkMode } = useTheme();
   const [studySet, setStudySet] = useState(null);
   const [documents, setDocuments] = useState([]);
-  const [completedSections, setCompletedSections] = useState([]);
+  const [revisionStatus, setRevisionStatus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -140,7 +140,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
     setPracticeMode(false);
     setMnemonic(null);
     setMnemonicError("");
-    setCompletedSections([]);
+    setRevisionStatus([]);
 
     if (!studySetId) {
       setLoading(false);
@@ -172,12 +172,17 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
         }
 
         try {
-          const activeAtt = await fetchActiveAttempt(studySetId);
-          if (isMounted && activeAtt) {
-            setCompletedSections(activeAtt.completed_sections || []);
+          // Every question type is independently scoped/scheduled now -
+          // there is no single study-set-wide "active attempt" to read
+          // completed_sections off of anymore. revision-status gives the
+          // real per-type picture (attempts_taken/needs_attention/etc)
+          // directly, without creating or mutating any attempt.
+          const status = await fetchRevisionStatus(studySetId);
+          if (isMounted && status) {
+            setRevisionStatus(status.statuses || []);
           }
         } catch (err) {
-          console.warn("Could not fetch active attempt for progress card:", err);
+          console.warn("Could not fetch revision status for progress card:", err);
         }
       } catch (err) {
         console.error("Failed to load study set details/documents:", err);
@@ -398,7 +403,8 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
             />
 
             <StudySetQuestionProgressCard
-              completedSections={completedSections}
+              revisionStatus={revisionStatus}
+              loading={loading}
             />
           </div>
         </div>

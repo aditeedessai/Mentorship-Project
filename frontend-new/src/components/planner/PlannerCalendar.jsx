@@ -26,6 +26,7 @@ export default function PlannerCalendar({
   onSelectDate,
   tasks = [],
   exams = [],
+  revisionsDue = [],
 }) {
   const { isDarkMode } = useTheme();
 
@@ -80,6 +81,20 @@ export default function PlannerCalendar({
     examsByDate[exam.exam_date].push(exam);
   });
 
+  // revisionsDue carries every scheduled pair's real next_due_date -
+  // today, overdue, or a future date (e.g. a fresh low-accuracy attempt
+  // due tomorrow). Marked on that actual date, except an overdue pair
+  // (next_due_date < today) carries forward onto TODAY's cell instead of
+  // staying pinned to the day it first became due (same rule
+  // DailySchedule.jsx applies for the day-view list).
+  const revisionsByDate = {};
+  revisionsDue.forEach((revision) => {
+    if (!revision.next_due_date) return;
+    const bucketKey = revision.next_due_date < todayKey ? todayKey : revision.next_due_date;
+    if (!revisionsByDate[bucketKey]) revisionsByDate[bucketKey] = [];
+    revisionsByDate[bucketKey].push(revision);
+  });
+
   const monthName = new Date(currentYear, currentMonth, 1).toLocaleString("en-US", {
     month: "long",
     year: "numeric",
@@ -110,6 +125,10 @@ export default function PlannerCalendar({
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-500" />
               <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Exams</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Revisions</span>
             </div>
           </div>
 
@@ -185,7 +204,8 @@ export default function PlannerCalendar({
 
           const dayTasks = tasksByDate[dateKey] || [];
           const dayExams = examsByDate[dateKey] || [];
-          const hasEvents = dayTasks.length > 0 || dayExams.length > 0;
+          const dayRevisions = revisionsByDate[dateKey] || [];
+          const hasEvents = dayTasks.length > 0 || dayExams.length > 0 || dayRevisions.length > 0;
 
           return (
             <button
@@ -225,6 +245,14 @@ export default function PlannerCalendar({
                       title={`${dayExams.length} exam(s) (Orange)`}
                     />
                   )}
+                  {dayRevisions.length > 0 && (
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        isSelected ? "bg-emerald-300" : "bg-emerald-500"
+                      }`}
+                      title={`${dayRevisions.length} revision(s) due (Green)`}
+                    />
+                  )}
                 </div>
               )}
             </button>
@@ -241,6 +269,10 @@ export default function PlannerCalendar({
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Exams (Orange)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className={isDarkMode ? "text-white/60" : "text-gray-500"}>Revisions (Green)</span>
         </div>
       </div>
     </div>

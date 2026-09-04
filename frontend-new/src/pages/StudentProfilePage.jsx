@@ -8,6 +8,7 @@ import {
   FIELDS_BY_LEVEL,
   CURRICULUM_OPTIONS,
 } from "../data/academicOptions";
+import jojoWorking from "../assets/jojo-working.png";
 
 /**
  * StudentProfilePage
@@ -20,13 +21,12 @@ import {
  *   purple gradient left panel, ambient glow orbs, theme toggle).
  * - Cascading dropdowns: changing education level resets and
  *   repopulates grade/year and field/stream.
- * - Saves to `student_profiles` via upsert (safe for edge-cases
- *   like double-submit or race conditions).
+ * - Saves to `student_profiles` via upsert.
  *
  * Props
- *   onProfileComplete  – called after a successful DB write so
- *                         App.jsx can flip `hasProfile → true`.
- *   user               – { id, name, email } from App state.
+ *   onProfileComplete – called after a successful DB write so
+ *                       App.jsx can flip `hasProfile → true`.
+ *   user             – { id, name, email } from App state.
  */
 function StudentProfilePage({ onProfileComplete, user }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -54,6 +54,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
     setEducationLevel(value);
     setGradeOrYear("");
     setFieldStream("");
+
     // Clear any stale validation errors for the cascaded fields
     setValidationErrors((prev) => {
       const next = { ...prev };
@@ -67,10 +68,21 @@ function StudentProfilePage({ onProfileComplete, user }) {
   const validate = () => {
     const errs = {};
 
-    if (!educationLevel) errs.educationLevel = "Please select your level of study.";
-    if (!gradeOrYear) errs.gradeOrYear = "Please select your grade or year.";
-    if (!fieldStream) errs.fieldStream = "Please select your field or stream.";
-    if (!curriculumType) errs.curriculumType = "Please select your curriculum type.";
+    if (!educationLevel) {
+      errs.educationLevel = "Please select your level of study.";
+    }
+
+    if (!gradeOrYear) {
+      errs.gradeOrYear = "Please select your grade or year.";
+    }
+
+    if (!fieldStream) {
+      errs.fieldStream = "Please select your field or stream.";
+    }
+
+    if (!curriculumType) {
+      errs.curriculumType = "Please select your curriculum type.";
+    }
 
     setValidationErrors(errs);
     return Object.keys(errs).length === 0;
@@ -79,7 +91,10 @@ function StudentProfilePage({ onProfileComplete, user }) {
   /** Convert the competitive-exams text input to a jsonb array. */
   const parseCompetitiveExams = (text) => {
     const trimmed = text.trim();
-    if (!trimmed || trimmed.toLowerCase() === "none") return [];
+
+    if (!trimmed || trimmed.toLowerCase() === "none") {
+      return [];
+    }
 
     return trimmed
       .split(",")
@@ -127,15 +142,19 @@ function StudentProfilePage({ onProfileComplete, user }) {
 
       if (dbError) {
         console.error("student_profiles upsert failed:", dbError);
+
         setError(
           dbError.message || "Failed to save your profile. Please try again."
         );
+
         setLoading(false);
         return;
       }
 
       // Success — let the parent know so it can unlock the main app.
-      if (onProfileComplete) onProfileComplete();
+      if (onProfileComplete) {
+        onProfileComplete();
+      }
     } catch (err) {
       console.error("Unexpected error saving profile:", err);
       setError(err.message || "An unexpected error occurred.");
@@ -145,6 +164,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
   };
 
   // ─── Reusable class strings ──────────────────────────
+
   const selectClasses = (hasError) =>
     `w-full appearance-none rounded-xl border px-4 py-3 pr-10 text-sm outline-none transition-all cursor-pointer ${
       isDarkMode
@@ -175,6 +195,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
   }`;
 
   // ─── Render ──────────────────────────────────────────
+
   return (
     <div
       className={`relative flex min-h-screen items-center justify-center p-4 sm:p-6 transition-colors duration-500 font-sans ${
@@ -190,6 +211,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
             isDarkMode ? "bg-[#6D45B8]/25" : "bg-[#D9CEF5]/60"
           }`}
         />
+
         <div
           className={`absolute -right-40 top-[20%] h-[500px] w-[500px] rounded-full blur-[130px] ${
             isDarkMode ? "bg-[#8B5CF6]/15" : "bg-[#E9DDF5]/70"
@@ -220,34 +242,51 @@ function StudentProfilePage({ onProfileComplete, user }) {
         }`}
       >
         {/* ════════ LEFT PANEL (purple gradient) ════════ */}
-        <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-12 text-white lg:flex">
+        <div className="relative hidden flex-col overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-12 text-white lg:flex">
+          {/* Decorative glow circles */}
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+
           <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
 
+          {/* Main content */}
           <div className="relative z-10">
+            {/* Brand */}
             <div className="mb-10 flex items-center gap-3">
               <div className="text-4xl font-black tracking-[-0.08em] text-white">
                 Jot<span className="text-purple-200">.</span>
               </div>
+
               <span className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
                 your study buddy
               </span>
             </div>
 
+            {/* Heading */}
             <h1 className="max-w-md text-4xl font-black leading-tight tracking-tight">
               One last thing
               <br />
               <span className="text-purple-200">before we begin.</span>
             </h1>
 
+            {/* Description */}
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100/90">
-              Tell us a bit about your academic background so Jojo can
-              tailor your study sessions, quizzes, and revision materials
-              to exactly what you need.
+              Tell us a bit about your academic background so Jojo can tailor
+              your study sessions, quizzes, and revision materials to exactly
+              what you need.
             </p>
+
+            {/* Jojo Working */}
+            <div className="mt-8 flex justify-center">
+              <img
+                src={jojoWorking}
+                alt="Jojo helping with your profile"
+                className="h-48 w-auto object-contain drop-shadow-xl"
+              />
+            </div>
           </div>
 
-          <div className="relative z-10 flex items-center gap-2 text-xs font-semibold text-purple-200">
+          {/* Bottom tagline */}
+          <div className="relative z-10 mt-auto flex items-center gap-2 text-xs font-semibold text-purple-200">
             <Sparkles size={16} />
             <span>Jot it. Organise it. Top it.</span>
           </div>
@@ -267,6 +306,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
             <h2 className="text-3xl font-black tracking-tight">
               Tell us more...
             </h2>
+
             <p
               className={`mt-2 text-sm ${
                 isDarkMode ? "text-white/55" : "text-[#706A78]"
@@ -282,22 +322,37 @@ function StudentProfilePage({ onProfileComplete, user }) {
             {/* ── 1. Current Level of Study ── */}
             <div>
               <label className={labelClasses}>Current Level of Study</label>
+
               <div className="relative">
                 <select
                   id="education-level"
                   value={educationLevel}
-                  onChange={(e) => handleEducationLevelChange(e.target.value)}
-                  className={selectClasses(validationErrors.educationLevel)}
+                  onChange={(e) =>
+                    handleEducationLevelChange(e.target.value)
+                  }
+                  className={selectClasses(
+                    validationErrors.educationLevel
+                  )}
                 >
-                  <option value="" disabled className={placeholderOptionClasses}>
+                  <option
+                    value=""
+                    disabled
+                    className={placeholderOptionClasses}
+                  >
                     Select your level
                   </option>
+
                   {EDUCATION_LEVELS.map((lvl) => (
-                    <option key={lvl.label} value={lvl.value} className={optionClasses}>
+                    <option
+                      key={lvl.label}
+                      value={lvl.value}
+                      className={optionClasses}
+                    >
                       {lvl.label}
                     </option>
                   ))}
                 </select>
+
                 <ChevronDown
                   size={16}
                   className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${
@@ -305,6 +360,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   }`}
                 />
               </div>
+
               {validationErrors.educationLevel && (
                 <p className="mt-1 text-xs font-semibold text-red-400">
                   {validationErrors.educationLevel}
@@ -317,12 +373,14 @@ function StudentProfilePage({ onProfileComplete, user }) {
               <label className={labelClasses}>
                 Current Grade / Year of Study
               </label>
+
               <div className="relative">
                 <select
                   id="grade-or-year"
                   value={gradeOrYear}
                   onChange={(e) => {
                     setGradeOrYear(e.target.value);
+
                     setValidationErrors((prev) => {
                       const next = { ...prev };
                       delete next.gradeOrYear;
@@ -330,19 +388,27 @@ function StudentProfilePage({ onProfileComplete, user }) {
                     });
                   }}
                   disabled={!educationLevel}
-                  className={`${selectClasses(validationErrors.gradeOrYear)} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={`${selectClasses(
+                    validationErrors.gradeOrYear
+                  )} disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
-                  <option value="" disabled className={placeholderOptionClasses}>
+                  <option
+                    value=""
+                    disabled
+                    className={placeholderOptionClasses}
+                  >
                     {educationLevel
                       ? "Select your grade / year"
                       : "Select level first"}
                   </option>
+
                   {gradeOptions.map((g) => (
                     <option key={g} value={g} className={optionClasses}>
                       {g}
                     </option>
                   ))}
                 </select>
+
                 <ChevronDown
                   size={16}
                   className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${
@@ -350,6 +416,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   }`}
                 />
               </div>
+
               {validationErrors.gradeOrYear && (
                 <p className="mt-1 text-xs font-semibold text-red-400">
                   {validationErrors.gradeOrYear}
@@ -360,12 +427,14 @@ function StudentProfilePage({ onProfileComplete, user }) {
             {/* ── 3. Field / Stream / Major ── */}
             <div>
               <label className={labelClasses}>Field / Stream / Major</label>
+
               <div className="relative">
                 <select
                   id="field-stream"
                   value={fieldStream}
                   onChange={(e) => {
                     setFieldStream(e.target.value);
+
                     setValidationErrors((prev) => {
                       const next = { ...prev };
                       delete next.fieldStream;
@@ -373,19 +442,27 @@ function StudentProfilePage({ onProfileComplete, user }) {
                     });
                   }}
                   disabled={!educationLevel}
-                  className={`${selectClasses(validationErrors.fieldStream)} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={`${selectClasses(
+                    validationErrors.fieldStream
+                  )} disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
-                  <option value="" disabled className={placeholderOptionClasses}>
+                  <option
+                    value=""
+                    disabled
+                    className={placeholderOptionClasses}
+                  >
                     {educationLevel
                       ? "Select your field / stream"
                       : "Select level first"}
                   </option>
+
                   {fieldOptions.map((f) => (
                     <option key={f} value={f} className={optionClasses}>
                       {f}
                     </option>
                   ))}
                 </select>
+
                 <ChevronDown
                   size={16}
                   className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${
@@ -393,6 +470,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   }`}
                 />
               </div>
+
               {validationErrors.fieldStream && (
                 <p className="mt-1 text-xs font-semibold text-red-400">
                   {validationErrors.fieldStream}
@@ -403,29 +481,39 @@ function StudentProfilePage({ onProfileComplete, user }) {
             {/* ── 4. Type of Curriculum ── */}
             <div>
               <label className={labelClasses}>Type of Curriculum</label>
+
               <div className="relative">
                 <select
                   id="curriculum-type"
                   value={curriculumType}
                   onChange={(e) => {
                     setCurriculumType(e.target.value);
+
                     setValidationErrors((prev) => {
                       const next = { ...prev };
                       delete next.curriculumType;
                       return next;
                     });
                   }}
-                  className={selectClasses(validationErrors.curriculumType)}
+                  className={selectClasses(
+                    validationErrors.curriculumType
+                  )}
                 >
-                  <option value="" disabled className={placeholderOptionClasses}>
+                  <option
+                    value=""
+                    disabled
+                    className={placeholderOptionClasses}
+                  >
                     Select your curriculum
                   </option>
+
                   {CURRICULUM_OPTIONS.map((c) => (
                     <option key={c} value={c} className={optionClasses}>
                       {c}
                     </option>
                   ))}
                 </select>
+
                 <ChevronDown
                   size={16}
                   className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${
@@ -433,6 +521,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   }`}
                 />
               </div>
+
               {validationErrors.curriculumType && (
                 <p className="mt-1 text-xs font-semibold text-red-400">
                   {validationErrors.curriculumType}
@@ -440,11 +529,12 @@ function StudentProfilePage({ onProfileComplete, user }) {
               )}
             </div>
 
-            {/* ── 5. Competitive Exams (text input) ── */}
+            {/* ── 5. Competitive Exams ── */}
             <div>
               <label className={labelClasses}>
                 Preparing for any competitive exams?
               </label>
+
               <input
                 id="competitive-exams"
                 type="text"

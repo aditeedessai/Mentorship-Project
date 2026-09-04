@@ -33,7 +33,7 @@ const confettiPieces = [
   { left: '78%', top: '78%', rotate: '26deg', delay: '120ms' },
 ]
 
-export default function MCQPage() {
+export default function MCQPage({ onNavigate } = {}) {
   const { isDarkMode } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
@@ -89,15 +89,19 @@ export default function MCQPage() {
     cleanup: antiCheatCleanup,
   } = useQuizAntiCheating({
     enabled: questionCount > 0,
-    onTerminate: () => navigate('/'),
+    onTerminate: () => {
+      onNavigate?.('dashboard')
+      navigate('/')
+    },
   })
 
   // Redirect if no questions were loaded
   useEffect(() => {
     if (questionCount === 0) {
+      onNavigate?.('quiz', { studySetId: location.state?.studySetId })
       navigate('/quiz')
     }
-  }, [questionCount, navigate])
+  }, [questionCount, navigate, onNavigate, location.state?.studySetId])
 
   // Timer — only ticks when fullscreen is established and no active violation
   useEffect(() => {
@@ -252,6 +256,11 @@ export default function MCQPage() {
       const studySetId = location.state?.studySetId
 
       setTimeout(() => {
+        onNavigate?.('results', {
+          attemptId,
+          studySetId,
+          questionType: 'mcq',
+        })
         navigate('/results', {
           state: {
             attemptId,
@@ -272,14 +281,16 @@ export default function MCQPage() {
     questions,
     selectedAnswers,
     navigate,
+    onNavigate,
     location.state,
     antiCheatCleanup,
   ])
 
   const handleAbortConfirm = useCallback(() => {
     antiCheatCleanup()
+    onNavigate?.('dashboard')
     navigate('/')
-  }, [navigate, antiCheatCleanup])
+  }, [navigate, onNavigate, antiCheatCleanup])
 
   const toggleBookmark = useCallback(() => {
     setBookmarkedQuestions((prev) => ({
