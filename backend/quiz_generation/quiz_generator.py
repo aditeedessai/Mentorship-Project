@@ -42,7 +42,8 @@ def find_best_matching_chunks(question_text: str, reference_answer: str, chunks:
 def generate_quiz(
     study_set_id: str = None,
     question_type: str = "mcq",
-    document_ids: list[str] | str = None
+    document_ids: list[str] | str = None,
+    attempt_id: str = None
 ):
 
     print("===== generate_quiz() called =====")
@@ -168,9 +169,14 @@ def generate_quiz(
             question["document_id"] = resolved_doc_ids[0]
 
     # Save to SQLite (populating questions table and question_sources canonical table)
+    # attempt_id tags this freshly-generated batch as belonging to ONE
+    # specific attempt (see save_questions()'s own docstring) - this is
+    # what stops a revision attempt from being served the accumulated
+    # pool of every question ever generated for this study set + type.
     save_questions(
         study_set_id=study_set_id,
-        questions=quiz_data["questions"]
+        questions=quiz_data["questions"],
+        attempt_id=attempt_id
     )
 
     return quiz_data

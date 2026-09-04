@@ -41,11 +41,16 @@ def display_generated_questions(questions: list[dict]) -> None:
 def run_quiz(
     study_set_id: str = None,
     question_type: str = "mcq",
-    document_ids: list[str] | str = None
+    document_ids: list[str] | str = None,
+    attempt_id: str = None
 ):
     """
     Generate a quiz from uploaded study material(s)
     based on the selected question type.
+
+    `attempt_id` (optional): forwarded to generate_quiz() so the newly
+    generated batch is tagged as belonging to this specific attempt -
+    see quiz_repository.save_questions()'s docstring for why.
     """
 
     if not study_set_id and not document_ids:
@@ -66,7 +71,8 @@ def run_quiz(
     quiz = generate_quiz(
         study_set_id=study_set_id,
         question_type=question_type,
-        document_ids=document_ids
+        document_ids=document_ids,
+        attempt_id=attempt_id
     )
 
     questions = quiz.get(

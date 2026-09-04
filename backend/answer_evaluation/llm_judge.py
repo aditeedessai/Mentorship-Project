@@ -70,6 +70,8 @@ the next run.
 import os
 import re
 import json
+import random
+import threading
 import time
 import logging
 
@@ -106,12 +108,31 @@ except ImportError:  # pragma: no cover
 
 _JUDGE_MODEL = os.environ.get("JUDGE_MODEL_NAME", "gemini-3.6-flash")
 _MAX_OUTPUT_TOKENS = 800  # thinking tokens were eating a smaller budget
-_MAX_RETRIES = 2
+_MAX_RETRIES = int(os.environ.get("JUDGE_MAX_RETRIES", "3"))
 
 # 60/20=3s minimum between calls, plus a buffer. Override with
 # JUDGE_MIN_INTERVAL_SECONDS=0 if you're on a paid tier / higher quota.
 _MIN_CALL_INTERVAL_S = float(os.environ.get("JUDGE_MIN_INTERVAL_SECONDS", "4"))
 _last_call_time = 0.0
+
+# Guards _last_call_time so the throttle below is actually a global
+# queue, not just a per-thread suggestion. FastAPI's sync route handlers
+# (e.g. api/routes/attempts.py's submit_section_answers) run on
+# Starlette's thread pool, so concurrent submissions call into this
+# module from multiple threads at once. Without a lock, two threads can
+# both read `elapsed` before either writes _last_call_time, both
+# conclude no wait is needed, and fire on Gemini in the same instant -
+# silently defeating the rate limit exactly when concurrency (and thus
+# 429 risk) is highest. The lock makes concurrent callers queue for
+# their turn one at a time instead.
+_throttle_lock = threading.Lock()
+
+# Ceiling for the exponential-backoff fallback in _seconds_to_wait_from_error
+# (used only when Gemini's 429 body doesn't include its own "retry in Xs"
+# hint - that hint is always preferred when present). Override with
+# JUDGE_MAX_BACKOFF_SECONDS if the default cap is too aggressive/lax for
+# your quota tier.
+_MAX_BACKOFF_S = float(os.environ.get("JUDGE_MAX_BACKOFF_SECONDS", "60"))
 
 # --- Persistent on-disk cache -------------------------------------------
 # Re-running the same grading job repeatedly during development re-pays
@@ -247,30 +268,49 @@ def is_available() -> bool:
 
 
 def _throttle():
-    """Client-side rate limiter to stay under the free-tier req/min cap."""
+    """
+    Client-side rate limiter to stay under the free-tier req/min cap.
+
+    Holds _throttle_lock for the full check-sleep-update sequence, so
+    concurrent callers (see the lock's own comment above) are serialized
+    into a real queue, one Gemini call in flight at a time, spaced at
+    least _MIN_CALL_INTERVAL_S apart - rather than each thread computing
+    its own wait against a stale, racily-read _last_call_time.
+    """
     global _last_call_time
     if _MIN_CALL_INTERVAL_S <= 0:
         return
-    elapsed = time.monotonic() - _last_call_time
-    wait = _MIN_CALL_INTERVAL_S - elapsed
-    if wait > 0:
-        time.sleep(wait)
-    _last_call_time = time.monotonic()
+    with _throttle_lock:
+        elapsed = time.monotonic() - _last_call_time
+        wait = _MIN_CALL_INTERVAL_S - elapsed
+        if wait > 0:
+            time.sleep(wait)
+        _last_call_time = time.monotonic()
 
 
 _RETRY_SECONDS_RE = re.compile(r"retry in ([\d.]+)s", re.IGNORECASE)
 
 
-def _seconds_to_wait_from_error(error: Exception) -> float:
-    """Gemini's 429 body often includes 'Please retry in 43.9s' - use that
-    hint if present rather than guessing a backoff duration."""
+def _seconds_to_wait_from_error(error: Exception, attempt: int) -> float:
+    """
+    Gemini's 429 body often includes 'Please retry in 43.9s' - that hint
+    is always preferred when present, since it's authoritative (Gemini
+    knows its own quota window better than a client-side guess). When
+    it's absent, back off exponentially (_MIN_CALL_INTERVAL_S * 2**attempt,
+    capped at _MAX_BACKOFF_S) instead of retrying at the same fixed
+    interval that just got rate-limited - plus up-to-25% jitter so
+    multiple concurrently-throttled requests that all got 429'd together
+    don't then all retry in lockstep.
+    """
     match = _RETRY_SECONDS_RE.search(str(error))
     if match:
         try:
             return float(match.group(1)) + 1.0  # small buffer
         except ValueError:
             pass
-    return _MIN_CALL_INTERVAL_S
+    backoff = min(_MIN_CALL_INTERVAL_S * (2 ** attempt), _MAX_BACKOFF_S)
+    jitter = random.uniform(0, backoff * 0.25)
+    return backoff + jitter
 
 
 _COMBINED_SYSTEM_PROMPT = """You are grading a student's answer against a reference answer for an \
@@ -350,7 +390,7 @@ def _generate_with_retry(
             network_ms = round((time.perf_counter() - network_start) * 1000, 3) if network_start is not None else 0.0
             is_rate_limit = _BACKEND == "gemini" and ("429" in str(e) or "too_many_requests" in str(e).lower())
             if is_rate_limit and attempt < _MAX_RETRIES:
-                wait_s = _seconds_to_wait_from_error(e)
+                wait_s = _seconds_to_wait_from_error(e, attempt)
                 logger.warning(
                     "llm_judge.py: rate limited (attempt %d/%d); retrying in %.1fs.",
                     attempt + 1, _MAX_RETRIES, wait_s,

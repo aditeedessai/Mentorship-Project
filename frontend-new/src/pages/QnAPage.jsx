@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import QuizHeader from '../components/quiz/QuizHeader'
@@ -37,6 +37,24 @@ export default function QnAPage({ onNavigate } = {}) {
   const [showNavDrawer, setShowNavDrawer] = useState(false)
   const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
 
+  // Controls the timeout screen
+  const [isTimedOut, setIsTimedOut] = useState(false)
+
+  // Holds the live countdown interval so it can be cleared imperatively
+  // (from a click handler, not just effect cleanup) the instant the quiz ends.
+  const timerIntervalRef = useRef(null)
+
+  // Guards manual submission, abort, and timer-expiry from all firing —
+  // whichever reaches this first "wins" and the others become no-ops.
+  const quizEndedRef = useRef(false)
+
+  const clearQuizTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+  }, [])
+
   const {
     isFullscreenReady,
     quizTerminated,
@@ -62,13 +80,38 @@ export default function QnAPage({ onNavigate } = {}) {
     }
   }, [questionCount, navigate, onNavigate, location.state?.studySetId])
 
+  // Auto-abort triggered when the countdown reaches zero. Guarded by
+  // quizEndedRef so a manual submit/abort that lands in the same tick wins
+  // instead of both handlers running.
+  const handleTimeExpired = useCallback(() => {
+    if (quizEndedRef.current) return
+    quizEndedRef.current = true
+
+    clearQuizTimer()
+    antiCheatCleanup()
+    setIsTimedOut(true)
+
+    setTimeout(() => {
+      onNavigate?.('dashboard')
+      navigate('/')
+    }, 2500)
+  }, [antiCheatCleanup, clearQuizTimer, navigate, onNavigate])
+
   useEffect(() => {
-    if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive) return
-    const interval = setInterval(() => {
+    if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive || quizEndedRef.current) return
+    timerIntervalRef.current = setInterval(() => {
       setRemainingSeconds(prev => Math.max(0, prev - 1))
     }, 1000)
-    return () => clearInterval(interval)
-  }, [remainingSeconds, isFullscreenReady, isViolationActive])
+    return () => clearQuizTimer()
+  }, [remainingSeconds, isFullscreenReady, isViolationActive, clearQuizTimer])
+
+  // Auto-abort the instant the countdown reaches zero — races against a
+  // manual submit/abort via quizEndedRef, so only one of the two can win.
+  useEffect(() => {
+    if (questionCount > 0 && remainingSeconds === 0) {
+      handleTimeExpired()
+    }
+  }, [questionCount, remainingSeconds, handleTimeExpired])
 
   const goToQuestion = useCallback((num) => {
     if (num < 1 || num > questionCount || num === currentQuestion) return
@@ -110,7 +153,10 @@ export default function QnAPage({ onNavigate } = {}) {
   }, [currentQuestion, answers])
 
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || !attemptId) return
+    if (quizEndedRef.current || isSubmitting || !attemptId) return
+    quizEndedRef.current = true
+    clearQuizTimer()
+
     setIsSubmitting(true)
 
     try {
@@ -147,10 +193,13 @@ export default function QnAPage({ onNavigate } = {}) {
       })
     } catch (err) {
       console.error('Failed to submit quiz:', err)
+      // Submission failed — allow the user to retry rather than stranding
+      // them on a dead "Submit" button (the timer stays stopped either way).
+      quizEndedRef.current = false
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup])
+  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup, clearQuizTimer])
 
   const toggleBookmark = useCallback(() => {
     setBookmarkedQuestions(prev => ({
@@ -168,12 +217,58 @@ export default function QnAPage({ onNavigate } = {}) {
   }, [currentQuestion])
 
   const handleAbortConfirm = useCallback(() => {
+    if (quizEndedRef.current) return
+    quizEndedRef.current = true
+    clearQuizTimer()
+
     antiCheatCleanup()
     onNavigate?.('dashboard')
     navigate('/')
-  }, [navigate, onNavigate, antiCheatCleanup])
+  }, [navigate, onNavigate, antiCheatCleanup, clearQuizTimer])
 
   if (questionCount === 0 || quizTerminated) return null
+
+  if (isTimedOut) {
+    return (
+      <div className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${
+        isDarkMode ? 'bg-[#0E0B15] text-white' : 'bg-[#F6F3FC] text-[#292530]'
+      }`}>
+        <div className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
+          isDarkMode ? 'bg-red-500/15' : 'bg-red-500/10'
+        }`} />
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
+          <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-3xl bg-red-500/15 text-red-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+            Time&apos;s up!
+          </h1>
+
+          <p className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode ? 'text-white/55' : 'text-gray-500'}`}>
+            The countdown reached 00:00 before you submitted, so this quiz
+            session has been automatically aborted.
+          </p>
+
+          <div className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
+            isDarkMode ? 'border-white/10 bg-white/5' : 'border-red-500/10 bg-white/70'
+          }`}>
+            <p className={`text-sm font-bold ${isDarkMode ? 'text-white/80' : 'text-[#514863]'}`}>
+              Your progress on this attempt was not saved.
+            </p>
+
+            <p className={`mt-1 text-xs ${isDarkMode ? 'text-white/35' : 'text-gray-400'}`}>
+              Taking you back to your dashboard...
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const currentQ = questions[currentQuestion - 1] || questions[0]
   const progress = (currentQuestion / questionCount) * 100
@@ -278,15 +373,22 @@ export default function QnAPage({ onNavigate } = {}) {
                 {currentQ.question}
               </h2>
 
-              <div className={`flex gap-3 p-3.5 sm:p-4 border rounded-2xl mb-5 ${
-                isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
-              }`}>
-                <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                <p className="text-xs leading-relaxed font-semibold overflow-wrap-anywhere">
-                  <span className="font-black">AI Hint: </span>
-                  {currentQ.hint}
-                </p>
-              </div>
+              {/* AI Hint */}
+              {currentQ?.hint && (
+                <div
+                  className={`mb-5 flex gap-3 rounded-2xl border p-3.5 sm:p-4 ${
+                    isDarkMode
+                      ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200"
+                      : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+                  }`}
+                >
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+                  <p className="overflow-wrap-anywhere text-xs font-semibold leading-relaxed">
+                    <span className="font-black">AI Hint: </span>
+                    {currentQ.hint}
+                  </p>
+                </div>
+              )}
 
               <div className={`flex-1 min-h-[160px] sm:min-h-[180px] ${isViolationActive ? 'opacity-50 pointer-events-none' : ''}`} data-ac-editable="true">
                 <textarea
