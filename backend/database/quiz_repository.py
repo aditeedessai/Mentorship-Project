@@ -14,12 +14,20 @@ def _parse_json_field(val, default=None):
     return val
 
 
-def save_questions(study_set_id: str = None, questions: list = None, document_id: str = None):
+def save_questions(study_set_id: str = None, questions: list = None, document_id: str = None, attempt_id: str = None):
     """
     Save generated quiz questions and their reference answers.
 
     Inserts rows into `questions` and populates the canonical `question_sources` table
     linking (question_id, document_id, chunk_id).
+
+    `attempt_id` (optional) tags this whole batch as belonging to one
+    specific quiz attempt - same batch-level-default-with-per-question-
+    override pattern as `study_set_id`/`document_id` above. This is what
+    lets a revision attempt's freshly-generated questions be told apart
+    from every other question ever generated for the same
+    (study_set_id, question_type) pair - see
+    quiz_repository.get_questions_by_study_set()'s own `attempt_id` filter.
     """
     if questions is None:
         questions = []
@@ -48,6 +56,7 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
 
             doc_id = primary_doc_id or None
             set_id = study_set_id or question.get("study_set_id") or None
+            att_id = attempt_id or question.get("attempt_id") or None
             marks = float(question.get("marks", 2.0 if question.get("question_type") == "mcq" else 10.0))
 
             # Insert question, or update it in place if question_id already exists
@@ -57,6 +66,7 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                     question_id,
                     document_id,
                     study_set_id,
+                    attempt_id,
                     question_type,
                     topic,
                     question,
@@ -67,10 +77,11 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                     source_chunk_ids,
                     marks
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (question_id) DO UPDATE SET
                     document_id = EXCLUDED.document_id,
                     study_set_id = EXCLUDED.study_set_id,
+                    attempt_id = EXCLUDED.attempt_id,
                     question_type = EXCLUDED.question_type,
                     topic = EXCLUDED.topic,
                     question = EXCLUDED.question,
@@ -85,6 +96,7 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                     question.get("question_id"),
                     doc_id,
                     set_id,
+                    att_id,
                     question.get("question_type", "short"),
                     question.get("topic"),
                     question.get("question", ""),
@@ -169,33 +181,66 @@ def get_question_sources(question_id: str) -> list[dict]:
         connection.close()
 
 
-def get_questions_by_study_set(study_set_id: str):
+def get_questions_by_study_set(study_set_id: str, attempt_id: str = None):
     """
     Retrieve questions for a specific study set with source metadata attached.
+
+    `attempt_id` (optional): when given, scopes results to ONLY the
+    questions generated for that specific attempt, instead of every
+    question ever generated for this study set + type across every past
+    attempt. Callers that need "this one attempt's question set" (e.g.
+    the questions list route backing a quiz page) MUST pass this -
+    otherwise a revision attempt (a fresh attempt_id, see
+    api/routes/attempts.py's start_attempt) would be served the
+    accumulated pool of every prior attempt's questions too. Omitted
+    (None) preserves the old unscoped behavior for callers that
+    genuinely want the whole study set's question history.
     """
     connection = get_connection()
 
     try:
-        rows = connection.execute(
-            """
-            SELECT
-                question_id,
-                study_set_id,
-                document_id,
-                question_type,
-                topic,
-                question,
-                options,
-                source_document_ids,
-                source_chunk_ids,
-                marks,
-                created_at
-            FROM questions
-            WHERE study_set_id = ?
-            ORDER BY id
-            """,
-            (study_set_id,)
-        ).fetchall()
+        if attempt_id:
+            rows = connection.execute(
+                """
+                SELECT
+                    question_id,
+                    study_set_id,
+                    document_id,
+                    question_type,
+                    topic,
+                    question,
+                    options,
+                    source_document_ids,
+                    source_chunk_ids,
+                    marks,
+                    created_at
+                FROM questions
+                WHERE study_set_id = ? AND attempt_id = ?
+                ORDER BY id
+                """,
+                (study_set_id, attempt_id)
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT
+                    question_id,
+                    study_set_id,
+                    document_id,
+                    question_type,
+                    topic,
+                    question,
+                    options,
+                    source_document_ids,
+                    source_chunk_ids,
+                    marks,
+                    created_at
+                FROM questions
+                WHERE study_set_id = ?
+                ORDER BY id
+                """,
+                (study_set_id,)
+            ).fetchall()
 
         questions = []
 
