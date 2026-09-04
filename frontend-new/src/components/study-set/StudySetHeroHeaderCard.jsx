@@ -1,4 +1,4 @@
-import { BookOpen, Sparkles, Eye } from "lucide-react";
+import { BookOpen, Sparkles, Eye, History } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
 function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
@@ -43,7 +43,7 @@ function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto shrink-0 flex-wrap">
           <button
             type="button"
             onClick={() => onNavigate?.("quiz", { studySetId })}
@@ -51,6 +51,19 @@ function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
           >
             <Sparkles size={18} />
             <span>Generate Quiz</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate?.("study-set-attempts", { studySetId })}
+            className={`flex items-center justify-center gap-2.5 rounded-xl border px-5 py-3 sm:py-3.5 font-bold text-xs sm:text-sm transition-all duration-300 ${
+              isDarkMode
+                ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+                : "border-gray-200 bg-white/80 text-[#292530] hover:bg-white"
+            }`}
+          >
+            <History size={18} />
+            <span>View Attempts</span>
           </button>
 
           <button

@@ -320,6 +320,42 @@ export async function fetchQuestions(studySetId, frontendType, attemptId = null)
 // ── Attempts ─────────────────────────────────────────────────────────
 
 /**
+ * Fetch all quiz attempts for a study set from Supabase.
+ */
+export async function fetchAttemptsForStudySet(studySetId) {
+  if (!studySetId) return [];
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    let query = supabase
+      .from("quiz_attempts")
+      .select("*")
+      .eq("study_set_id", studySetId);
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
+
+    if (error) {
+      console.warn("Could not fetch attempts from Supabase table:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error("Failed to fetch attempts for study set:", err);
+    return [];
+  }
+}
+
+/**
  * Fetch the active in-progress attempt for one (study set, question type)
  * pair if one exists. GET /api/attempts/study-sets/{studySetId}/active-attempt?question_type=
  * Returns null if no active attempt exists (404).

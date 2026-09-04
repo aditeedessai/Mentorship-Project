@@ -89,7 +89,13 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
 
     SECTIONS.forEach((sec) => {
       const matched = attempts.filter((att) => {
-        const t = (att.question_type || "").toLowerCase().trim();
+        const rawType =
+          att.question_type ||
+          att.type ||
+          att.section ||
+          att.questionType ||
+          "";
+        const t = String(rawType).toLowerCase().trim();
         return sec.types.includes(t);
       });
 

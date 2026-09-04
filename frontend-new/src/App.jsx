@@ -9,6 +9,7 @@ import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import StudySetsPage from "./pages/StudySetsPage";
 import IndivisualStudySetPage from "./pages/indivisualStudySetPage";
+import StudySetAttemptsPage from "./pages/StudySetAttemptsPage";
 import VerifyOtpPage from "./pages/VerifyOtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -573,6 +574,15 @@ function AppContent() {
       {/* ================= INDIVIDUAL STUDY SET ================= */}
       {currentPage === "study-set" && (
         <IndivisualStudySetPage
+          studySetId={selectedStudySetId}
+          studySets={studySets}
+          onNavigate={handleNavigate}
+        />
+      )}
+
+      {/* ================= VIEW ATTEMPTS ================= */}
+      {(currentPage === "study-set-attempts" || currentPage === "attempts") && (
+        <StudySetAttemptsPage
           studySetId={selectedStudySetId}
           studySets={studySets}
           onNavigate={handleNavigate}
