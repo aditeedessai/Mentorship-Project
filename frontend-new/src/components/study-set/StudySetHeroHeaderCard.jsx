@@ -68,7 +68,7 @@ function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
 
           <button
             type="button"
-            onClick={() => onNavigate?.("results", { studySetId })}
+            onClick={() => onNavigate?.("study-set-attempts", { studySetId })}
             className={`flex items-center justify-center gap-2.5 rounded-xl border px-5 py-3 sm:py-3.5 font-bold text-xs sm:text-sm transition-all duration-300 ${
               isDarkMode
                 ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"

@@ -373,15 +373,22 @@ export default function QnAPage({ onNavigate } = {}) {
                 {currentQ.question}
               </h2>
 
-              <div className={`flex gap-3 p-3.5 sm:p-4 border rounded-2xl mb-5 ${
-                isDarkMode ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200" : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
-              }`}>
-                <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                <p className="text-xs leading-relaxed font-semibold overflow-wrap-anywhere">
-                  <span className="font-black">AI Hint: </span>
-                  {currentQ.hint}
-                </p>
-              </div>
+              {/* AI Hint */}
+              {currentQ?.hint && (
+                <div
+                  className={`mb-5 flex gap-3 rounded-2xl border p-3.5 sm:p-4 ${
+                    isDarkMode
+                      ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200"
+                      : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
+                  }`}
+                >
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+                  <p className="overflow-wrap-anywhere text-xs font-semibold leading-relaxed">
+                    <span className="font-black">AI Hint: </span>
+                    {currentQ.hint}
+                  </p>
+                </div>
+              )}
 
               <div className={`flex-1 min-h-[160px] sm:min-h-[180px] ${isViolationActive ? 'opacity-50 pointer-events-none' : ''}`} data-ac-editable="true">
                 <textarea
