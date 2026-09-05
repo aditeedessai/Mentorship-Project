@@ -38,7 +38,7 @@ export default function MCQPage({ onNavigate } = {}) {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Pull data from route state (set by ConfigureSession)
+  // Pull data from route state
   const questions = useMemo(
     () => location.state?.questions || [],
     [location.state?.questions]
@@ -64,6 +64,7 @@ export default function MCQPage({ onNavigate } = {}) {
 
   const [scratchpad, setScratchpad] = useState({})
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState({})
+
   const [remainingSeconds, setRemainingSeconds] = useState(
     questionCount * 90
   )
@@ -73,8 +74,11 @@ export default function MCQPage({ onNavigate } = {}) {
   const [showNavDrawer, setShowNavDrawer] = useState(false)
   const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
 
-  // NEW: controls the celebration screen
+  // Celebration screen
   const [showCelebration, setShowCelebration] = useState(false)
+
+  // Finish Quiz confirmation popup
+  const [showFinishModal, setShowFinishModal] = useState(false)
 
   // ── Anti-Cheating ──────────────────────────────────────────────
   const {
@@ -98,12 +102,21 @@ export default function MCQPage({ onNavigate } = {}) {
   // Redirect if no questions were loaded
   useEffect(() => {
     if (questionCount === 0) {
-      onNavigate?.('quiz', { studySetId: location.state?.studySetId })
+      onNavigate?.('quiz', {
+        studySetId: location.state?.studySetId,
+      })
+
       navigate('/quiz')
     }
-  }, [questionCount, navigate, onNavigate, location.state?.studySetId])
+  }, [
+    questionCount,
+    navigate,
+    onNavigate,
+    location.state?.studySetId,
+  ])
 
-  // Timer — only ticks when fullscreen is established and no active violation
+  // Timer — only ticks when fullscreen is established
+  // and no active violation
   useEffect(() => {
     if (
       remainingSeconds <= 0 ||
@@ -115,7 +128,9 @@ export default function MCQPage({ onNavigate } = {}) {
     }
 
     const interval = setInterval(() => {
-      setRemainingSeconds((prev) => Math.max(0, prev - 1))
+      setRemainingSeconds((prev) =>
+        Math.max(0, prev - 1)
+      )
     }, 1000)
 
     return () => clearInterval(interval)
@@ -125,6 +140,8 @@ export default function MCQPage({ onNavigate } = {}) {
     isViolationActive,
     showCelebration,
   ])
+
+  // ── Question Navigation ────────────────────────────────────────
 
   const goToQuestion = useCallback(
     (num) => {
@@ -207,14 +224,28 @@ export default function MCQPage({ onNavigate } = {}) {
     }
   }, [currentQuestion, selectedAnswers])
 
+  // ── Finish Quiz Confirmation ──────────────────────────────────
+
+  const handleFinishClick = useCallback(() => {
+    if (isSubmitting || isViolationActive) {
+      return
+    }
+
+    setShowFinishModal(true)
+  }, [isSubmitting, isViolationActive])
+
+  // ── Submit Quiz ────────────────────────────────────────────────
+
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || !attemptId) return
+    if (isSubmitting || !attemptId) {
+      return
+    }
 
     setIsSubmitting(true)
 
     try {
       // Build answers array for ALL section questions
-      // (answered + skipped)
+      // answered + skipped
       const answersPayload = []
 
       for (let i = 1; i <= questionCount; i++) {
@@ -252,7 +283,7 @@ export default function MCQPage({ onNavigate } = {}) {
       // 3. Show celebration AFTER successful submission
       setShowCelebration(true)
 
-      // 4. Wait briefly so the user can see the celebration
+      // 4. Wait briefly so the user can see celebration
       const studySetId = location.state?.studySetId
 
       setTimeout(() => {
@@ -261,6 +292,7 @@ export default function MCQPage({ onNavigate } = {}) {
           studySetId,
           questionType: 'mcq',
         })
+
         navigate('/results', {
           state: {
             attemptId,
@@ -286,11 +318,19 @@ export default function MCQPage({ onNavigate } = {}) {
     antiCheatCleanup,
   ])
 
+  // ── Abort Quiz ─────────────────────────────────────────────────
+
   const handleAbortConfirm = useCallback(() => {
     antiCheatCleanup()
     onNavigate?.('dashboard')
     navigate('/')
-  }, [navigate, onNavigate, antiCheatCleanup])
+  }, [
+    navigate,
+    onNavigate,
+    antiCheatCleanup,
+  ])
+
+  // ── Bookmark ───────────────────────────────────────────────────
 
   const toggleBookmark = useCallback(() => {
     setBookmarkedQuestions((prev) => ({
@@ -298,6 +338,8 @@ export default function MCQPage({ onNavigate } = {}) {
       [currentQuestion]: !prev[currentQuestion],
     }))
   }, [currentQuestion])
+
+  // ── Scratchpad ────────────────────────────────────────────────
 
   const handleScratchpadChange = useCallback(
     (value) => {
@@ -317,11 +359,11 @@ export default function MCQPage({ onNavigate } = {}) {
   }, [currentQuestion])
 
   // Don't render if no questions or quiz was terminated
-  if (questionCount === 0 || quizTerminated) return null
+  if (questionCount === 0 || quizTerminated) {
+    return null
+  }
 
-  /* =========================================================
-     JOJO CELEBRATION SCREEN
-  ========================================================= */
+  // ── JOJO CELEBRATION SCREEN ───────────────────────────────────
 
   if (showCelebration) {
     return (
@@ -356,22 +398,23 @@ export default function MCQPage({ onNavigate } = {}) {
             />
           ))}
 
-          {confettiPieces.slice(0, 12).map((piece, index) => (
-            <span
-              key={`small-${index}`}
-              className="absolute h-2.5 w-2.5 rounded-full bg-purple-300 animate-[confettiPop_1.6s_ease-out_infinite]"
-              style={{
-                left: piece.left,
-                top: piece.top,
-                animationDelay: piece.delay,
-                transform: `translateY(8px)`,
-              }}
-            />
-          ))}
+          {confettiPieces
+            .slice(0, 12)
+            .map((piece, index) => (
+              <span
+                key={`small-${index}`}
+                className="absolute h-2.5 w-2.5 rounded-full bg-purple-300 animate-[confettiPop_1.6s_ease-out_infinite]"
+                style={{
+                  left: piece.left,
+                  top: piece.top,
+                  animationDelay: piece.delay,
+                  transform: 'translateY(8px)',
+                }}
+              />
+            ))}
         </div>
 
         <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
-
           {/* Jojo */}
           <div className="relative mb-7 flex h-64 w-64 items-center justify-center">
             <div
@@ -466,7 +509,7 @@ export default function MCQPage({ onNavigate } = {}) {
           : 'bg-[#F6F3FC] text-[#292530]'
       }`}
     >
-      {/* Fullscreen gate — blocks quiz until fullscreen is confirmed */}
+      {/* Fullscreen gate */}
       {!isFullscreenReady && (
         <div
           className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${
@@ -557,7 +600,7 @@ export default function MCQPage({ onNavigate } = {}) {
           onPrevious={handlePrevious}
           onNext={
             currentQuestion === questionCount
-              ? handleFinishQuiz
+              ? handleFinishClick
               : handleConfirmNext
           }
           isFirstQuestion={currentQuestion === 1}
@@ -576,11 +619,71 @@ export default function MCQPage({ onNavigate } = {}) {
         />
       </div>
 
+      {/* Abort Quiz Modal */}
       {showAbortModal && (
         <AbortQuizModal
           onCancel={() => setShowAbortModal(false)}
           onConfirm={handleAbortConfirm}
         />
+      )}
+
+      {/* Finish Quiz Confirmation Modal */}
+      {showFinishModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div
+            className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${
+              isDarkMode
+                ? 'border-white/10 bg-[#171320] text-white'
+                : 'border-[#8064C7]/10 bg-white text-[#292530]'
+            }`}
+          >
+            <h2 className="text-xl font-black tracking-tight">
+              Finish Quiz?
+            </h2>
+
+            <p
+              className={`mt-2 text-sm leading-relaxed ${
+                isDarkMode
+                  ? 'text-white/60'
+                  : 'text-gray-500'
+              }`}
+            >
+              Are you sure you want to finish the quiz? Your
+              answers will be submitted and you won't be able to
+              make any more changes.
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              {/* Cancel */}
+              <button
+                type="button"
+                onClick={() => setShowFinishModal(false)}
+                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
+                  isDarkMode
+                    ? 'bg-white/10 text-white hover:bg-white/15'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Cancel
+              </button>
+
+              {/* Confirm Finish */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFinishModal(false)
+                  handleFinishQuiz()
+                }}
+                disabled={isSubmitting}
+                className="rounded-xl bg-[#8064C7] px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? 'Submitting...'
+                  : 'Finish Quiz'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
