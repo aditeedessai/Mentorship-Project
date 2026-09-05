@@ -91,7 +91,8 @@ def generate_questions(
             study_set_id=str(study_set_id),
             question_type=payload.question_type.value,
             document_ids=doc_id_str,
-            attempt_id=payload.attempt_id
+            attempt_id=payload.attempt_id,
+            user_id=current_user.user_id
         )
     except ValueError as e:
         raise HTTPException(

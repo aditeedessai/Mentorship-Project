@@ -42,7 +42,8 @@ def run_quiz(
     study_set_id: str = None,
     question_type: str = "mcq",
     document_ids: list[str] | str = None,
-    attempt_id: str = None
+    attempt_id: str = None,
+    user_id: str = None
 ):
     """
     Generate a quiz from uploaded study material(s)
@@ -72,7 +73,8 @@ def run_quiz(
         study_set_id=study_set_id,
         question_type=question_type,
         document_ids=document_ids,
-        attempt_id=attempt_id
+        attempt_id=attempt_id,
+        user_id=user_id
     )
 
     questions = quiz.get(

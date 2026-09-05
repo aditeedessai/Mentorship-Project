@@ -1,9 +1,35 @@
-def build_summary_prompt(text: str) -> str:
+def build_summary_prompt(
+    text: str,
+    student_grade_or_year: str | None = None,
+    student_field: str | None = None,
+    student_curriculum: str | None = None,
+) -> str:
+
+    # Build the optional student-level adaptation block
+    student_level_block = ""
+    if student_grade_or_year or student_field or student_curriculum:
+        student_level_block = f"""
+The student's educational profile is:
+- Grade / Year of Study: {student_grade_or_year or "Not specified"}
+- Field of Study: {student_field or "Not specified"}
+- Curriculum: {student_curriculum or "Not specified"}
+
+Adapt the complexity of language, technical terminology, level of assumed prior
+knowledge, conceptual depth, and academic tone to be appropriate for this
+student's academic level.
+
+IMPORTANT: The student's educational information is ONLY a level and
+presentation calibration signal. It is NOT a source of summary content. All
+factual content must come exclusively from the study material provided below.
+Do NOT add facts from the curriculum, concepts from the student's field,
+definitions from outside the material, examples from general knowledge, or
+topics simply because they are appropriate for the student's academic level.
+"""
 
     return f"""
 You are an experienced university professor helping a student
 orient themselves before a quiz.
-
+{student_level_block}
 Write a QUICK overview of the study material below — a fast skim,
 not a detailed study guide, and not a replacement for reading the
 actual material.
