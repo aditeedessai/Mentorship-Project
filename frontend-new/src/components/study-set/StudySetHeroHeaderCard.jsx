@@ -1,4 +1,4 @@
-import { BookOpen, Sparkles, Eye, History } from "lucide-react";
+import { BookOpen, Sparkles, History } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
 function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
@@ -63,20 +63,7 @@ function StudySetHeroHeaderCard({ studySetName, studySetId, onNavigate }) {
             }`}
           >
             <History size={18} />
-            <span>View Attempts</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigate?.("study-set-attempts", { studySetId })}
-            className={`flex items-center justify-center gap-2.5 rounded-xl border px-5 py-3 sm:py-3.5 font-bold text-xs sm:text-sm transition-all duration-300 ${
-              isDarkMode
-                ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
-                : "border-gray-200 bg-white/80 text-[#292530] hover:bg-white"
-            }`}
-          >
-            <Eye size={18} />
-            <span>View Results</span>
+            <span>View Attempts and Results</span>
           </button>
         </div>
       </div>

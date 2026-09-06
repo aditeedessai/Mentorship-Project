@@ -54,6 +54,12 @@ export default function DailySchedule({
   // day it first became due; a future pair shows only on its own actual
   // due date, matching how tasks are dated. Never mixed into the
   // "Completed" tab (a revision-due item isn't a completable checkbox).
+  const getRevisionAttemptDateStr = (revision) => {
+    if (!revision.last_attempt_at) return null;
+    const iso = String(revision.last_attempt_at);
+    return iso.split("T")[0].split(" ")[0];
+  };
+
   const revisionMatchesDate = (revision, dateKey) => {
     if (!revision.next_due_date) return false;
     if (dateKey === todayStr) return revision.next_due_date <= todayStr;
@@ -67,6 +73,8 @@ export default function DailySchedule({
       ? revisionsDue.filter((r) => r.next_due_date > todayStr)
       : filterStatus === "all"
       ? revisionsDue.filter((r) => revisionMatchesDate(r, selectedDate))
+      : filterStatus === "completed"
+      ? revisionsDue.filter((r) => r.attempts_taken > 0 && r.last_attempt_at)
       : [];
 
   const formattedDateTitle = formatHeaderDate(selectedDate);
@@ -199,6 +207,7 @@ export default function DailySchedule({
                   key={`${revision.study_set_id}-${revision.question_type}`}
                   revision={revision}
                   onStart={onStartRevision}
+                  isCompleted={filterStatus === "completed"}
                 />
               ))}
               {dateTasks.map((task) => (

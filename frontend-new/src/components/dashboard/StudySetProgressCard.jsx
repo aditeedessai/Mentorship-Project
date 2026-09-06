@@ -1,30 +1,44 @@
 import { useEffect, useState } from "react";
-import { Layers, Loader2, AlertCircle } from "lucide-react";
+import { Layers, Loader2, AlertCircle, BookOpen, ChevronRight } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
-import { fetchStudySetProgress } from "../../services/api";
+import { fetchStudySets } from "../../services/api";
 
-function StudySetProgressCard() {
+function StudySetProgressCard({ onNavigate }) {
   const { isDarkMode } = useTheme();
-  const [progress, setProgress] = useState([]);
+  const [studySets, setStudySets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const loadProgress = async () => {
+  const loadSets = async () => {
     setIsLoading(true);
     setLoadError("");
     try {
-      const data = await fetchStudySetProgress();
-      setProgress(data);
+      const data = await fetchStudySets();
+      setStudySets(data || []);
     } catch {
-      setLoadError("Couldn't load study set progress. Please try again.");
+      setLoadError("Couldn't load study sets. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    loadProgress();
+    loadSets();
   }, []);
+
+  const handleSeeAll = () => {
+    if (onNavigate) {
+      onNavigate("study-sets");
+    }
+  };
+
+  const handleSetClick = (setId) => {
+    if (onNavigate && setId) {
+      onNavigate("individual-set", { studySetId: setId });
+    } else if (onNavigate) {
+      onNavigate("study-sets");
+    }
+  };
 
   return (
     <div
@@ -34,17 +48,33 @@ function StudySetProgressCard() {
           : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
-      <div className="mb-5 flex items-center gap-2">
-        <Layers size={22} className="text-[#8064C7]" />
-        <h2 className="text-xl font-bold tracking-tight">
-          Study Set Progress
-        </h2>
+      {/* Header */}
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Layers size={22} className="text-[#8064C7]" />
+          <h2 className="text-xl font-bold tracking-tight">
+            Study Sets
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSeeAll}
+          className={`rounded-full border px-3.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+            isDarkMode
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-xs"
+          }`}
+        >
+          See all
+        </button>
       </div>
 
+      {/* Content */}
       {isLoading ? (
         <div className="flex flex-1 items-center justify-center gap-2 py-6 text-sm opacity-50">
           <Loader2 size={16} className="animate-spin" />
-          Loading progress...
+          Loading study sets...
         </div>
       ) : loadError ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-6 text-center">
@@ -54,56 +84,49 @@ function StudySetProgressCard() {
           </div>
           <button
             type="button"
-            onClick={loadProgress}
+            onClick={loadSets}
             className="text-xs font-bold text-[#8064C7] underline underline-offset-2 hover:text-[#8B6DD4]"
           >
             Retry
           </button>
         </div>
-      ) : progress.length === 0 ? (
+      ) : studySets.length === 0 ? (
         <p className={`flex-1 py-6 text-center text-sm ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
           No study sets yet.
         </p>
       ) : (
-        <div className="flex-1 space-y-5">
-          {progress.map((set) => {
-            const isComplete = set.sections_completed >= set.total_sections;
-            const percent = Math.min(
-              100,
-              (set.sections_completed / set.total_sections) * 100
-            );
+        <div className="flex-1 space-y-2.5 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+          {studySets.map((set) => {
+            const setId = set.study_set_id || set.id;
+            const name = set.name || "Untitled Study Set";
 
             return (
-              <div key={set.study_set_id}>
-                <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="truncate text-sm font-bold">
-                      {set.name}
-                    </span>
-                    {isComplete && (
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                        isDarkMode
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}>
-                        Done
-                      </span>
-                    )}
+              <div
+                key={setId || name}
+                onClick={() => handleSetClick(setId)}
+                className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-all cursor-pointer ${
+                  isDarkMode
+                    ? "border-white/5 bg-white/5 hover:bg-white/10 text-white"
+                    : "border-white/80 bg-white/70 hover:bg-white text-[#231B33]"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                      isDarkMode ? "bg-[#8064C7]/20 text-[#A78BFA]" : "bg-[#8064C7]/10 text-[#8064C7]"
+                    }`}
+                  >
+                    <BookOpen size={16} />
                   </div>
-                  <span className={`shrink-0 text-xs font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
-                    {set.sections_completed}/{set.total_sections} sections
+                  <span className="truncate text-sm font-bold">
+                    {name}
                   </span>
                 </div>
 
-                <div className={`h-3 w-full overflow-hidden rounded-full ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${percent}%`,
-                      backgroundColor: isComplete ? "#10B981" : "#8064C7",
-                    }}
-                  />
-                </div>
+                <ChevronRight
+                  size={16}
+                  className={`shrink-0 ${isDarkMode ? "text-white/30" : "text-gray-400"}`}
+                />
               </div>
             );
           })}

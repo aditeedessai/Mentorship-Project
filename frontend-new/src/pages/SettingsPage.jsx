@@ -503,33 +503,6 @@ const SettingsPage = ({
               </p>
             )}
 
-            {/* =================================================
-                ACTIVE SESSIONS
-            ================================================= */}
-            <button
-              type="button"
-              className="flex w-full cursor-pointer items-center justify-between py-4 text-left transition hover:opacity-80"
-            >
-              <div>
-                <p className="text-xs font-bold">
-                  Active Sessions
-                </p>
-
-                <p
-                  className={`mt-0.5 text-[11px] ${isDarkMode
-                      ? "text-white/50"
-                      : "text-gray-500"
-                    }`}
-                >
-                  Manage devices where you're signed in
-                </p>
-              </div>
-
-              <ChevronRight
-                size={18}
-                className="opacity-40"
-              />
-            </button>
 
             {/* =================================================
                 PRIVACY POLICY
