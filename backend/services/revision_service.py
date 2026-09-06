@@ -250,10 +250,11 @@ def get_due_revisions_for_user(user_id: str) -> list[dict]:
     due = []
     for schedule in schedules:
         info = _compute_next_due_from_schedule(schedule, user_id)
-        if info["next_due_date"] is not None:
+        if info["next_due_date"] is not None or schedule.get("last_attempt_at") is not None:
             due.append({
                 "study_set_id": schedule["study_set_id"],
                 "question_type": schedule["question_type"],
+                "last_attempt_at": schedule.get("last_attempt_at"),
                 **info,
             })
 

@@ -364,8 +364,10 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         selectedDate={selectedDate}
         tasks={tasks}
         exams={exams}
+        revisionsDue={revisionsDue}
         onSelectDate={setSelectedDate}
         onToggleTaskComplete={handleToggleTaskComplete}
+        onStartRevision={handleStartRevision}
       />
 
       {/* Add Task Modal Dialog */}

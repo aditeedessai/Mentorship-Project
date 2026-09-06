@@ -362,8 +362,6 @@ function StudySetsPage({
 
                 <div className="mb-4 h-3 w-1/2 rounded-lg bg-current opacity-10" />
 
-                <div className="mb-4 h-2 w-full rounded-full bg-current opacity-10" />
-
                 <div className="h-4 w-1/3 rounded-lg bg-current opacity-10" />
               </div>
             ))}
@@ -517,11 +515,13 @@ function StudySetsPage({
                       </div>
 
                       <div className="flex items-center gap-1.5">
+                        {/* Priority Badge (Low/Mid/High) - commented out so it can be enabled/disabled later
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${priority.color}`}
                         >
                           {priority.label}
                         </span>
+                        */}
 
                         <button
                           type="button"
@@ -553,62 +553,9 @@ function StudySetsPage({
                       {getDescription(studySet)}
                     </p>
 
-                    {/* PROGRESS */}
-                    <div className="mt-auto">
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span
-                          className={`text-xs font-bold ${
-                            progress >= 75
-                              ? "text-emerald-500 dark:text-emerald-400"
-                              : "text-emerald-600 dark:text-emerald-400"
-                          }`}
-                        >
-                          Progress
-                        </span>
-
-                        <span
-                          className={`text-xs font-bold ${
-                            meta.loaded && progress >= 75
-                              ? "text-emerald-500 dark:text-emerald-400"
-                              : !meta.loaded
-                              ? "opacity-50"
-                              : ""
-                          }`}
-                        >
-                          {/* Distinct from "0%" - a real 0% (genuinely
-                              untouched study set) and "still fetching
-                              revision-status" must never render
-                              identically, or a real user sees 0% for the
-                              several real seconds a cold dev-server load
-                              can take and reasonably concludes progress
-                              isn't being tracked at all. */}
-                          {meta.loaded ? `${progress}%` : "Loading…"}
-                        </span>
-                      </div>
-
-                      <div
-                        className={`h-2 w-full overflow-hidden rounded-full ${
-                          isDarkMode
-                            ? "bg-white/10"
-                            : "bg-black/10"
-                        }`}
-                      >
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            !meta.loaded
-                              ? "bg-white/20 animate-pulse"
-                              : progress >= 75
-                              ? "bg-emerald-500"
-                              : "bg-emerald-500/80"
-                          }`}
-                          style={{
-                            width: meta.loaded ? `${progress}%` : "100%",
-                          }}
-                        />
-                      </div>
-
-                      {/* CARD BOTTOM */}
-                      <div className="mt-4 flex items-end justify-between">
+                    {/* CARD BOTTOM & CTA */}
+                    <div className="mt-auto pt-2">
+                      <div className="flex items-end justify-between">
                         <div className="text-[11px] leading-tight opacity-60">
                           <span className="block">
                             Created

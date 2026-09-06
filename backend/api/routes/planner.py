@@ -41,6 +41,7 @@ def get_revisions_due(
             next_due_date=d["next_due_date"],
             attempts_taken=d["attempts_taken"],
             last_accuracy=d["last_accuracy"],
+            last_attempt_at=d.get("last_attempt_at"),
         )
         for d in due
     ]

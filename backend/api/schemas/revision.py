@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -76,9 +76,10 @@ class PlannerRevisionDueItem(BaseModel):
     study_set_id: str = Field(..., description="Study set this due revision belongs to")
     study_set_name: str = Field(..., description="Study set's display name, for planner labeling")
     question_type: str = Field(..., description="Question type this revision is for ('mcq', 'application', 'long', 'short')")
-    next_due_date: date = Field(..., description="The date this became (or remains) due")
+    next_due_date: date | None = Field(None, description="The date this became (or remains) due")
     attempts_taken: int = Field(..., ge=0, le=4, description="Attempts taken so far for this pair")
     last_accuracy: float | None = Field(None, description="Accuracy percentage (0-100) from the most recent attempt")
+    last_attempt_at: datetime | str | None = Field(None, description="Timestamp when the last attempt was taken")
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -48,7 +48,7 @@ def generate_study_set_summary(
                 detail=f"Study set with ID '{study_set_id}' not found"
             )
 
-        summary_data = generate_summary(study_set_id=str(study_set_id))
+        summary_data = generate_summary(study_set_id=str(study_set_id), user_id=current_user.user_id)
 
         try:
             summary_repository.save_summary(

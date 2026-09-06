@@ -5,6 +5,7 @@ import traceback
 from .gemini_client import client
 from .prompt_builder import build_quiz_prompt
 from backend.database.quiz_repository import save_questions
+from backend.database.student_profile_repository import get_student_profile
 from backend.embeddings.retriever import retrieve_chunks
 
 
@@ -43,7 +44,8 @@ def generate_quiz(
     study_set_id: str = None,
     question_type: str = "mcq",
     document_ids: list[str] | str = None,
-    attempt_id: str = None
+    attempt_id: str = None,
+    user_id: str = None
 ):
 
     print("===== generate_quiz() called =====")
@@ -91,9 +93,23 @@ def generate_quiz(
 
     print("Text length:", len(text))
 
+    # Fetch student profile for level adaptation (if user_id available)
+    student_grade_or_year = None
+    student_field = None
+    student_curriculum = None
+    if user_id:
+        profile = get_student_profile(user_id)
+        if profile:
+            student_grade_or_year = profile.get("grade_or_year")
+            student_field = profile.get("field_stream")
+            student_curriculum = profile.get("curriculum_type")
+
     prompt = build_quiz_prompt(
         text,
-        question_type=question_type
+        question_type=question_type,
+        student_grade_or_year=student_grade_or_year,
+        student_field=student_field,
+        student_curriculum=student_curriculum,
     )
 
     print("Calling Gemini...")

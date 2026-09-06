@@ -1,6 +1,5 @@
 import {
   FileText,
-  Loader2,
   AlertCircle,
   RefreshCw,
   Sparkles,
@@ -9,6 +8,7 @@ import {
   Copy,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import jojoSummary from "../../assets/jojo-summary.png";
 
 const SUMMARY_ILLUSTRATION_URL =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAouo3QtCCo7QifKWkDxrxAsJZU4tNXEJ-10uNYJWyxAXKf100yjk9uni0q2p_0Yn8M8enbgmj3qqwz7gQxHnvMKC5kEQCh5lJtP5iNruT0eKFVxY9ipaj1ypR2QWo0BVTecbDunMXuknVl6PiMzKaTnqKuXl9ecuTz9VNw4IgvACNaQl_RhYFQfWXmQqCs9ar8ZSCaNE9WttpJoFbZAj5PWcbCOP6mY00x-srcnWLxBNS2SQSBjkEe";
@@ -29,11 +29,11 @@ function StudySetSummaryCard({
 
   const summaryParagraphs = summary
     ? summary.overview_paragraphs ||
-    (summary.overview
-      ? [summary.overview]
-      : typeof summary === "string"
-        ? [summary]
-        : [JSON.stringify(summary)])
+      (summary.overview
+        ? [summary.overview]
+        : typeof summary === "string"
+          ? [summary]
+          : [JSON.stringify(summary)])
     : [];
 
   const keyTakeaways = summary
@@ -49,181 +49,287 @@ function StudySetSummaryCard({
           : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
+      {/* Subtle Jojo floating animation */}
+      <style>
+        {`
+          @keyframes jojoFloat {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-6px);
+            }
+          }
+        `}
+      </style>
+
+      {/* ==================== HEADER ==================== */}
       <div className="flex items-center gap-3 mb-5">
         <div className="bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] p-3 rounded-2xl">
           <FileText size={22} />
         </div>
+
         <div>
-          <h2 className="text-xl font-black tracking-tight">Summary</h2>
-          <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>AI-generated comprehensive document synthesis</p>
+          <h2 className="text-xl font-black tracking-tight">
+            Summary
+          </h2>
+
+          <p
+            className={`text-xs ${
+              isDarkMode ? "text-white/50" : "text-gray-500"
+            }`}
+          >
+            AI-generated comprehensive document synthesis
+          </p>
         </div>
       </div>
 
+      {/* ==================== LOADING STATE ==================== */}
       {(summaryLoading || summaryFetching) && (
-        <div className={`flex-1 flex flex-col justify-center items-center p-12 border rounded-2xl backdrop-blur-xl text-center ${
-          isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
-        }`}>
-          <Loader2 size={40} className="mb-3 animate-spin text-[#8064C7]" />
-          <p className="text-base font-bold">
-            {summaryFetching ? "Loading Summary..." : "Generating Study Set Summary..."}
+        <div
+          className={`flex-1 flex flex-col justify-center items-center p-8 sm:p-10 border rounded-2xl backdrop-blur-xl text-center overflow-hidden ${
+            isDarkMode
+              ? "border-white/10 bg-white/5"
+              : "border-gray-200/80 bg-white/50"
+          }`}
+        >
+          {/* Jojo */}
+          <img
+            src={jojoSummary}
+            alt="Jojo preparing your summary"
+            className="w-44 h-44 sm:w-52 sm:h-52 object-contain"
+            style={{
+              animation: "jojoFloat 3s ease-in-out infinite",
+            }}
+          />
+
+          {/* Loading title */}
+          <p className="text-base font-bold mt-2">
+            {summaryFetching
+              ? "Jojo is checking your notes..."
+              : "Jojo is preparing your summary..."}
           </p>
-          <p className={`mt-1 text-xs max-w-sm ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
+
+          {/* Loading description */}
+          <p
+            className={`mt-1 text-xs max-w-sm ${
+              isDarkMode ? "text-white/60" : "text-gray-500"
+            }`}
+          >
             {summaryFetching
               ? "Checking for a previously generated summary."
-              : "AI is analyzing your study materials and building a structured breakdown."}
+              : "Jojo is organizing the important points from your study materials."}
           </p>
         </div>
       )}
 
-      {!summaryLoading && !summaryFetching && summaryError && (
-        <div className="flex-1 p-6 border border-red-500/30 rounded-2xl bg-red-500/10 text-center">
-          <AlertCircle size={32} className="mx-auto mb-2 text-red-400" />
-          <p className="text-sm font-bold text-red-400">
-            Failed to generate summary
-          </p>
-          <p className="mt-1 text-xs text-red-300 mb-4">{summaryError}</p>
-          <button
-            type="button"
-            onClick={onGenerateSummary}
-            className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4.5 py-2.5 text-xs font-bold text-white transition hover:bg-red-600 shadow-md"
-          >
-            <RefreshCw size={14} /> Try Again
-          </button>
-        </div>
-      )}
+      {/* ==================== ERROR STATE ==================== */}
+      {!summaryLoading &&
+        !summaryFetching &&
+        summaryError && (
+          <div className="flex-1 p-6 border border-red-500/30 rounded-2xl bg-red-500/10 text-center">
+            <AlertCircle
+              size={32}
+              className="mx-auto mb-2 text-red-400"
+            />
 
-      {!summaryLoading && !summaryFetching && !summaryError && !summary && (
-        <div className={`flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
-          isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
-        }`}>
-          <div className="w-full lg:w-1/2 shrink-0">
-            <div className="rounded-2xl overflow-hidden border border-inherit shadow-sm group">
-              <img
-                src={SUMMARY_ILLUSTRATION_URL}
-                alt="AI Summary Illustration"
-                className="w-full h-auto max-h-[220px] object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-            </div>
-          </div>
-          <div className="flex-1 text-left w-full">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider mb-2.5 ${
-              isDarkMode ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-300" : "bg-emerald-100 border border-emerald-200 text-emerald-700"
-            }`}>
-              <Sparkles size={13} />
-              AI SYNTHESIS
-            </span>
-            <h3 className="text-xl font-black tracking-tight mb-1">
-              AI-powered synthesis
-            </h3>
-            <p className={`text-xs mb-4 leading-relaxed ${isDarkMode ? "text-white/60" : "text-gray-500"}`}>
-              A comprehensive overview of your documents is ready to be generated.
+            <p className="text-sm font-bold text-red-400">
+              Failed to generate summary
+            </p>
+
+            <p className="mt-1 text-xs text-red-300 mb-4">
+              {summaryError}
             </p>
 
             <button
               type="button"
               onClick={onGenerateSummary}
-              disabled={documentsCount === 0}
-              className="w-full flex items-center justify-center gap-2.5 bg-[#8064C7] hover:bg-[#8B6DD4] text-white rounded-xl px-6 py-3.5 font-bold text-sm shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl bg-red-500 px-4.5 py-2.5 text-xs font-bold text-white transition hover:bg-red-600 shadow-md"
             >
-              <Sparkles size={18} />
-              <span>Generate Summary</span>
+              <RefreshCw size={14} />
+              Try Again
             </button>
-            {documentsCount === 0 && (
-              <p className={`mt-2 text-[11px] text-center ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
-                Upload at least one document first to generate a summary.
-              </p>
-            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {!summaryLoading && !summaryFetching && !summaryError && summary && (
-        <div className={`flex-1 flex flex-col justify-between gap-4 p-6 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
-          isDarkMode ? "border-white/10 bg-white/5" : "border-gray-200/80 bg-white/50"
-        }`}>
-          <div>
-            <h3 className="text-xl font-black tracking-tight mb-3">
-              {summary.title || `${studySetName}: Overview`}
-            </h3>
-
-            <div className="space-y-3.5 text-sm leading-relaxed">
-              {summaryParagraphs.map((para, idx) => (
-                <p
-                  key={idx}
-                  className={`p-4 border rounded-2xl backdrop-blur-xl overflow-wrap-anywhere ${
-                    isDarkMode ? "border-white/5 bg-white/5" : "border-gray-100 bg-white/90 text-[#292530]"
-                  }`}
-                >
-                  {para}
-                </p>
-              ))}
+      {/* ==================== EMPTY / GENERATE STATE ==================== */}
+      {!summaryLoading &&
+        !summaryFetching &&
+        !summaryError &&
+        !summary && (
+          <div
+            className={`flex-1 flex flex-col lg:flex-row items-center gap-6 p-6 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
+              isDarkMode
+                ? "border-white/10 bg-white/5"
+                : "border-gray-200/80 bg-white/50"
+            }`}
+          >
+            <div className="w-full lg:w-1/2 shrink-0">
+              <div className="rounded-2xl overflow-hidden border border-inherit shadow-sm group">
+                <img
+                  src={SUMMARY_ILLUSTRATION_URL}
+                  alt="AI Summary Illustration"
+                  className="w-full h-auto max-h-[220px] object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              </div>
             </div>
 
-            {keyTakeaways.length > 0 && (
-              <div className="mt-6 pt-5 border-t border-inherit">
-                <p className="font-mono text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] uppercase tracking-wider mb-3">
-                  KEY TAKEAWAYS
+            <div className="flex-1 text-left w-full">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider mb-2.5 ${
+                  isDarkMode
+                    ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-300"
+                    : "bg-emerald-100 border border-emerald-200 text-emerald-700"
+                }`}
+              >
+                <Sparkles size={13} />
+                AI SYNTHESIS
+              </span>
+
+              <h3 className="text-xl font-black tracking-tight mb-1">
+                AI-powered synthesis
+              </h3>
+
+              <p
+                className={`text-xs mb-4 leading-relaxed ${
+                  isDarkMode ? "text-white/60" : "text-gray-500"
+                }`}
+              >
+                A comprehensive overview of your documents is ready to be
+                generated.
+              </p>
+
+              <button
+                type="button"
+                onClick={onGenerateSummary}
+                disabled={documentsCount === 0}
+                className="w-full flex items-center justify-center gap-2.5 bg-[#8064C7] hover:bg-[#8B6DD4] text-white rounded-xl px-6 py-3.5 font-bold text-sm shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Sparkles size={18} />
+                <span>Generate Summary</span>
+              </button>
+
+              {documentsCount === 0 && (
+                <p
+                  className={`mt-2 text-[11px] text-center ${
+                    isDarkMode ? "text-white/40" : "text-gray-400"
+                  }`}
+                >
+                  Upload at least one document first to generate a summary.
                 </p>
-                <ul className="space-y-2.5">
-                  {keyTakeaways.map((takeaway, idx) => (
-                    <li
-                      key={idx}
-                      className={`flex items-start gap-3 text-xs sm:text-sm p-3.5 rounded-2xl border transition-all ${
-                        isDarkMode ? "border-white/5 bg-white/5" : "border-gray-100 bg-white text-[#292530]"
-                      }`}
-                    >
-                      <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
-                        <CheckCircle2 size={16} />
-                      </div>
-                      <span className="font-bold leading-relaxed overflow-wrap-anywhere">{takeaway}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border-inherit">
-            <button
-              type="button"
-              onClick={onGenerateSummary}
-              disabled={summaryLoading}
-              className="flex items-center justify-center gap-2 bg-[#8064C7] hover:bg-[#8B6DD4] text-white rounded-xl px-5 py-2.5 font-bold text-xs shadow-md transition-all hover:-translate-y-0.5 disabled:opacity-50"
-            >
-              <RefreshCw size={15} />
-              Regenerate Summary
-            </button>
-
-            <button
-              type="button"
-              onClick={onCopySummary}
-              className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all ${
-                isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-gray-200 bg-white hover:bg-gray-50"
-              }`}
-              title="Copy Summary"
-            >
-              {copied ? (
-                <>
-                  <Check size={16} className="text-emerald-400" />
-                  <span className="text-xs font-bold sm:hidden text-emerald-400">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={16} />
-                  <span className="text-xs font-bold sm:hidden">Copy</span>
-                </>
               )}
-            </button>
+            </div>
           </div>
+        )}
 
-        </div>
-      )}
+      {/* ==================== GENERATED SUMMARY ==================== */}
+      {!summaryLoading &&
+        !summaryFetching &&
+        !summaryError &&
+        summary && (
+          <div
+            className={`flex-1 flex flex-col justify-between gap-4 p-6 border rounded-2xl backdrop-blur-xl relative overflow-hidden ${
+              isDarkMode
+                ? "border-white/10 bg-white/5"
+                : "border-gray-200/80 bg-white/50"
+            }`}
+          >
+            <div>
+              <h3 className="text-xl font-black tracking-tight mb-3">
+                {summary.title || `${studySetName}: Overview`}
+              </h3>
+
+              <div className="space-y-3.5 text-sm leading-relaxed">
+                {summaryParagraphs.map((para, idx) => (
+                  <p
+                    key={idx}
+                    className={`p-4 border rounded-2xl backdrop-blur-xl overflow-wrap-anywhere ${
+                      isDarkMode
+                        ? "border-white/5 bg-white/5"
+                        : "border-gray-100 bg-white/90 text-[#292530]"
+                    }`}
+                  >
+                    {para}
+                  </p>
+                ))}
+              </div>
+
+              {keyTakeaways.length > 0 && (
+                <div className="mt-6 pt-5 border-t border-inherit">
+                  <p className="font-mono text-xs font-bold text-[#8064C7] dark:text-[#A78BFA] uppercase tracking-wider mb-3">
+                    KEY TAKEAWAYS
+                  </p>
+
+                  <ul className="space-y-2.5">
+                    {keyTakeaways.map((takeaway, idx) => (
+                      <li
+                        key={idx}
+                        className={`flex items-start gap-3 text-xs sm:text-sm p-3.5 rounded-2xl border transition-all ${
+                          isDarkMode
+                            ? "border-white/5 bg-white/5"
+                            : "border-gray-100 bg-white text-[#292530]"
+                        }`}
+                      >
+                        <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                          <CheckCircle2 size={16} />
+                        </div>
+
+                        <span className="font-bold leading-relaxed overflow-wrap-anywhere">
+                          {takeaway}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* ==================== SUMMARY ACTIONS ==================== */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border-inherit">
+              <button
+                type="button"
+                onClick={onGenerateSummary}
+                disabled={summaryLoading}
+                className="flex items-center justify-center gap-2 bg-[#8064C7] hover:bg-[#8B6DD4] text-white rounded-xl px-5 py-2.5 font-bold text-xs shadow-md transition-all hover:-translate-y-0.5 disabled:opacity-50"
+              >
+                <RefreshCw size={15} />
+                Regenerate Summary
+              </button>
+
+              <button
+                type="button"
+                onClick={onCopySummary}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/5 hover:bg-white/10"
+                    : "border-gray-200 bg-white hover:bg-gray-50"
+                }`}
+                title="Copy Summary"
+              >
+                {copied ? (
+                  <>
+                    <Check size={16} className="text-emerald-400" />
+                    <span className="text-xs font-bold sm:hidden text-emerald-400">
+                      Copied
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} />
+                    <span className="text-xs font-bold sm:hidden">
+                      Copy
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
     </section>
   );
 }
 
 export default StudySetSummaryCard;
-

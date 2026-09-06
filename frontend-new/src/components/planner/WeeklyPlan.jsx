@@ -1,6 +1,13 @@
 import React, { useState } from "react";
-import { CalendarRange, CheckCircle2, Circle, Award, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { CalendarRange, CheckCircle2, Circle, Award, ChevronLeft, ChevronRight, ChevronDown, RotateCcw } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+
+const SECTION_TITLE_MAP = {
+  mcq: "MCQ",
+  application: "Application",
+  short: "Short Answer",
+  long: "Long Answer",
+};
 
 function formatLocalIsoDate(d) {
   const year = d.getFullYear();
@@ -47,8 +54,10 @@ export default function WeeklyPlan({
   selectedDate,
   tasks = [],
   exams = [],
+  revisionsDue = [],
   onSelectDate,
   onToggleTaskComplete,
+  onStartRevision,
 }) {
   const { isDarkMode } = useTheme();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -70,6 +79,22 @@ export default function WeeklyPlan({
     examsByDate[dateKey].push(e);
   });
 
+  const getRevisionsForDate = (dateStr) => {
+    return revisionsDue.filter((r) => {
+      // Completed revision on this exact date
+      if (r.last_attempt_at) {
+        const attemptDate = String(r.last_attempt_at).split("T")[0].split(" ")[0];
+        if (attemptDate === dateStr && r.attempts_taken > 0) return true;
+      }
+      // Active revision due on this date
+      if (r.next_due_date) {
+        if (dateStr === todayStr && r.next_due_date <= todayStr) return true;
+        if (dateStr > todayStr && r.next_due_date === dateStr) return true;
+      }
+      return false;
+    });
+  };
+
   return (
     <div
       className={`rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-300 ${
@@ -85,7 +110,7 @@ export default function WeeklyPlan({
           <div>
             <h3 className="text-lg sm:text-xl font-black tracking-tight">This Week's Plan</h3>
             <p className={`text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
-              Chronological overview of scheduled tasks & upcoming exams
+              Chronological overview of scheduled tasks, exams & revisions
             </p>
           </div>
         </div>
@@ -166,7 +191,8 @@ export default function WeeklyPlan({
           {weekDays.map((day) => {
             const dayTasks = tasksByDate[day.dateStr] || [];
             const dayExams = examsByDate[day.dateStr] || [];
-            const hasItems = dayTasks.length > 0 || dayExams.length > 0;
+            const dayRevisions = getRevisionsForDate(day.dateStr);
+            const hasItems = dayTasks.length > 0 || dayExams.length > 0 || dayRevisions.length > 0;
 
             const isSelected = day.dateStr === selectedDate;
             const isToday = day.dateStr === todayStr;
@@ -207,7 +233,7 @@ export default function WeeklyPlan({
                   </span>
                 </div>
 
-                {/* Items List for Day (Tasks + Exams) */}
+                {/* Items List for Day (Exams + Revisions + Tasks) */}
                 <div className="flex-1 space-y-1.5 overflow-hidden">
                   {!hasItems ? (
                     <p
@@ -235,6 +261,43 @@ export default function WeeklyPlan({
                             <Award size={12} className="mt-0.5 shrink-0 text-amber-500" />
                             <span className="truncate">{examName}</span>
                           </div>
+                        );
+                      })}
+
+                      {/* Revisions */}
+                      {dayRevisions.map((revision) => {
+                        const sectionTitle = SECTION_TITLE_MAP[revision.question_type] || revision.question_type;
+                        const isCompleted =
+                          revision.last_attempt_at &&
+                          String(revision.last_attempt_at).startsWith(day.dateStr) &&
+                          revision.attempts_taken > 0;
+
+                        return (
+                          <button
+                            key={`revision-${revision.study_set_id}-${revision.question_type}`}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onStartRevision) onStartRevision(revision);
+                            }}
+                            className={`flex w-full items-start gap-1 text-[11px] font-semibold leading-tight p-1 rounded-lg border text-left cursor-pointer transition ${
+                              isCompleted
+                                ? isDarkMode
+                                  ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300 opacity-60 line-through"
+                                  : "border-emerald-200 bg-emerald-50 text-emerald-700 opacity-70 line-through"
+                                : isDarkMode
+                                ? "border-dashed border-emerald-500/30 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25"
+                                : "border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            }`}
+                            title={`Revision: ${sectionTitle} - ${revision.study_set_name}`}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle2 size={12} className="mt-0.5 shrink-0 text-emerald-500" />
+                            ) : (
+                              <RotateCcw size={12} className="mt-0.5 shrink-0 text-emerald-500" />
+                            )}
+                            <span className="truncate">Revise: {sectionTitle}</span>
+                          </button>
                         );
                       })}
 
