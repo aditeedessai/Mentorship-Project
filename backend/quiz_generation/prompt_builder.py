@@ -1,4 +1,10 @@
-def build_quiz_prompt(text: str, question_type: str) -> str:
+def build_quiz_prompt(
+    text: str,
+    question_type: str,
+    student_grade_or_year: str | None = None,
+    student_field: str | None = None,
+    student_curriculum: str | None = None,
+) -> str:
 
     if question_type == "mcq":
         type_instruction = """
@@ -58,11 +64,32 @@ For every question:
             "Expected: mcq, application, long, or short."
         )
 
+    # Build the optional student-level adaptation block
+    student_level_block = ""
+    if student_grade_or_year or student_field or student_curriculum:
+        student_level_block = f"""
+The student's educational profile is:
+- Grade / Year of Study: {student_grade_or_year or "Not specified"}
+- Field of Study: {student_field or "Not specified"}
+- Curriculum: {student_curriculum or "Not specified"}
+
+Adapt the difficulty, depth of reasoning, complexity of wording, terminology,
+expected prior knowledge, and level of conceptual or application-based thinking
+to be appropriate for this student's academic level.
+
+IMPORTANT: The student's educational information is ONLY a difficulty and level
+calibration signal. It is NOT a source of quiz content. Every question, option,
+correct answer, and reference answer must be supported exclusively by the study
+material provided below. Do NOT introduce any information merely because it is
+normally taught at that grade/year, belongs to the student's field, appears in
+the student's curriculum, or is common knowledge for that academic level.
+"""
+
     return f"""
 You are an experienced university professor creating an educational quiz.
 
 The student has selected the question type: "{question_type}".
-
+{student_level_block}
 {type_instruction}
 
 For every question:
