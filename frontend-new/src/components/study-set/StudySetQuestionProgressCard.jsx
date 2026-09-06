@@ -43,12 +43,14 @@ function StudySetQuestionProgressCard({
   const { isDarkMode } = useTheme();
 
   const statusByType = {};
+
   for (const s of revisionStatus) {
     statusByType[s.question_type] = s;
   }
 
   const progressItems = QUESTION_TYPES.map((typeMeta) => {
     const s = statusByType[typeMeta.id];
+
     const attemptsTaken = s?.attempts_taken || 0;
     const needsAttention = Boolean(s?.needs_attention);
     const lastAccuracy = s?.last_accuracy;
@@ -61,9 +63,12 @@ function StudySetQuestionProgressCard({
     // study-set-wide attempt's completed_sections.
     const isAttempted = attemptsTaken > 0;
 
-    const total = questionCounts[typeMeta.id] || typeMeta.defaultTotal;
+    const total =
+      questionCounts[typeMeta.id] || typeMeta.defaultTotal;
+
     const answered = isAttempted ? total : 0;
     const percentage = isAttempted ? 100 : 0;
+
     const status = needsAttention
       ? "Needs Review"
       : isAttempted
@@ -75,7 +80,9 @@ function StudySetQuestionProgressCard({
     // off the same revision-status entry this row already renders from,
     // never restated/recomputed here.
     const explanation = needsAttention
-      ? `${attemptsTaken} attempt${attemptsTaken === 1 ? "" : "s"}, still below 50% - let's try a different approach.`
+      ? `${attemptsTaken} attempt${
+          attemptsTaken === 1 ? "" : "s"
+        }, still below 50% - let's try a different approach.`
       : null;
 
     return {
@@ -97,34 +104,62 @@ function StudySetQuestionProgressCard({
           : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
+      {/* =================================================
+          CARD HEADER
+      ================================================= */}
+
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] p-2.5 rounded-2xl shrink-0">
             <Target size={20} />
           </div>
+
           <div className="min-w-0">
-            <h2 className="text-lg font-black leading-tight truncate">Question Progress</h2>
-            <p className={`text-xs truncate ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>Answered vs. Pending Question Sets</p>
+            <h2 className="text-lg font-black leading-tight truncate">
+              Question Progress
+            </h2>
+
+            <p
+              className={`text-xs truncate ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Answered vs. Pending Question Sets
+            </p>
           </div>
         </div>
-        <span className={`shrink-0 whitespace-nowrap font-mono text-xs font-bold px-3 py-1 rounded-full ${
-          isDarkMode ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]" : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
-        }`}>
+
+        <span
+          className={`shrink-0 whitespace-nowrap font-mono text-xs font-bold px-3 py-1 rounded-full ${
+            isDarkMode
+              ? "bg-[#8064C7]/20 border border-[#8064C7]/30 text-[#A78BFA]"
+              : "bg-[#8064C7]/10 border border-[#8064C7]/20 text-[#8064C7]"
+          }`}
+        >
           {progressItems.length} Types
         </span>
       </div>
 
+      {/* =================================================
+          LOADING PROGRESS
+      ================================================= */}
+
       {loading ? (
-        // Distinct from "0/5 Answered, Pending" for every row - that
-        // markup is indistinguishable from a genuinely untouched type,
-        // so while the real revision-status fetch is still in flight
-        // (which, on a cold dev-server load, real-world tested at up to
-        // ~8s) this must never render as if it were the final answer.
         <div className="flex flex-1 items-center justify-center gap-2 py-10 text-sm opacity-50">
-          <Loader2 size={16} className="animate-spin" />
+          <Loader2
+            size={16}
+            className="animate-spin"
+          />
+
           Loading progress...
         </div>
       ) : (
+        /* =================================================
+            PROGRESS ITEMS
+        ================================================= */
+
         <div className="space-y-3.5">
           {progressItems.map((item) => (
             <div
@@ -135,23 +170,48 @@ function StudySetQuestionProgressCard({
                   : "border-gray-200/80 bg-white hover:border-[#8064C7]"
               }`}
             >
+              {/* =============================================
+                  QUESTION TYPE HEADER
+              ============================================= */}
+
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2.5 rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] shrink-0">
                     {item.icon}
                   </div>
+
                   <div className="min-w-0">
                     <h4 className="text-sm font-bold truncate group-hover:text-[#8064C7] dark:group-hover:text-[#A78BFA] transition-colors">
                       {item.title}
                     </h4>
-                    <p className={`text-xs mt-0.5 font-mono font-semibold ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
+
+                    <p
+                      className={`text-xs mt-0.5 font-mono font-semibold ${
+                        isDarkMode
+                          ? "text-white/50"
+                          : "text-gray-500"
+                      }`}
+                    >
                       {item.answered}/{item.total} Answered
-                      {item.lastAccuracy !== undefined && item.lastAccuracy !== null && (
-                        <> · {Math.round(item.lastAccuracy * 100) / 100}% last accuracy</>
-                      )}
+
+                      {item.lastAccuracy !== undefined &&
+                        item.lastAccuracy !== null && (
+                          <>
+                            {" "}
+                            ·{" "}
+                            {Math.round(
+                              item.lastAccuracy * 100
+                            ) / 100}
+                            % last accuracy
+                          </>
+                        )}
                     </p>
                   </div>
                 </div>
+
+                {/* =============================================
+                    STATUS
+                ============================================= */}
 
                 <span
                   className={`font-mono text-[11px] font-bold px-2.5 py-1 rounded-full border shrink-0 ml-2 ${
@@ -168,13 +228,27 @@ function StudySetQuestionProgressCard({
                 </span>
               </div>
 
+              {/* =============================================
+                  NEEDS REVIEW EXPLANATION
+              ============================================= */}
+
               {item.explanation && (
                 <p className="mt-1 text-xs font-semibold text-amber-500">
                   {item.explanation}
                 </p>
               )}
 
-              <div className={`w-full h-2 rounded-full overflow-hidden mt-3 ${isDarkMode ? "bg-white/10" : "bg-black/10"}`}>
+              {/* =============================================
+                  PROGRESS BAR
+              ============================================= */}
+
+              <div
+                className={`w-full h-2 rounded-full overflow-hidden mt-3 ${
+                  isDarkMode
+                    ? "bg-white/10"
+                    : "bg-black/10"
+                }`}
+              >
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     item.status === "Completed"
@@ -183,7 +257,9 @@ function StudySetQuestionProgressCard({
                       ? "bg-amber-500"
                       : "bg-[#8064C7]"
                   }`}
-                  style={{ width: `${item.percentage}%` }}
+                  style={{
+                    width: `${item.percentage}%`,
+                  }}
                 />
               </div>
             </div>
