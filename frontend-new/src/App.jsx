@@ -150,8 +150,9 @@ function AppContent() {
   const [studySetsLoading, setStudySetsLoading] = useState(false);
   const [studySetsError, setStudySetsError] = useState("");
 
-  // ================= SELECTED STUDY SET =================
+  // ================= SELECTED STUDY SET & ATTEMPT =================
   const [selectedStudySetId, setSelectedStudySetId] = useState(null);
+  const [selectedAttemptId, setSelectedAttemptId] = useState(null);
 
   // Which question type ConfigureSession should land on already
   // selected - set only when a navigation explicitly asks for one (e.g.
@@ -173,8 +174,15 @@ function AppContent() {
   const handleNavigate = (page, state) => {
     if (page === "upload") {
       setSelectedStudySetId(null);
+      setSelectedAttemptId(null);
     } else if (state?.studySetId) {
       setSelectedStudySetId(state.studySetId);
+    }
+
+    if (state?.attemptId) {
+      setSelectedAttemptId(state.attemptId);
+    } else if (page !== "results") {
+      setSelectedAttemptId(null);
     }
 
     setPreselectType(state?.preselectType || null);
@@ -595,6 +603,7 @@ function AppContent() {
           <ResultsPage
             onNavigate={handleNavigate}
             studySetId={selectedStudySetId}
+            attemptId={selectedAttemptId}
           />
         )}
 

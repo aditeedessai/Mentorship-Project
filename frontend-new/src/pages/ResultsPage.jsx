@@ -52,13 +52,13 @@ const extractTopicFromHint = (hint) => {
     .trim();
 };
 
-export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) {
+export default function ResultsPage({ onNavigate, studySetId: propStudySetId, attemptId: propAttemptId }) {
   const { isDarkMode } = useTheme();
   const { attemptId: paramAttemptId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const passedAttemptId = paramAttemptId || location.state?.attemptId;
+  const passedAttemptId = paramAttemptId || location.state?.attemptId || propAttemptId;
   const passedQuestions = useMemo(
     () => location.state?.questions || [],
     [location.state?.questions]
@@ -342,14 +342,20 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
   if (error && evaluations.length === 0) {
     return (
-      <div className="mx-auto mt-20 max-w-md rounded-3xl border border-red-500/30 bg-red-500/10 p-6 text-center text-red-400">
-        <AlertCircle className="mx-auto mb-2 text-red-400" size={28} />
+      <div
+        className={`mx-auto mt-20 max-w-md rounded-3xl border p-6 text-center ${
+          isDarkMode
+            ? "border-red-500/30 bg-red-500/10 text-red-400"
+            : "border-red-200/80 bg-red-50/70 text-red-600 shadow-sm"
+        }`}
+      >
+        <AlertCircle className={`mx-auto mb-2 ${isDarkMode ? "text-red-400" : "text-red-500"}`} size={28} />
         <p className="text-base font-black">Failed to load attempt evaluation</p>
-        <p className="mt-1 text-xs text-red-300">{error}</p>
+        <p className={`mt-1 text-xs ${isDarkMode ? "text-red-300" : "text-red-600/80"}`}>{error}</p>
         <button
           type="button"
           onClick={handleGoDashboard}
-          className="mt-4 rounded-xl bg-red-500 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-red-600"
+          className="mt-4 rounded-xl bg-red-500 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-red-600 cursor-pointer"
         >
           Back to Dashboard
         </button>
@@ -503,7 +509,13 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
             <span className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
               {correctCount} Right
             </span>
-            <span className="rounded-lg border border-rose-500/30 bg-rose-500/20 px-2.5 py-1 text-xs font-bold text-rose-400">
+            <span
+              className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${
+                isDarkMode
+                  ? "border-rose-500/30 bg-rose-500/20 text-rose-400"
+                  : "border-red-200 bg-red-50 text-red-600"
+              }`}
+            >
               {wrongCount} Wrong
             </span>
             {skippedCount > 0 && (
@@ -525,7 +537,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                   ? isDarkMode
                     ? 'border-white/5 bg-white/5'
                     : 'border-gray-100 bg-white'
-                  : 'border-rose-500/30 bg-rose-500/10'
+                  : isDarkMode
+                  ? 'border-rose-500/30 bg-rose-500/10'
+                  : 'border-red-200/80 bg-red-50/40'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -539,7 +553,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                       ? 'border-amber-500/30 bg-amber-500/20 text-amber-400'
                       : q.isCorrect === true
                       ? 'border-emerald-500/30 bg-emerald-500/20 text-emerald-400'
-                      : 'border-rose-500/30 bg-rose-500/20 text-rose-400'
+                      : isDarkMode
+                      ? 'border-rose-500/30 bg-rose-500/20 text-rose-400'
+                      : 'border-red-200 bg-red-50 text-red-600 font-semibold'
                   }`}
                 >
                   {q.isSkipped ? (
@@ -562,8 +578,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
               {/* Weak Topic Tag on incorrect/skipped question */}
               {(q.isCorrect === false || q.isSkipped) && q.topic && (
-                <div className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/25 bg-rose-500/10 px-2.5 py-1 text-[11px] font-bold text-rose-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                <div
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${
+                    isDarkMode
+                      ? 'border-rose-500/25 bg-rose-500/10 text-rose-400'
+                      : 'border-red-200/80 bg-red-50/80 text-red-600'
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${isDarkMode ? 'bg-rose-500' : 'bg-red-500'}`} />
                   <span>Weak Topic:</span>
                   <span className="font-extrabold">{q.topic}</span>
                 </div>
@@ -584,7 +606,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                         ? 'font-bold italic text-amber-400'
                         : q.isCorrect === true
                         ? 'font-bold'
-                        : 'font-bold text-rose-400'
+                        : isDarkMode
+                        ? 'font-bold text-rose-400'
+                        : 'font-bold text-red-600'
                     }
                   >
                     {q.userAnswer}
@@ -630,7 +654,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
               : 'border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]'
           }`}
         >
-          <div className="flex items-center gap-2 text-rose-400">
+          <div className={`flex items-center gap-2 ${isDarkMode ? 'text-rose-400' : 'text-red-600'}`}>
             <Target size={18} />
             <h3 className="text-sm font-black tracking-tight">
               Weak Topics Identified ({weakTopics.length})
@@ -651,9 +675,13 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
                 {weakTopics.map((topic, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/15 px-3 py-1.5 text-xs font-bold text-rose-300 backdrop-blur-md"
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold backdrop-blur-md ${
+                      isDarkMode
+                        ? 'border-rose-500/30 bg-rose-500/15 text-rose-300'
+                        : 'border-red-200/80 bg-red-50/90 text-red-600 shadow-xs'
+                    }`}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                    <span className={`h-1.5 w-1.5 rounded-full ${isDarkMode ? 'bg-rose-400' : 'bg-red-500'}`} />
                     {topic}
                   </span>
                 ))}
@@ -713,8 +741,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId }) 
 
             <div className="pt-2">
               {currentRevisionStatus?.needs_attention ? (
-                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs font-bold text-rose-400 flex items-center gap-2">
-                  <AlertCircle size={16} className="shrink-0" />
+                <div
+                  className={`rounded-xl border p-3 text-xs font-bold flex items-center gap-2 ${
+                    isDarkMode
+                      ? 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+                      : 'border-red-200 bg-red-50 text-red-600'
+                  }`}
+                >
+                  <AlertCircle size={16} className={`shrink-0 ${isDarkMode ? 'text-rose-400' : 'text-red-500'}`} />
                   <span>Needs Attention: Your score was below 50% after 4 attempts. Review your materials carefully.</span>
                 </div>
               ) : currentRevisionStatus?.reason === 'attempts_exhausted' || (currentRevisionStatus?.attempts_taken || 0) >= 4 ? (
