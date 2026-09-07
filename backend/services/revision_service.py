@@ -338,3 +338,103 @@ def record_attempt_result(attempt: dict) -> None:
         attempt_id=attempt_id,
         accuracy=accuracy,
     )
+
+
+from backend.database.evaluation_repository import get_evaluations_with_question_details
+from backend.answer_evaluation.topic_scorer import aggregate_topic_scores, WEAK_TOPIC_THRESHOLD
+
+
+def get_latest_completed_attempt(
+    study_set_id: str,
+    question_type: str,
+    user_id: str = None
+) -> dict | None:
+    """
+    Finds the latest completed attempt for a given (study_set_id, question_type).
+    Checks revision_schedules.last_attempt_id first, validating that it is completed,
+    or queries quiz_attempts for the latest completed attempt row.
+    """
+    if not study_set_id or not question_type:
+        return None
+
+    connection = get_connection()
+    try:
+        schedule = revision_repository.get_schedule(study_set_id, question_type)
+        if schedule and schedule.get("last_attempt_id"):
+            last_att_id = schedule["last_attempt_id"]
+            params = [last_att_id]
+            sql = (
+                "SELECT attempt_id, study_set_id, document_id, user_id, "
+                "total_marks, marks_awarded, status, question_type, created_at, updated_at "
+                "FROM quiz_attempts WHERE attempt_id = ? AND status = 'completed'"
+            )
+            if user_id:
+                sql += " AND user_id = ?"
+                params.append(user_id)
+            row = connection.execute(sql, tuple(params)).fetchone()
+            if row:
+                return dict(row)
+
+        params = [study_set_id, question_type]
+        sql = (
+            "SELECT attempt_id, study_set_id, document_id, user_id, "
+            "total_marks, marks_awarded, status, question_type, created_at, updated_at "
+            "FROM quiz_attempts "
+            "WHERE study_set_id = ? AND question_type = ? AND status = 'completed' "
+        )
+        if user_id:
+            sql += "AND user_id = ? "
+            params.append(user_id)
+        sql += "ORDER BY updated_at DESC, created_at DESC LIMIT 1"
+
+        row = connection.execute(sql, tuple(params)).fetchone()
+        return dict(row) if row else None
+    finally:
+        connection.close()
+
+
+def get_latest_completed_attempt_weak_topics(
+    study_set_id: str,
+    question_type: str,
+    user_id: str = None,
+    threshold: float = WEAK_TOPIC_THRESHOLD,
+) -> list[str]:
+    """
+    Calculates topic-level performance for the latest completed attempt of
+    (study_set_id, question_type) using existing topic_scorer rules.
+    Returns weak topics (percentage < threshold) ordered from lowest percentage to highest.
+    Returns empty list if no completed attempt exists or no weak topics found.
+    """
+    latest_attempt = get_latest_completed_attempt(study_set_id, question_type, user_id=user_id)
+    if not latest_attempt:
+        return []
+
+    attempt_id = latest_attempt["attempt_id"]
+    eval_records = get_evaluations_with_question_details(attempt_id)
+    if not eval_records:
+        return []
+
+    question_results = []
+    for rec in eval_records:
+        topic = str(rec.get("topic") or "general").strip() or "general"
+        awarded = float(rec.get("marks_awarded", 0.0))
+        q_type = str(rec.get("question_type") or question_type or "short").lower().strip()
+        max_m = float(rec.get("max_marks", 2.0 if q_type == "mcq" else 10.0))
+        question_results.append({
+            "topic": topic,
+            "marks_awarded": awarded,
+            "max_marks": max_m,
+        })
+
+    summary = aggregate_topic_scores(question_results, threshold=threshold)
+    topics_dict = summary.get("topics", {})
+
+    weak_with_pct = []
+    for t_name, t_info in topics_dict.items():
+        pct = float(t_info.get("percentage", 0.0))
+        if t_info.get("status") == "weak" or pct < threshold:
+            weak_with_pct.append((t_name, pct))
+
+    weak_with_pct.sort(key=lambda x: x[1])
+    return [t[0] for t in weak_with_pct]
+

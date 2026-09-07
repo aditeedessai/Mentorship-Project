@@ -4,6 +4,9 @@ def build_quiz_prompt(
     student_grade_or_year: str | None = None,
     student_field: str | None = None,
     student_curriculum: str | None = None,
+    weak_topics: list[str] | None = None,
+    topic_allocations: dict[str, int] | None = None,
+    previous_questions: list[str] | None = None,
 ) -> str:
 
     if question_type == "mcq":
@@ -85,11 +88,49 @@ normally taught at that grade/year, belongs to the student's field, appears in
 the student's curriculum, or is common knowledge for that academic level.
 """
 
+    # Build optional adaptive revision target block
+    adaptive_block = ""
+    if weak_topics and topic_allocations:
+        lines = []
+        for t_name, count in topic_allocations.items():
+            if t_name == "__general__":
+                lines.append(f"- General Revision: generate exactly {count} question(s) covering broader study material.")
+            else:
+                lines.append(f"- Weak Topic '{t_name}': generate exactly {count} question(s) specifically testing this topic.")
+
+        targets_str = "\n".join(lines)
+        example_weak = weak_topics[0] if weak_topics else "Genetics"
+
+        adaptive_block = f"""
+ADAPTIVE REVISION TARGETS:
+This is an adaptive revision attempt focusing on weak topics identified from the student's previous attempt.
+Required question distribution across topics:
+{targets_str}
+
+STRICT TOPIC CONSISTENCY RULE:
+For every question generated to test one of the target weak topics listed above, you MUST set the "topic" field in the JSON output to match the EXACT weak topic name string provided above (e.g. "{example_weak}").
+Do NOT rename the topic, abbreviate it, or invent alternative topic names (e.g., do not turn "{example_weak}" into synonyms or rephrased topic names). The topic value in JSON must match the exact string provided.
+"""
+
+    # Build optional duplicate prevention block
+    duplicate_prevention_block = ""
+    if previous_questions:
+        prev_list = "\n".join(f"- {q}" for q in previous_questions[:15])
+        duplicate_prevention_block = f"""
+FRESH QUESTION REQUIREMENT (PREVENT DUPLICATES):
+The student has already taken previous quiz attempt(s) containing the following questions:
+{prev_list}
+
+Do NOT generate duplicate questions. Every newly generated question must be newly authored, test different aspects, angles, or scenarios, and must NOT be a duplicate or slight rephrasing of any question listed above.
+"""
+
     return f"""
 You are an experienced university professor creating an educational quiz.
 
 The student has selected the question type: "{question_type}".
 {student_level_block}
+{adaptive_block}
+{duplicate_prevention_block}
 {type_instruction}
 
 For every question:
