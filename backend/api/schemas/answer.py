@@ -104,6 +104,10 @@ class EvaluationResponse(BaseModel):
         None,
         description="Evaluation summary or feedback string"
     )
+    topic: str | None = Field(
+        None,
+        description="Topic name associated with the evaluated question"
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

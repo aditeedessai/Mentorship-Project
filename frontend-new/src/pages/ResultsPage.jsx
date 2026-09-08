@@ -42,52 +42,25 @@ const toBackendType = (typeStr) => {
   return 'mcq';
 };
 
-const extractTopicFromHint = (hint) => {
-  if (!hint || typeof hint !== 'string') return null;
-  return hint
-    .replace(/^think\s+about\s+(the\s+)?(key\s+)?(concepts?\s+related\s+to\s+)?/i, '')
-    .replace(/^review\s+(the\s+)?(concepts?\s+around\s+|topic\s+of\s+)?/i, '')
-    .replace(/^focus\s+on\s+/i, '')
-    .replace(/[.]+$/, '')
-    .trim();
-};
+const formatTopicName = (topic) => {
+  if (!topic || typeof topic !== 'string') return 'General';
+  const trimmed = topic.trim();
+  if (!trimmed) return 'General';
 
-const extractTopicFromPrompt = (prompt) => {
-  if (!prompt || typeof prompt !== 'string') return null;
-
-  let text = prompt
-    .replace(/^according\s+to\s+(the\s+)?(provided\s+)?(text|passage|document|material|context|notes|chapter)[,\s:]*/i, '')
-    .replace(/^based\s+on\s+(the\s+)?(provided\s+)?(text|passage|document|material|context|notes)[,\s:]*/i, '')
-    .replace(/^(in|from)\s+the\s+context\s+of[,\s:]*/i, '')
-    .replace(/^(per|as\s+per)\s+the\s+(provided\s+)?(text|passage|notes)[,\s:]*/i, '')
-    .trim();
-
-  text = text
-    .replace(/^(what|which)\s+(specific\s+)?(type|types|kind|kinds|model|models|form|forms|category|categories)\s+of\s+/i, '')
-    .replace(/^(what|which)\s+(are|is|was|were|do|does|can|could|would|should)\s+(the\s+)?/i, '')
-    .replace(/^(what|which)\s+/i, '')
-    .replace(/^(how|why|where|when)\s+(does|do|can|could|is|are|was|were)\s+/i, '')
-    .replace(/^(explain|describe|define|discuss|list|identify|name|state|illustrate|outline|mention)\s+(the\s+)?/i, '')
-    .replace(/^(the\s+role\s+of|the\s+concept\s+of|the\s+process\s+of|the\s+purpose\s+of)\s+/i, '')
-    .trim();
-
-  text = text
-    .replace(/\s+(is|are|was|were)\s+(noted|mentioned|described|suitable|best|used|needed|required|defined|associated|referred).*$/i, '')
-    .replace(/\s+(for|in|to)\s+(the|this|a)\s+.*$/i, '')
-    .replace(/\?.*$/, '')
-    .trim();
-
-  text = text.replace(/^[,\s:]+/, '').replace(/[.,:;!?]+$/, '').trim();
-
-  const words = text.split(/\s+/).filter(Boolean);
-  if (words.length === 0) return null;
-
-  while (words.length > 0 && /^(a|an|the|of|in|for|and|or|to|with)$/i.test(words[0])) {
-    words.shift();
+  // Format snake_case topics (e.g. static_methods -> Static Methods)
+  if (trimmed.includes('_') && !trimmed.includes(' ')) {
+    return trimmed
+      .split('_')
+      .map((w) => {
+        const u = w.toUpperCase();
+        if (['OCP', 'SOLID', 'API', 'SQL', 'JVM', 'OOP', 'CPU', 'RAM', 'DB', 'HTTP', 'URL', 'REST', 'LLM', 'AI', 'MCQ'].includes(u)) {
+          return u;
+        }
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      })
+      .join(' ');
   }
-
-  const result = words.slice(0, 4).join(' ');
-  return result ? result.charAt(0).toUpperCase() + result.slice(1) : null;
+  return trimmed;
 };
 
 export default function ResultsPage({ onNavigate, studySetId: propStudySetId, attemptId: propAttemptId }) {
@@ -233,7 +206,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     const map = new Map();
     passedQuestions.forEach((q, idx) => {
       const cleaned =
-        extractTopicFromHint(q.hint) ||
         q.topic ||
         q.subtopic ||
         q.concept ||
@@ -264,18 +236,17 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
       const questionId = item.question_id || item.id;
       const promptText = item.question_text || item.question || item.prompt || `Question ${idx + 1}`;
 
-      const associatedTopic =
-        extractTopicFromHint(item.hint) ||
+      const rawTopic =
         item.topic ||
         item.subtopic ||
         item.concept ||
         item.concept_tested ||
         item.topic_name ||
-        extractTopicFromHint(item.ai_hint) ||
         questionHintMap.get(String(questionId)) ||
         questionHintMap.get(`index_${idx}`) ||
-        extractTopicFromPrompt(promptText) ||
-        `Concept ${idx + 1}`;
+        null;
+
+      const associatedTopic = formatTopicName(rawTopic);
 
       return {
         id: idx + 1,
@@ -289,6 +260,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         isCorrect,
         isSkipped,
         topic: associatedTopic,
+        rawTopic: rawTopic || associatedTopic,
       };
     });
   }, [evaluations, questionHintMap, rawQuestionType]);
@@ -298,21 +270,81 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const wrongCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === false && !q.isSkipped).length, [processedQuestions]);
 
   const weakTopics = useMemo(() => {
-    const map = new Map();
+    const perfTopics = performanceData?.topics || [];
+    const weakPerfTopicsSet = new Set();
+    perfTopics.forEach((t) => {
+      if (t.topic_name && typeof t.percentage === 'number' && t.percentage < 51) {
+        weakPerfTopicsSet.add(t.topic_name.toLowerCase().trim());
+      }
+    });
+
+    const topicMap = new Map();
 
     processedQuestions.forEach((q) => {
-      if ((q.isCorrect === false || q.isSkipped) && q.topic) {
-        if (!map.has(q.topic)) {
-          map.set(q.topic, {
-            title: q.topic,
-            questionNum: q.id,
+      const rawT = q.rawTopic || q.topic;
+      const formattedT = formatTopicName(rawT);
+      const key = (rawT || formattedT || 'General').toLowerCase().trim();
+
+      const isWeakByQuestion = q.isCorrect === false || q.isSkipped;
+      let isWeak = false;
+
+      if (perfTopics.length > 0) {
+        isWeak = weakPerfTopicsSet.has(key) || weakPerfTopicsSet.has(formattedT.toLowerCase().trim());
+      } else {
+        isWeak = isWeakByQuestion;
+      }
+
+      if (isWeak && isWeakByQuestion) {
+        if (!topicMap.has(key)) {
+          topicMap.set(key, {
+            title: formattedT,
+            questionNums: [],
           });
+        }
+        const entry = topicMap.get(key);
+        if (!entry.questionNums.includes(q.id)) {
+          entry.questionNums.push(q.id);
         }
       }
     });
 
-    return Array.from(map.values());
-  }, [processedQuestions]);
+    // Fallback: If backend reported weak topics via performanceData.topics that weren't mapped above
+    if (perfTopics.length > 0) {
+      perfTopics.forEach((t) => {
+        if (t.topic_name && typeof t.percentage === 'number' && t.percentage < 51) {
+          const key = t.topic_name.toLowerCase().trim();
+          if (!topicMap.has(key)) {
+            const formattedT = formatTopicName(t.topic_name);
+            const qNums = processedQuestions
+              .filter((q) => {
+                const rawT = q.rawTopic || q.topic;
+                return (
+                  (rawT && rawT.toLowerCase().trim() === key) ||
+                  q.topic.toLowerCase().trim() === formattedT.toLowerCase().trim()
+                ) && (q.isCorrect === false || q.isSkipped);
+              })
+              .map((q) => q.id);
+
+            topicMap.set(key, {
+              title: formattedT,
+              questionNums: qNums,
+            });
+          }
+        }
+      });
+    }
+
+    return Array.from(topicMap.values()).map((item) => {
+      const qStr = item.questionNums.length > 0
+        ? item.questionNums.map((n) => `Q${n}`).join(', ')
+        : 'Q1';
+      return {
+        title: item.title,
+        questionDisplay: qStr,
+        questionNum: item.questionNums[0] || 1,
+      };
+    });
+  }, [performanceData, processedQuestions]);
 
   const currentRevisionStatus = useMemo(() => {
     return revisionStatuses.find((s) => s.question_type === backendType) || null;
@@ -728,7 +760,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                         : 'border-red-200 bg-white/80 text-red-600'
                     }`}
                   >
-                    Q{topicItem.questionNum}
+                    {topicItem.questionDisplay || `Q${topicItem.questionNum}`}
                   </span>
                 </div>
               ))}

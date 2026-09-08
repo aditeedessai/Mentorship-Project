@@ -369,6 +369,7 @@ def get_attempt_evaluations(
                 correct_answer=correct_ans,
                 max_marks=float(rec.get("max_marks", 2.0 if q_type == "mcq" else 10.0)),
                 feedback=feedback_str,
+                topic=rec.get("topic"),
             )
         )
 
