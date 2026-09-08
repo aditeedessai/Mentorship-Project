@@ -22,17 +22,20 @@ import {
   fetchRevisionsDue,
 } from "../services/api";
 
-// Backend question_type ('mcq'/'application'/'long'/'short') -> the
-// frontend type id ConfigureSession's questionTypes array keys off of.
-// Mirrors api.js's fromBackendType convention (kept local here since
-// that helper isn't exported).
+// Backend question_type -> frontend type id
 function toFrontendQuestionTypeId(backendType) {
   return backendType === "short" ? "short-answer" : backendType;
 }
 
 function formatBackendTask(t) {
-  const priority = t.priority ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1) : "Medium";
-  const type = t.task_type ? t.task_type.charAt(0).toUpperCase() + t.task_type.slice(1) : "Study";
+  const priority = t.priority
+    ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
+    : "Medium";
+
+  const type = t.task_type
+    ? t.task_type.charAt(0).toUpperCase() + t.task_type.slice(1)
+    : "Study";
+
   const studySetName = t.study_set_name || "General Study";
 
   return {
@@ -73,11 +76,13 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
   const [isDeleteTaskLoading, setIsDeleteTaskLoading] = useState(false);
   const [deleteTaskError, setDeleteTaskError] = useState(null);
 
-  // Single mount effect to fetch all initial page data safely without infinite loops
+  // =========================================================
+  // FETCH DATA
+  // =========================================================
+
   useEffect(() => {
     let isMounted = true;
 
-    // 1. Fetch user study sets if not passed via props
     if (studySets && studySets.length > 0) {
       setUserStudySets(studySets);
     } else {
@@ -85,11 +90,16 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         .then((sets) => {
           if (isMounted) setUserStudySets(sets || []);
         })
-        .catch((err) => console.warn("Could not fetch user study sets for planner:", err));
+        .catch((err) =>
+          console.warn(
+            "Could not fetch user study sets for planner:",
+            err
+          )
+        );
     }
 
-    // 2. Fetch upcoming exams
     setIsLoadingExams(true);
+
     fetchExams()
       .then((data) => {
         if (isMounted && Array.isArray(data)) setExams(data);
@@ -102,8 +112,8 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         if (isMounted) setIsLoadingExams(false);
       });
 
-    // 3. Fetch all tasks for the user
     setIsLoadingTasks(true);
+
     fetchTasks()
       .then((backendTasks) => {
         if (isMounted && Array.isArray(backendTasks)) {
@@ -120,10 +130,6 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         if (isMounted) setIsLoadingTasks(false);
       });
 
-    // 4. Fetch revision due-dates across all study sets, for the Daily
-    // Schedule's "Revise: X - Y" items. One aggregated call - see
-    // fetchRevisionsDue()'s docstring for why this isn't done per
-    // study set.
     fetchRevisionsDue()
       .then((due) => {
         if (isMounted) setRevisionsDue(due);
@@ -133,8 +139,8 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         if (isMounted) setRevisionsDue([]);
       });
 
-    // 5. Fetch studied days for study streak
     const now = new Date();
+
     fetchStudiedDays(now.getFullYear(), now.getMonth() + 1)
       .then((studiedDays) => {
         if (isMounted && Array.isArray(studiedDays)) {
@@ -149,9 +155,12 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
     return () => {
       isMounted = false;
     };
-  }, []); // Run ONCE on mount
+  }, []);
 
-  // Compute dynamic summary counts strictly from live data
+  // =========================================================
+  // SUMMARY
+  // =========================================================
+
   const tasksToday = useMemo(() => {
     return tasks.filter((t) => t.date === todayStr);
   }, [tasks, todayStr]);
@@ -159,7 +168,10 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
   const tasksTodayCount = tasksToday.length;
   const upcomingExamsCount = exams.length;
 
-  // Toggle task completion
+  // =========================================================
+  // TASK COMPLETION
+  // =========================================================
+
   const handleToggleTaskComplete = async (taskId) => {
     const targetTask = tasks.find((t) => t.id === taskId);
     if (!targetTask) return;
@@ -181,12 +193,19 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
     try {
       await toggleTaskCompletion(taskId, willBeCompleted);
     } catch (err) {
-      console.warn("Backend toggleTaskCompletion failed, reverting state:", err);
+      console.warn(
+        "Backend toggleTaskCompletion failed, reverting state:",
+        err
+      );
+
       setTasks((prevTasks) =>
         prevTasks.map((t) =>
-          t.id === taskId ? { ...t, completed: targetTask.completed } : t
+          t.id === taskId
+            ? { ...t, completed: targetTask.completed }
+            : t
         )
       );
+
       if (willBeCompleted) {
         setCompletedTodayCount((prev) => Math.max(0, prev - 1));
       } else {
@@ -195,14 +214,25 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
     }
   };
 
-  // Add new task via Backend API
+  // =========================================================
+  // ADD TASK
+  // =========================================================
+
   const handleAddTask = async (newTaskData) => {
     try {
       let studySetId = newTaskData.studySetId || null;
-      if (!studySetId && newTaskData.studySet && Array.isArray(userStudySets)) {
+
+      if (
+        !studySetId &&
+        newTaskData.studySet &&
+        Array.isArray(userStudySets)
+      ) {
         const found = userStudySets.find(
-          (s) => (typeof s === "object" ? s.name : s) === newTaskData.studySet
+          (s) =>
+            (typeof s === "object" ? s.name : s) ===
+            newTaskData.studySet
         );
+
         if (found && typeof found === "object") {
           studySetId = found.study_set_id || found.id;
         }
@@ -220,21 +250,30 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
       const formattedTask = formatBackendTask(created);
 
       setTasks((prevTasks) => [formattedTask, ...prevTasks]);
+
       if (formattedTask.date) {
         setSelectedDate(formattedTask.date);
       }
     } catch (err) {
-      console.warn("API createTask failed, adding to local state fallback:", err);
+      console.warn(
+        "API createTask failed, adding to local state fallback:",
+        err
+      );
+
       const fallbackTask = {
         id: `task-${Date.now()}`,
         ...newTaskData,
         completed: false,
       };
+
       setTasks((prevTasks) => [fallbackTask, ...prevTasks]);
     }
   };
 
-  // Add new exam via Backend API
+  // =========================================================
+  // ADD EXAM
+  // =========================================================
+
   const handleAddExam = async (newExamData) => {
     try {
       const created = await createExam(
@@ -246,9 +285,17 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
 
       setExams((prevExams) => {
         const next = [...prevExams];
-        const insertAt = next.findIndex((e) => e.exam_date > created.exam_date);
-        if (insertAt === -1) next.push(created);
-        else next.splice(insertAt, 0, created);
+
+        const insertAt = next.findIndex(
+          (e) => e.exam_date > created.exam_date
+        );
+
+        if (insertAt === -1) {
+          next.push(created);
+        } else {
+          next.splice(insertAt, 0, created);
+        }
+
         return next;
       });
     } catch (err) {
@@ -256,156 +303,476 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
     }
   };
 
-  // Delete exam via Backend API
+  // =========================================================
+  // DELETE EXAM
+  // =========================================================
+
   const handleDeleteExam = async (examId) => {
     try {
       await deleteExam(examId);
     } catch (err) {
       console.warn("API deleteExam failed:", err);
     } finally {
-      setExams((prevExams) => prevExams.filter((e) => e.id !== examId));
+      setExams((prevExams) =>
+        prevExams.filter((e) => e.id !== examId)
+      );
     }
   };
 
-  // Click-through from a "Revise: X - Y" planner item straight into
-  // ConfigureSession, with that exact type pre-selected (see App.jsx's
-  // handleNavigate/preselectType plumbing) so the student doesn't have
-  // to click the type card again themselves.
+  // =========================================================
+  // REVISION
+  // =========================================================
+
   const handleStartRevision = (revision) => {
     onNavigate?.("quiz", {
       studySetId: revision.study_set_id,
-      preselectType: toFrontendQuestionTypeId(revision.question_type),
+      preselectType: toFrontendQuestionTypeId(
+        revision.question_type
+      ),
     });
   };
 
-  // Open confirmation modal for deleting a task
+  // =========================================================
+  // DELETE TASK
+  // =========================================================
+
   const handleOpenDeleteTaskConfirm = (taskId) => {
     const targetTask = tasks.find((t) => t.id === taskId);
+
     if (targetTask) {
       setDeletingTask(targetTask);
       setDeleteTaskError(null);
     }
   };
 
-  // Confirm delete task via Backend API
   const handleConfirmDeleteTask = async () => {
     if (!deletingTask) return;
 
     setIsDeleteTaskLoading(true);
     setDeleteTaskError(null);
+
     try {
       await deleteTask(deletingTask.id);
-      setTasks((prevTasks) => prevTasks.filter((t) => t.id !== deletingTask.id));
+
+      setTasks((prevTasks) =>
+        prevTasks.filter((t) => t.id !== deletingTask.id)
+      );
+
       setDeletingTask(null);
     } catch (err) {
       console.warn("API deleteTask failed:", err);
-      setDeleteTaskError("Could not delete task. Please try again.");
+      setDeleteTaskError(
+        "Could not delete task. Please try again."
+      );
     } finally {
       setIsDeleteTaskLoading(false);
     }
   };
 
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12 transition-all duration-300">
-      {/* 1. Page Header */}
-      <PlannerHeader
-        onAddTask={() => setIsAddModalOpen(true)}
-        onAddExam={() => setIsAddExamModalOpen(true)}
-      />
+    <>
+      {/* =====================================================
+          PLANNER ANIMATION SYSTEM
+          Only animation CSS — no colors/layout/functionality changed.
+      ===================================================== */}
+      <style>{`
+        /* ================================
+           PAGE ENTRANCE
+        ================================= */
 
-      {/* 2. Summary Metric Cards (Pure Live Data Only) */}
-      <PlannerSummary
-        tasksTodayCount={tasksTodayCount}
-        completedTodayCount={completedTodayCount}
-        upcomingExamsCount={upcomingExamsCount}
-      />
+        .planner-page {
+          animation: plannerPageIn 0.7s cubic-bezier(.22,1,.36,1) both;
+        }
 
-      {/* 3. Main Grid: Monthly Calendar + Daily Schedule */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Monthly Calendar (7 cols on desktop) */}
-        <div className="lg:col-span-7 w-full">
-          <PlannerCalendar
+        @keyframes plannerPageIn {
+          from {
+            opacity: 0;
+            transform: scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        /* ================================
+           HEADER
+        ================================= */
+
+        .planner-header-animated {
+          animation:
+            plannerHeaderIn 0.85s cubic-bezier(.16,1,.3,1) both;
+          transform-origin: center top;
+        }
+
+        @keyframes plannerHeaderIn {
+          0% {
+            opacity: 0;
+            transform: translateY(-28px) scale(.97);
+            filter: blur(5px);
+          }
+
+          70% {
+            opacity: 1;
+            transform: translateY(4px) scale(1.01);
+            filter: blur(0);
+          }
+
+          100% {
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        /* ================================
+           SUMMARY = POPPING METRICS
+        ================================= */
+
+        .planner-summary-animated > * {
+          animation: metricPop .65s cubic-bezier(.34,1.56,.64,1) both;
+        }
+
+        .planner-summary-animated > *:nth-child(1) {
+          animation-delay: .18s;
+        }
+
+        .planner-summary-animated > *:nth-child(2) {
+          animation-delay: .30s;
+        }
+
+        .planner-summary-animated > *:nth-child(3) {
+          animation-delay: .42s;
+        }
+
+        @keyframes metricPop {
+          from {
+            opacity: 0;
+            transform: translateY(24px) scale(.82);
+          }
+
+          70% {
+            transform: translateY(-5px) scale(1.025);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        /* ================================
+           MAIN PLANNER GRID
+        ================================= */
+
+        .planner-main-grid {
+          perspective: 1200px;
+        }
+
+        /* CALENDAR enters like a planning board */
+
+        .planner-calendar-animated {
+          animation:
+            calendarReveal .9s cubic-bezier(.16,1,.3,1) .45s both;
+          transform-origin: left center;
+        }
+
+        @keyframes calendarReveal {
+          from {
+            opacity: 0;
+            transform:
+              translateX(-45px)
+              rotateY(7deg)
+              scale(.96);
+          }
+
+          to {
+            opacity: 1;
+            transform:
+              translateX(0)
+              rotateY(0)
+              scale(1);
+          }
+        }
+
+        /* SCHEDULE enters independently from right */
+
+        .planner-schedule-animated {
+          animation:
+            scheduleReveal .9s cubic-bezier(.16,1,.3,1) .58s both;
+          transform-origin: right center;
+        }
+
+        @keyframes scheduleReveal {
+          from {
+            opacity: 0;
+            transform:
+              translateX(45px)
+              rotateY(-7deg)
+              scale(.96);
+          }
+
+          to {
+            opacity: 1;
+            transform:
+              translateX(0)
+              rotateY(0)
+              scale(1);
+          }
+        }
+
+        /* ================================
+           CALENDAR SPECIAL EFFECT
+        ================================= */
+
+        .planner-calendar-animated {
+          position: relative;
+        }
+
+        .planner-calendar-animated::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          border-radius: inherit;
+          opacity: 0;
+          box-shadow:
+            0 0 0 1px rgba(128,100,199,.12),
+            0 0 35px rgba(128,100,199,.08);
+          animation: calendarGlow 2.8s ease-in-out 1.2s infinite;
+        }
+
+        @keyframes calendarGlow {
+          0%, 100% {
+            opacity: 0;
+          }
+
+          50% {
+            opacity: 1;
+          }
+        }
+
+        /* ================================
+           UPCOMING EXAMS
+        ================================= */
+
+        .planner-exams-animated {
+          animation:
+            sectionRise .8s cubic-bezier(.16,1,.3,1) .7s both;
+        }
+
+        @keyframes sectionRise {
+          from {
+            opacity: 0;
+            transform: translateY(35px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* ================================
+           WEEKLY PLAN
+        ================================= */
+
+        .planner-weekly-animated {
+          animation:
+            weeklyReveal .9s cubic-bezier(.16,1,.3,1) .82s both;
+          transform-origin: center bottom;
+        }
+
+        @keyframes weeklyReveal {
+          from {
+            opacity: 0;
+            transform: translateY(45px) scale(.97);
+          }
+
+          70% {
+            transform: translateY(-3px) scale(1.005);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        /* ================================
+           HOVER EFFECTS
+           Different from dashboard/cards.
+        ================================= */
+
+        .planner-interactive {
+          transition:
+            transform .3s cubic-bezier(.22,1,.36,1),
+            filter .3s ease;
+        }
+
+        .planner-interactive:hover {
+          transform: translateY(-3px);
+        }
+
+        /* ================================
+           LITTLE CALENDAR ENERGY
+        ================================= */
+
+        .planner-calendar-animated:hover::after {
+          animation-duration: 1.4s;
+        }
+
+        /* ================================
+           REDUCED MOTION
+        ================================= */
+
+        @media (prefers-reduced-motion: reduce) {
+          .planner-page,
+          .planner-header-animated,
+          .planner-summary-animated > *,
+          .planner-calendar-animated,
+          .planner-schedule-animated,
+          .planner-exams-animated,
+          .planner-weekly-animated {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+            filter: none !important;
+          }
+
+          .planner-calendar-animated::after {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
+      <div className="planner-page max-w-7xl mx-auto space-y-6 pb-12 transition-all duration-300">
+
+        {/* =====================================================
+            1. HEADER
+        ===================================================== */}
+        <div className="planner-header-animated">
+          <PlannerHeader
+            onAddTask={() => setIsAddModalOpen(true)}
+            onAddExam={() => setIsAddExamModalOpen(true)}
+          />
+        </div>
+
+        {/* =====================================================
+            2. SUMMARY
+        ===================================================== */}
+        <div className="planner-summary-animated">
+          <PlannerSummary
+            tasksTodayCount={tasksTodayCount}
+            completedTodayCount={completedTodayCount}
+            upcomingExamsCount={upcomingExamsCount}
+          />
+        </div>
+
+        {/* =====================================================
+            3. CALENDAR + DAILY SCHEDULE
+        ===================================================== */}
+        <div className="planner-main-grid grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          {/* CALENDAR */}
+          <div className="planner-calendar-animated lg:col-span-7 w-full planner-interactive">
+            <PlannerCalendar
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              tasks={tasks}
+              exams={exams}
+              revisionsDue={revisionsDue}
+            />
+          </div>
+
+          {/* DAILY SCHEDULE */}
+          <div className="planner-schedule-animated lg:col-span-5 w-full planner-interactive">
+            <DailySchedule
+              selectedDate={selectedDate}
+              tasks={tasks}
+              revisionsDue={revisionsDue}
+              onToggleTaskComplete={handleToggleTaskComplete}
+              onDeleteTask={handleOpenDeleteTaskConfirm}
+              onStartRevision={handleStartRevision}
+              onAddTaskClick={() => setIsAddModalOpen(true)}
+              filterStatus={filterStatus}
+              onFilterStatusChange={setFilterStatus}
+            />
+          </div>
+        </div>
+
+        {/* =====================================================
+            4. UPCOMING EXAMS
+        ===================================================== */}
+        <div className="planner-exams-animated">
+          <UpcomingExams
+            exams={exams}
+            studySets={userStudySets}
+            isLoading={isLoadingExams}
+            onAddExamClick={() => setIsAddExamModalOpen(true)}
+            onDeleteExam={handleDeleteExam}
+            onNavigate={onNavigate}
+          />
+        </div>
+
+        {/* =====================================================
+            5. WEEKLY PLAN
+        ===================================================== */}
+        <div className="planner-weekly-animated">
+          <WeeklyPlan
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
             tasks={tasks}
             exams={exams}
             revisionsDue={revisionsDue}
-          />
-        </div>
-
-        {/* Selected Date Schedule (5 cols on desktop) */}
-        <div className="lg:col-span-5 w-full">
-          <DailySchedule
-            selectedDate={selectedDate}
-            tasks={tasks}
-            revisionsDue={revisionsDue}
+            onSelectDate={setSelectedDate}
             onToggleTaskComplete={handleToggleTaskComplete}
-            onDeleteTask={handleOpenDeleteTaskConfirm}
             onStartRevision={handleStartRevision}
-            onAddTaskClick={() => setIsAddModalOpen(true)}
-            filterStatus={filterStatus}
-            onFilterStatusChange={setFilterStatus}
           />
         </div>
-      </div>
 
-      {/* 4. Upcoming Exams Connected to Backend (Actual Database Data Only) */}
-      <UpcomingExams
-        exams={exams}
-        studySets={userStudySets}
-        isLoading={isLoadingExams}
-        onAddExamClick={() => setIsAddExamModalOpen(true)}
-        onDeleteExam={handleDeleteExam}
-        onNavigate={onNavigate}
-      />
+        {/* =====================================================
+            MODALS
+        ===================================================== */}
 
-      {/* 5. This Week's Plan */}
-      <WeeklyPlan
-        selectedDate={selectedDate}
-        tasks={tasks}
-        exams={exams}
-        revisionsDue={revisionsDue}
-        onSelectDate={setSelectedDate}
-        onToggleTaskComplete={handleToggleTaskComplete}
-        onStartRevision={handleStartRevision}
-      />
+        <AddTaskModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAddTask={handleAddTask}
+          defaultDate={selectedDate}
+          studySets={userStudySets}
+        />
 
-      {/* Add Task Modal Dialog */}
-      <AddTaskModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddTask={handleAddTask}
-        defaultDate={selectedDate}
-        studySets={userStudySets}
-      />
+        <AddExamModal
+          isOpen={isAddExamModalOpen}
+          onClose={() => setIsAddExamModalOpen(false)}
+          onAddExam={handleAddExam}
+          studySets={userStudySets}
+        />
 
-      {/* Add Exam Modal Dialog */}
-      <AddExamModal
-        isOpen={isAddExamModalOpen}
-        onClose={() => setIsAddExamModalOpen(false)}
-        onAddExam={handleAddExam}
-        studySets={userStudySets}
-      />
-
-      {/* Delete Task Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={!!deletingTask}
-        title="Delete Study Task?"
-        itemName={deletingTask?.title || deletingTask?.name || ""}
-        warningText="This action will permanently delete this task from your study schedule."
-        confirmText="Delete Task"
-        cancelText="Cancel"
-        isLoading={isDeleteTaskLoading}
-        error={deleteTaskError}
-        onConfirm={handleConfirmDeleteTask}
-        onCancel={() => {
-          if (!isDeleteTaskLoading) {
-            setDeletingTask(null);
-            setDeleteTaskError(null);
+        <DeleteConfirmModal
+          isOpen={!!deletingTask}
+          title="Delete Study Task?"
+          itemName={
+            deletingTask?.title ||
+            deletingTask?.name ||
+            ""
           }
-        }}
-      />
-    </div>
+          warningText="This action will permanently delete this task from your study schedule."
+          confirmText="Delete Task"
+          cancelText="Cancel"
+          isLoading={isDeleteTaskLoading}
+          error={deleteTaskError}
+          onConfirm={handleConfirmDeleteTask}
+          onCancel={() => {
+            if (!isDeleteTaskLoading) {
+              setDeletingTask(null);
+              setDeleteTaskError(null);
+            }
+          }}
+        />
+      </div>
+    </>
   );
 }
-

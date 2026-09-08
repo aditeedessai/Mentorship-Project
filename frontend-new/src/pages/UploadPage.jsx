@@ -23,6 +23,516 @@ const ALLOWED_EXTENSIONS = [
   ".webp",
 ];
 
+/* =========================================================
+   ANIMATION STYLES
+   ONLY ANIMATIONS — NO UI / COLOR CHANGES
+========================================================= */
+
+const uploadAnimationStyles = `
+  @keyframes uploadPageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes uploadHeaderEnter {
+    from {
+      opacity: 0;
+      transform: translateY(-18px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes uploadCardEnter {
+    from {
+      opacity: 0;
+      transform: translateY(25px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes jojoFloat {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    25% {
+      transform: translateY(-7px) rotate(-1.5deg);
+    }
+
+    50% {
+      transform: translateY(-12px) rotate(1deg);
+    }
+
+    75% {
+      transform: translateY(-5px) rotate(-0.8deg);
+    }
+  }
+
+  @keyframes jojoGlow {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(0.9);
+    }
+
+    50% {
+      opacity: 0.7;
+      transform: scale(1.12);
+    }
+  }
+
+  @keyframes speechPop {
+    0% {
+      opacity: 0;
+      transform: scale(0.7) translateX(-12px);
+    }
+
+    70% {
+      transform: scale(1.05) translateX(2px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scale(1) translateX(0);
+    }
+  }
+
+  @keyframes uploadIconFloat {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+      transform: translateY(-8px) rotate(-4deg);
+    }
+  }
+
+  @keyframes uploadIconPulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(128, 100, 199, 0);
+    }
+
+    50% {
+      box-shadow: 0 0 0 12px rgba(128, 100, 199, 0.08);
+    }
+  }
+
+  @keyframes borderGlow {
+    0% {
+      background-position: 0% 50%;
+      opacity: 0.15;
+    }
+
+    50% {
+      background-position: 100% 50%;
+      opacity: 0.5;
+    }
+
+    100% {
+      background-position: 0% 50%;
+      opacity: 0.15;
+    }
+  }
+
+  @keyframes buttonShine {
+    0% {
+      transform: translateX(-140%);
+    }
+
+    35%,
+    100% {
+      transform: translateX(140%);
+    }
+  }
+
+  @keyframes buttonIconBounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
+  @keyframes fileEnter {
+    from {
+      opacity: 0;
+      transform: translateX(-18px) scale(0.96);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes fileIconPop {
+    0% {
+      transform: scale(0.7) rotate(-12deg);
+    }
+
+    70% {
+      transform: scale(1.08) rotate(3deg);
+    }
+
+    100% {
+      transform: scale(1) rotate(0);
+    }
+  }
+
+  @keyframes formatEnter {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.96);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes formatIconFloat {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0);
+    }
+
+    50% {
+      transform: translateY(-3px) rotate(3deg);
+    }
+  }
+
+  @keyframes infoShimmer {
+    0% {
+      transform: translateX(-120%);
+    }
+
+    100% {
+      transform: translateX(120%);
+    }
+  }
+
+  @keyframes loadingJojo {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0);
+    }
+
+    50% {
+      transform: translateY(-14px) rotate(2deg);
+    }
+  }
+
+  @keyframes loadingGlow {
+    0%,
+    100% {
+      transform: scale(0.85);
+      opacity: 0.25;
+    }
+
+    50% {
+      transform: scale(1.15);
+      opacity: 0.55;
+    }
+  }
+
+  @keyframes sparkleSpin {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+
+    50% {
+      transform: rotate(12deg) scale(1.15);
+    }
+
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+  }
+
+  @keyframes subtleBounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
+  .upload-page-animation {
+    animation: uploadPageEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .upload-header-animation {
+    animation: uploadHeaderEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .upload-main-card-animation {
+    animation: uploadCardEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+
+  .upload-name-card-animation {
+    animation: uploadCardEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+  }
+
+  .upload-formats-animation {
+    animation: uploadCardEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both;
+  }
+
+  .jojo-upload-float {
+    animation: jojoFloat 4.5s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+
+  .jojo-upload-glow {
+    animation: jojoGlow 3.5s ease-in-out infinite;
+  }
+
+  .speech-bubble-animation {
+    animation: speechPop 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+    transform-origin: left center;
+  }
+
+  .upload-icon-animation {
+    animation:
+      uploadIconFloat 3s ease-in-out infinite,
+      uploadIconPulse 2.5s ease-in-out infinite;
+  }
+
+  .upload-zone-animation {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone-animation::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      110deg,
+      transparent,
+      rgba(128, 100, 199, 0.05),
+      rgba(128, 100, 199, 0.35),
+      rgba(128, 100, 199, 0.05),
+      transparent
+    );
+    background-size: 250% 100%;
+    animation: borderGlow 4s ease-in-out infinite;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .upload-zone-animation > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .animated-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .animated-shine::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent
+    );
+    transform: translateX(-140%);
+    pointer-events: none;
+  }
+
+  .animated-shine:hover::after {
+    animation: buttonShine 0.75s ease-out;
+  }
+
+  .browse-icon-animation {
+    transition: transform 0.3s ease;
+  }
+
+  .animated-shine:hover .browse-icon-animation {
+    animation: buttonIconBounce 0.6s ease-in-out;
+  }
+
+  .camera-icon-animation {
+    transition: transform 0.3s ease;
+  }
+
+  .animated-shine:hover .camera-icon-animation {
+    transform: rotate(-8deg) scale(1.1);
+  }
+
+  .selected-file-animation {
+    animation: fileEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .selected-file-icon-animation {
+    animation: fileIconPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .selected-file-animation:hover .selected-file-icon-animation {
+    transform: scale(1.08) rotate(3deg);
+  }
+
+  .format-card-animation {
+    animation: formatEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .format-card-animation:hover {
+    transform: translateY(-5px) scale(1.015);
+  }
+
+  .format-card-animation:hover .format-icon-animation {
+    animation: formatIconFloat 0.7s ease-in-out;
+  }
+
+  .format-icon-animation {
+    transition: transform 0.3s ease;
+  }
+
+  .info-card-animation {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .info-card-animation::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(128, 100, 199, 0.08),
+      transparent
+    );
+    transform: translateX(-120%);
+  }
+
+  .info-card-animation:hover::after {
+    animation: infoShimmer 0.9s ease-out;
+  }
+
+  .sparkle-animation {
+    animation: sparkleSpin 2.5s ease-in-out infinite;
+  }
+
+  .loading-jojo-animation {
+    animation: loadingJojo 3.5s ease-in-out infinite;
+  }
+
+  .loading-glow-animation {
+    animation: loadingGlow 3s ease-in-out infinite;
+  }
+
+  .create-button-animation {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .create-button-animation::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 30%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent
+    );
+    transform: translateX(-140%);
+  }
+
+  .create-button-animation:hover::after {
+    animation: buttonShine 0.8s ease-out;
+  }
+
+  .create-button-animation svg {
+    transition: transform 0.3s ease;
+  }
+
+  .create-button-animation:hover svg {
+    transform: translateY(-3px);
+  }
+
+  .cancel-button-animation:hover {
+    transform: translateY(-2px);
+  }
+
+  .remove-button-animation:hover svg {
+    transform: rotate(8deg) scale(1.15);
+  }
+
+  .remove-button-animation svg {
+    transition: transform 0.25s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .upload-page-animation,
+    .upload-header-animation,
+    .upload-main-card-animation,
+    .upload-name-card-animation,
+    .upload-formats-animation,
+    .jojo-upload-float,
+    .jojo-upload-glow,
+    .speech-bubble-animation,
+    .upload-icon-animation,
+    .format-card-animation,
+    .selected-file-animation,
+    .selected-file-icon-animation,
+    .sparkle-animation,
+    .loading-jojo-animation,
+    .loading-glow-animation {
+      animation: none !important;
+    }
+
+    .format-card-animation:hover,
+    .cancel-button-animation:hover {
+      transform: none !important;
+    }
+  }
+`;
+
 const getFileIcon = (fileName) => {
   const ext = "." + fileName.toLowerCase().split(".").pop();
 
@@ -229,12 +739,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             : "bg-[#F8F8FC] text-[#231B33]"
         }`}
       >
-        <div className="flex w-full max-w-xl flex-col items-center px-6 py-12 text-center">
+        <style>{uploadAnimationStyles}</style>
+
+        <div className="flex w-full max-w-xl flex-col items-center px-6 py-12 text-center upload-page-animation">
           {/* JOJO */}
           <div className="relative mb-8 flex h-56 w-56 items-center justify-center">
             {/* Soft glow */}
             <div
-              className={`absolute inset-0 rounded-full blur-3xl ${
+              className={`absolute inset-0 rounded-full blur-3xl loading-glow-animation ${
                 isDarkMode
                   ? "bg-[#8064C7]/20"
                   : "bg-[#8064C7]/15"
@@ -244,7 +756,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             <img
               src={jojoReading}
               alt="Jojo is reading your study material"
-              className="relative z-10 h-52 w-52 object-contain"
+              className="relative z-10 h-52 w-52 object-contain loading-jojo-animation"
             />
           </div>
 
@@ -292,7 +804,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             <div className="flex items-start gap-3 text-left">
               <Sparkles
                 size={18}
-                className="mt-0.5 shrink-0 text-[#8064C7]"
+                className="mt-0.5 shrink-0 text-[#8064C7] sparkle-animation"
               />
 
               <p
@@ -325,12 +837,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   }
 
   return (
-    <div>
+    <div className="upload-page-animation">
+      <style>{uploadAnimationStyles}</style>
+
       {/* =====================================================
           HEADER
       ===================================================== */}
       <div
-        className={`relative mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 ${
+        className={`relative mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 upload-header-animation ${
           isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
@@ -360,17 +874,17 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           ================================================= */}
           <div className="relative flex h-[145px] w-[320px] shrink-0 items-end">
             {/* Soft glow */}
-            <div className="pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl jojo-upload-glow" />
 
             {/* Jojo */}
             <img
               src={jojoReading}
               alt="Jojo reading"
-              className="absolute bottom-0 left-0 z-10 h-[135px] w-[135px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px]"
+              className="absolute bottom-0 left-0 z-10 h-[135px] w-[135px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px] jojo-upload-float"
             />
 
             {/* Speech Bubble */}
-            <div className="absolute left-[145px] top-[18px] z-20">
+            <div className="absolute left-[145px] top-[18px] z-20 speech-bubble-animation">
               <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
                 <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
                   Ready when you are! 📖
@@ -410,7 +924,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       <div className="grid items-stretch gap-6 lg:grid-cols-3">
         {/* ================= UPLOAD CARD ================= */}
         <div
-          className={`flex h-full flex-col rounded-3xl border p-4 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 sm:p-6 ${
+          className={`flex h-full flex-col rounded-3xl border p-4 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 sm:p-6 upload-main-card-animation ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
@@ -423,7 +937,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[300px] flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-300 sm:p-8 ${
+            className={`flex min-h-[300px] flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-300 upload-zone-animation sm:p-8 ${
               isDragging
                 ? "border-[#8064C7] bg-[#8064C7]/15"
                 : isDarkMode
@@ -433,7 +947,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           >
             {selectedFiles.length === 0 ? (
               <>
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] upload-icon-animation">
                   <Upload size={30} />
                 </div>
 
@@ -453,8 +967,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <label className="cursor-pointer rounded-xl bg-[#8064C7] px-6 py-3 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
-                    Browse Files
+                  <label className="animated-shine cursor-pointer rounded-xl bg-[#8064C7] px-6 py-3 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
+                    <span className="browse-icon-animation inline-block">
+                      Browse Files
+                    </span>
 
                     <input
                       type="file"
@@ -467,13 +983,16 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
                   {/* Direct Mobile Camera Button */}
                   <label
-                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
+                    className={`animated-shine flex cursor-pointer items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
                       isDarkMode
                         ? "border-white/10 bg-white/5 text-[#A78BFA] hover:border-[#8064C7]/50 hover:bg-white/10"
                         : "border-[#8064C7]/30 bg-white text-[#8064C7] shadow-sm hover:border-[#8064C7] hover:bg-[#8064C7]/5"
                     }`}
                   >
-                    <Camera size={18} />
+                    <Camera
+                      size={18}
+                      className="camera-icon-animation"
+                    />
 
                     Take Photo
 
@@ -548,13 +1067,16 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     {selectedFiles.map((file, index) => (
                       <div
                         key={`${file.name}-${file.size}-${index}`}
-                        className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
+                        style={{
+                          animationDelay: `${index * 90}ms`,
+                        }}
+                        className={`selected-file-animation flex items-center gap-3 rounded-xl border p-3 transition-all ${
                           isDarkMode
                             ? "border-white/5 bg-white/5 hover:border-white/10"
                             : "border-gray-100 bg-white/70 hover:border-purple-200"
                         }`}
                       >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+                        <div className="selected-file-icon-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
                           {getFileIcon(file.name)}
                         </div>
 
@@ -581,7 +1103,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                           type="button"
                           onClick={() => removeFile(index)}
                           disabled={uploading}
-                          className="rounded-lg p-1.5 opacity-60 transition hover:text-red-400 hover:opacity-100 disabled:opacity-50"
+                          className="remove-button-animation rounded-lg p-1.5 opacity-60 transition hover:text-red-400 hover:opacity-100 disabled:opacity-50"
                           title="Remove file"
                         >
                           <X size={16} />
@@ -597,7 +1119,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
         {/* ================= STUDY SET NAME & ACTIONS ================= */}
         <div
-          className={`flex h-full flex-col justify-between rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 ${
+          className={`flex h-full flex-col justify-between rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 upload-name-card-animation ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
@@ -645,7 +1167,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               type="button"
               onClick={handleCreateAndUpload}
               disabled={uploading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
+              className="create-button-animation flex w-full items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload size={17} />
 
@@ -660,7 +1182,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 onNavigate?.("study-sets");
               }}
               disabled={uploading}
-              className={`w-full rounded-xl border px-5 py-2.5 text-center text-sm font-semibold transition ${
+              className={`cancel-button-animation w-full rounded-xl border px-5 py-2.5 text-center text-sm font-semibold transition ${
                 isDarkMode
                   ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
                   : "border-gray-200 bg-white/70 text-gray-600 hover:bg-white"
@@ -674,7 +1196,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= SUPPORTED FORMATS ================= */}
       <div
-        className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+        className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 upload-formats-animation ${
           isDarkMode
             ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"
@@ -698,13 +1220,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* PDF */}
           <div
-            className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            style={{ animationDelay: "0.42s" }}
+            className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
               isDarkMode
                 ? "border-white/5 bg-white/5"
                 : "border-white/80 bg-white/70"
             }`}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+            <div className="format-icon-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <FileText
                 size={20}
                 className="text-[#8064C7] dark:text-[#A78BFA]"
@@ -730,13 +1253,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
           {/* DOCX */}
           <div
-            className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            style={{ animationDelay: "0.51s" }}
+            className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
               isDarkMode
                 ? "border-white/5 bg-white/5"
                 : "border-white/80 bg-white/70"
             }`}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+            <div className="format-icon-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <FileCheck
                 size={20}
                 className="text-[#8064C7] dark:text-[#A78BFA]"
@@ -762,13 +1286,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
           {/* PPTX */}
           <div
-            className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            style={{ animationDelay: "0.60s" }}
+            className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
               isDarkMode
                 ? "border-white/5 bg-white/5"
                 : "border-white/80 bg-white/70"
             }`}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+            <div className="format-icon-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <Presentation
                 size={20}
                 className="text-[#8064C7] dark:text-[#A78BFA]"
@@ -794,13 +1319,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
           {/* CAMERA / OCR */}
           <div
-            className={`flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
+            style={{ animationDelay: "0.69s" }}
+            className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
               isDarkMode
                 ? "border-white/5 bg-white/5"
                 : "border-white/80 bg-white/70"
             }`}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
+            <div className="format-icon-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15">
               <Camera
                 size={20}
                 className="text-[#8064C7] dark:text-[#A78BFA]"
@@ -827,14 +1353,17 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
         {/* INFO */}
         <div
-          className={`mt-5 rounded-2xl border p-4 ${
+          className={`info-card-animation mt-5 rounded-2xl border p-4 ${
             isDarkMode
               ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200"
               : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
           }`}
         >
           <div className="flex items-start gap-2.5">
-            <Sparkles size={18} className="mt-0.5 shrink-0" />
+            <Sparkles
+              size={18}
+              className="mt-0.5 shrink-0 sparkle-animation"
+            />
 
             <p className="text-xs font-semibold leading-relaxed">
               Photos and scans of handwritten notes are
