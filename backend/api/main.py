@@ -7,13 +7,14 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.answer_evaluation.sbert_model import preload_models
-from backend.database.database import init_db
+from backend.database.database import close_pool, init_db, init_pool
 from backend.api.routes import (
     account,
     activity,
     attempts,
     documents,
     exams,
+    google_calendar,
     health,
     performance,
     planner,
@@ -52,17 +53,27 @@ async def _preload_models_in_background() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Database first: a fast reachability check (SELECT 1 - see
-    # init_db()) so the app fails fast on DB misconfiguration and every
-    # DB-backed endpoint is usable the instant the server starts
-    # accepting requests, instead of waiting behind model loading below.
+    # 1. Connection pool first: creates (and pre-warms, per
+    # DB_POOL_MIN_CONN) the process-wide pool every repository call leases
+    # from via get_connection(). Doing this before init_db()'s reachability
+    # check means a bad DATABASE_URL / unreachable database still fails
+    # fast at startup, exactly as it did before pooling existed.
+    print("main.py: creating database connection pool...")
+    start = time.monotonic()
+    init_pool()
+    elapsed = time.monotonic() - start
+    print(f"main.py: connection pool created in {elapsed:.2f}s.")
+
+    # 2. Reachability check (SELECT 1 - see init_db()) so every DB-backed
+    # endpoint is usable the instant the server starts accepting requests,
+    # instead of waiting behind model loading below.
     print("main.py: checking database connection...")
     start = time.monotonic()
     init_db()
     elapsed = time.monotonic() - start
     print(f"main.py: database connection established in {elapsed:.2f}s.")
 
-    # 2. Model loading happens afterward, in the background - kicked off
+    # 3. Model loading happens afterward, in the background - kicked off
     # here but not awaited, so `yield` (and uvicorn accepting requests)
     # isn't delayed by it. See _preload_models_in_background().
     preload_task = asyncio.create_task(_preload_models_in_background())
@@ -70,6 +81,12 @@ async def lifespan(app: FastAPI):
     yield
 
     preload_task.cancel()
+
+    # Release every pooled connection back to Postgres on shutdown rather
+    # than leaving them open until the OS reaps the process.
+    print("main.py: closing database connection pool...")
+    close_pool()
+    print("main.py: connection pool closed.")
 
 
 app = FastAPI(
@@ -108,6 +125,7 @@ api_router.include_router(tasks.router)
 api_router.include_router(exams.router)
 api_router.include_router(activity.router)
 api_router.include_router(account.router)
+api_router.include_router(google_calendar.router)
 
 # Mount API router to app
 app.include_router(api_router)

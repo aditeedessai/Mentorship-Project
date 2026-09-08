@@ -34,7 +34,7 @@ function StudySetProgressCard({ onNavigate }) {
 
   const handleSetClick = (setId) => {
     if (onNavigate && setId) {
-      onNavigate("individual-set", { studySetId: setId });
+      onNavigate("study-set", { studySetId: setId });
     } else if (onNavigate) {
       onNavigate("study-sets");
     }

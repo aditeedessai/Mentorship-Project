@@ -1,32 +1,39 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
-import DashboardPage from "./pages/DashboardPage";
-import UploadPage from "./pages/UploadPage";
-import LoginPage from "./pages/LoginPage";
-import SignUpPage from "./pages/SignUpPage";
-import StudySetsPage from "./pages/StudySetsPage";
-import IndivisualStudySetPage from "./pages/indivisualStudySetPage";
-import StudySetAttemptsPage from "./pages/StudySetAttemptsPage";
-import VerifyOtpPage from "./pages/VerifyOtpPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import ResultsPage from "./pages/ResultsPage";
-import ConfigureSession from "./pages/ConfigureSession";
-import MCQPage from "./pages/MCQPage";
-import QnAPage from "./pages/QnAPage";
-
-import JotLandingTest from "./pages/JotLandingTest";
-import LandingPage from "./pages/LandingPage";
-import AboutPage from "./pages/AboutPage";
-import SettingsPage from "./pages/SettingsPage";
-import PlannerPage from "./pages/PlannerPage";
-import StudentProfilePage from "./pages/StudentProfilePage";
-
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
+import GoogleCalendarPrompt from "./components/GoogleCalendarPrompt";
+
+// Every page is loaded on demand (its own network chunk fetched the
+// first time currentPage/authPage actually selects it) instead of all
+// ~19 pages downloading upfront on first paint - see PageFallback below
+// for what renders while a given page's chunk is in flight. Sidebar and
+// BackToTop above stay as regular imports since they're part of the
+// shell itself, rendered on every authenticated view, not a single page.
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const UploadPage = lazy(() => import("./pages/UploadPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignUpPage = lazy(() => import("./pages/SignUpPage"));
+const StudySetsPage = lazy(() => import("./pages/StudySetsPage"));
+const IndivisualStudySetPage = lazy(() => import("./pages/indivisualStudySetPage"));
+const StudySetAttemptsPage = lazy(() => import("./pages/StudySetAttemptsPage"));
+const VerifyOtpPage = lazy(() => import("./pages/VerifyOtpPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const ResultsPage = lazy(() => import("./pages/ResultsPage"));
+const ConfigureSession = lazy(() => import("./pages/ConfigureSession"));
+const MCQPage = lazy(() => import("./pages/MCQPage"));
+const QnAPage = lazy(() => import("./pages/QnAPage"));
+
+const JotLandingTest = lazy(() => import("./pages/JotLandingTest"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const PlannerPage = lazy(() => import("./pages/PlannerPage"));
+const StudentProfilePage = lazy(() => import("./pages/StudentProfilePage"));
 
 
 import {
@@ -36,6 +43,19 @@ import {
 } from "./services/api";
 
 import { supabase } from "./services/supabase";
+
+// Shown while a lazy-loaded page's chunk is being fetched - same visual
+// language as the existing "Loading your profile..." gate below, just
+// without a fixed background/min-h-screen wrapper so it also reads
+// correctly nested inside MainAppLayout's <main> (padded, sidebar
+// already visible) rather than only full-screen pre-login.
+function PageFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8064C7] border-t-transparent" />
+    </div>
+  );
+}
 
 function MainAppLayout({ children, onNavigate, currentPage, user }) {
   const { isDarkMode } = useTheme();
@@ -65,15 +85,15 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
       {/* Top Header Bar for Mobile / Tablet (< 1024px) */}
       <header
         className={`lg:hidden fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between px-4 border-b backdrop-blur-2xl transition-colors duration-300 ${isDarkMode
-            ? "border-white/10 bg-[#13101A]/90 text-[#F3F0F8]"
-            : "border-black/5 bg-[#F8F8FC]/90 text-[#231B33]"
+          ? "border-white/10 bg-[#13101A]/90 text-[#F3F0F8]"
+          : "border-black/5 bg-[#F8F8FC]/90 text-[#231B33]"
           }`}
       >
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${isDarkMode
-              ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
-              : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
+            ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+            : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
             }`}
           aria-label="Open Mobile Menu"
         >
@@ -85,8 +105,8 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           <span className="text-[#8064C7]">.</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${isDarkMode
-                ? "bg-[#8064C7]/20 text-[#A78BFA]"
-                : "bg-[#8064C7]/10 text-[#8064C7]"
+              ? "bg-[#8064C7]/20 text-[#A78BFA]"
+              : "bg-[#8064C7]/10 text-[#8064C7]"
               }`}
           >
             Study
@@ -160,6 +180,10 @@ function AppContent() {
   // other navigation so it never leaks into an unrelated later visit to
   // Configure Session.
   const [preselectType, setPreselectType] = useState(null);
+
+  // ================= GOOGLE CALENDAR PROMPT =================
+  // Shown once after a new user completes the student profile.
+  const [showGcalPrompt, setShowGcalPrompt] = useState(false);
 
   // ================= SCROLL TO TOP ON PAGE SWITCH =================
   useEffect(() => {
@@ -347,12 +371,14 @@ function AppContent() {
   // ================= PASSWORD RESET =================
   if (needsPasswordReset) {
     return (
-      <ResetPasswordPage
-        onComplete={() => {
-          setNeedsPasswordReset(false);
-          setAuthPage("login");
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <ResetPasswordPage
+          onComplete={() => {
+            setNeedsPasswordReset(false);
+            setAuthPage("login");
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -360,15 +386,17 @@ function AppContent() {
   // 1. Jot Landing Page ALWAYS opens first when launching the app
   if (authPage === "landing") {
     return (
-      <JotLandingTest
-        onNavigate={(page) => {
-          if (page === "login" && user) {
-            setAuthPage("app");
-          } else {
-            setAuthPage(page);
-          }
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <JotLandingTest
+          onNavigate={(page) => {
+            if (page === "login" && user) {
+              setAuthPage("app");
+            } else {
+              setAuthPage(page);
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -376,73 +404,83 @@ function AppContent() {
     // About Us
     if (authPage === "about") {
       return (
-        <AboutPage
-          onNavigate={setAuthPage}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <AboutPage
+            onNavigate={setAuthPage}
+          />
+        </Suspense>
       );
     }
 
     // Login
     if (authPage === "login") {
       return (
-        <LoginPage
-          onLogin={(userData) => {
-            setUser(userData);
-            setAuthPage("app");
-          }}
-          onSignUp={() => setAuthPage("signup")}
-          onForgotPassword={() =>
-            setAuthPage("forgot-password")
-          }
-          onBack={() => setAuthPage("landing")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <LoginPage
+            onLogin={(userData) => {
+              setUser(userData);
+              setAuthPage("app");
+            }}
+            onSignUp={() => setAuthPage("signup")}
+            onForgotPassword={() =>
+              setAuthPage("forgot-password")
+            }
+            onBack={() => setAuthPage("landing")}
+          />
+        </Suspense>
       );
     }
 
     // Signup
     if (authPage === "signup") {
       return (
-        <SignUpPage
-          onSignUpSuccess={(email) => {
-            setPendingEmail(email);
-            setOtpType("signup");
-            setAuthPage("verify-otp");
-          }}
-          onLogin={() => setAuthPage("login")}
-          onBack={() => setAuthPage("landing")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <SignUpPage
+            onSignUpSuccess={(email) => {
+              setPendingEmail(email);
+              setOtpType("signup");
+              setAuthPage("verify-otp");
+            }}
+            onLogin={() => setAuthPage("login")}
+            onBack={() => setAuthPage("landing")}
+          />
+        </Suspense>
       );
     }
 
     // Forgot Password
     if (authPage === "forgot-password") {
       return (
-        <ForgotPasswordPage
-          onCodeSent={(email) => {
-            setPendingEmail(email);
-            setOtpType("recovery");
-            setAuthPage("verify-otp");
-          }}
-          onBack={() => setAuthPage("login")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <ForgotPasswordPage
+            onCodeSent={(email) => {
+              setPendingEmail(email);
+              setOtpType("recovery");
+              setAuthPage("verify-otp");
+            }}
+            onBack={() => setAuthPage("login")}
+          />
+        </Suspense>
       );
     }
 
     // OTP Verification
     if (authPage === "verify-otp") {
       return (
-        <VerifyOtpPage
-          email={pendingEmail}
-          type={otpType}
-          onVerified={() => {
-            if (otpType === "recovery") {
-              setNeedsPasswordReset(true);
-            } else {
-              setAuthPage("login");
-            }
-          }}
-          onBack={() => setAuthPage("login")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <VerifyOtpPage
+            email={pendingEmail}
+            type={otpType}
+            onVerified={() => {
+              if (otpType === "recovery") {
+                setNeedsPasswordReset(true);
+              } else {
+                setAuthPage("login");
+              }
+            }}
+            onBack={() => setAuthPage("login")}
+          />
+        </Suspense>
       );
     }
   }
@@ -454,9 +492,8 @@ function AppContent() {
   if (hasProfile === null || profileLoading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${
-          isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
-        }`}
+        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+          }`}
       >
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8064C7] border-t-transparent" />
@@ -471,12 +508,19 @@ function AppContent() {
   // If the profile doesn't exist yet, show the mandatory form.
   // There is no skip, close, or back button — the user MUST
   // complete this before accessing any authenticated page.
+
+
   if (hasProfile === false) {
     return (
-      <StudentProfilePage
-        user={user}
-        onProfileComplete={() => setHasProfile(true)}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <StudentProfilePage
+          user={user}
+          onProfileComplete={() => {
+            setHasProfile(true);
+            setShowGcalPrompt(true);
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -497,154 +541,178 @@ function AppContent() {
     location.pathname === "/quiz/mcq" ||
     currentPage === "quiz-mcq"
   ) {
-    return <MCQPage onNavigate={handleNavigate} />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <MCQPage onNavigate={handleNavigate} />
+      </Suspense>
+    );
   }
 
   if (
     location.pathname === "/quiz/qna" ||
     currentPage === "quiz-qna"
   ) {
-    return <QnAPage onNavigate={handleNavigate} />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <QnAPage onNavigate={handleNavigate} />
+      </Suspense>
+    );
   }
 
   if (currentPage === "change-password-otp" && user) {
     return (
-      <VerifyOtpPage
-        email={user.email}
-        type="recovery"
-        onVerified={() => handleNavigate("change-password-new")}
-        onBack={() => handleNavigate("settings")}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <VerifyOtpPage
+          email={user.email}
+          type="recovery"
+          onVerified={() => handleNavigate("change-password-new")}
+          onBack={() => handleNavigate("settings")}
+        />
+      </Suspense>
     );
   }
 
   if (currentPage === "change-password-new" && user) {
     return (
-      <ResetPasswordPage
-        onComplete={() => {
-          setSettingsNotice("Your password has been changed successfully.");
-          handleNavigate("settings");
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <ResetPasswordPage
+          onComplete={() => {
+            setSettingsNotice("Your password has been changed successfully.");
+            handleNavigate("settings");
+          }}
+        />
+      </Suspense>
     );
   }
 
   // ================= MAIN AUTHENTICATED APP =================
-  return (
+  const mainContent = (
     <MainAppLayout
       onNavigate={handleNavigate}
       currentPage={currentPage}
       user={user}
     >
-      {/* ================= ABOUT US ================= */}
-      {currentPage === "about" && (
-        <AboutPage
-          onNavigate={handleNavigate}
-        />
-      )}
-
-      {/* ================= UPLOAD ================= */}
-      {currentPage === "upload" && (
-        <UploadPage
-          studySetId={selectedStudySetId}
-          onNavigate={handleNavigate}
-          onStudySetCreated={(newStudySet) => {
-            setStudySets((prev) => [
-              newStudySet,
-              ...prev,
-            ]);
-
-            setSelectedStudySetId(
-              newStudySet.study_set_id
-            );
-          }}
-        />
-      )}
-
-      {/* ================= STUDY SETS ================= */}
-      {currentPage === "study-sets" && (
-        <StudySetsPage
-          studySets={studySets}
-          studySetsLoading={studySetsLoading}
-          studySetsError={studySetsError}
-          onCreateClick={() => {
-            handleNavigate("upload");
-          }}
-          onDeleteStudySet={handleDeleteStudySet}
-          onContinueStudying={(studySetId) => {
-            handleNavigate("study-set", {
-              studySetId,
-            });
-          }}
-        />
-      )}
-
-      {/* ================= INDIVIDUAL STUDY SET ================= */}
-      {currentPage === "study-set" && (
-        <IndivisualStudySetPage
-          studySetId={selectedStudySetId}
-          studySets={studySets}
-          onNavigate={handleNavigate}
-        />
-      )}
-
-      {/* ================= VIEW ATTEMPTS ================= */}
-      {(currentPage === "study-set-attempts" || currentPage === "attempts") && (
-        <StudySetAttemptsPage
-          studySetId={selectedStudySetId}
-          studySets={studySets}
-          onNavigate={handleNavigate}
-        />
-      )}
-
-      {/* ================= RESULTS / PROGRESS ================= */}
-      {(currentPage === "results" ||
-        currentPage === "progress") && (
-          <ResultsPage
+      <Suspense fallback={<PageFallback />}>
+        {/* ================= ABOUT US ================= */}
+        {currentPage === "about" && (
+          <AboutPage
             onNavigate={handleNavigate}
-            studySetId={selectedStudySetId}
-            attemptId={selectedAttemptId}
           />
         )}
 
-      {/* ================= QUIZ CONFIGURATION ================= */}
-      {currentPage === "quiz" && (
-        <ConfigureSession
-          studySetId={selectedStudySetId}
-          studySetName={
-            studySets.find(
-              (s) =>
-                s.study_set_id === selectedStudySetId
-            )?.name
-          }
-          preselectType={preselectType}
-        />
-      )}
+        {/* ================= UPLOAD ================= */}
+        {currentPage === "upload" && (
+          <UploadPage
+            studySetId={selectedStudySetId}
+            onNavigate={handleNavigate}
+            onStudySetCreated={(newStudySet) => {
+              setStudySets((prev) => [
+                newStudySet,
+                ...prev,
+              ]);
 
-      {/* ================= SETTINGS ================= */}
-      {currentPage === "settings" && (
-        <SettingsPage
-          onNavigate={handleNavigate}
-          user={user}
-          notice={settingsNotice}
-          onDismissNotice={() => setSettingsNotice("")}
-          onDeleteAllStudySets={handleDeleteAllStudySets}
-        />
-      )}
+              setSelectedStudySetId(
+                newStudySet.study_set_id
+              );
+            }}
+          />
+        )}
 
-      {/* ================= PLANNER ================= */}
-      {currentPage === "planner" && (
-        <PlannerPage onNavigate={handleNavigate} />
-      )}
+        {/* ================= STUDY SETS ================= */}
+        {currentPage === "study-sets" && (
+          <StudySetsPage
+            studySets={studySets}
+            studySetsLoading={studySetsLoading}
+            studySetsError={studySetsError}
+            onCreateClick={() => {
+              handleNavigate("upload");
+            }}
+            onDeleteStudySet={handleDeleteStudySet}
+            onContinueStudying={(studySetId) => {
+              handleNavigate("study-set", {
+                studySetId,
+              });
+            }}
+          />
+        )}
 
-      {/* ================= DASHBOARD ================= */}
-      {currentPage === "dashboard" && (
-        <DashboardPage
-          user={user}
-          onNavigate={handleNavigate}
-        />
-      )}
+        {/* ================= INDIVIDUAL STUDY SET ================= */}
+        {currentPage === "study-set" && (
+          <IndivisualStudySetPage
+            studySetId={selectedStudySetId}
+            studySets={studySets}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* ================= VIEW ATTEMPTS ================= */}
+        {(currentPage === "study-set-attempts" || currentPage === "attempts") && (
+          <StudySetAttemptsPage
+            studySetId={selectedStudySetId}
+            studySets={studySets}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* ================= RESULTS / PROGRESS ================= */}
+        {(currentPage === "results" ||
+          currentPage === "progress") && (
+            <ResultsPage
+              onNavigate={handleNavigate}
+              studySetId={selectedStudySetId}
+              attemptId={selectedAttemptId}
+            />
+          )}
+
+        {/* ================= QUIZ CONFIGURATION ================= */}
+        {currentPage === "quiz" && (
+          <ConfigureSession
+            studySetId={selectedStudySetId}
+            studySetName={
+              studySets.find(
+                (s) =>
+                  s.study_set_id === selectedStudySetId
+              )?.name
+            }
+            preselectType={preselectType}
+          />
+        )}
+
+        {/* ================= SETTINGS ================= */}
+        {currentPage === "settings" && (
+          <SettingsPage
+            onNavigate={handleNavigate}
+            user={user}
+            notice={settingsNotice}
+            onDismissNotice={() => setSettingsNotice("")}
+            onDeleteAllStudySets={handleDeleteAllStudySets}
+          />
+        )}
+
+        {/* ================= PLANNER ================= */}
+        {currentPage === "planner" && (
+          <PlannerPage onNavigate={handleNavigate} />
+        )}
+
+        {/* ================= DASHBOARD ================= */}
+        {currentPage === "dashboard" && (
+          <DashboardPage
+            user={user}
+            onNavigate={handleNavigate}
+          />
+        )}
+      </Suspense>
     </MainAppLayout>
+  );
+
+  // Wrap with optional GCal prompt overlay
+  return (
+    <>
+      {mainContent}
+      {showGcalPrompt && (
+        <GoogleCalendarPrompt onDismiss={() => setShowGcalPrompt(false)} />
+      )}
+    </>
   );
 }
 

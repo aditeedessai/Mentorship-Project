@@ -12,6 +12,7 @@ from backend.api.schemas.task import (
     UpdateTaskRequest,
 )
 from backend.database import study_set_repository, task_repository
+from backend.services import google_calendar_service
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -81,7 +82,9 @@ def create_task(
             study_set_id=study_set_id_str,
             task_type=payload.task_type,
         )
-        return TaskResponse(**data)
+        response = TaskResponse(**data)
+        google_calendar_service.sync_task_to_calendar(current_user.user_id, data)
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -136,7 +139,9 @@ def update_task(
                 detail=f"Task with ID '{task_id}' not found"
             )
 
-        return TaskResponse(**updated)
+        response = TaskResponse(**updated)
+        google_calendar_service.sync_task_to_calendar(current_user.user_id, updated)
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -199,6 +204,7 @@ def delete_task(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Task with ID '{task_id}' not found"
             )
+        google_calendar_service.delete_task_from_calendar(current_user.user_id, str(task_id))
         return DeleteTaskResponse(
             message="Task deleted successfully",
             task_id=task_id
