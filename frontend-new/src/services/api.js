@@ -681,3 +681,31 @@ export async function deleteAccount() {
     method: "DELETE",
   });
 }
+
+// ── Google Calendar ──────────────────────────────────────────────────
+
+/**
+ * Check whether the current user has an active Google Calendar connection.
+ * GET /api/google-calendar/status
+ */
+export async function getGoogleCalendarStatus() {
+  return request("/api/google-calendar/status");
+}
+
+/**
+ * Get the Google OAuth authorization URL to start the connection flow.
+ * GET /api/google-calendar/connect
+ */
+export async function getGoogleCalendarConnectUrl() {
+  return request("/api/google-calendar/connect");
+}
+
+/**
+ * Disconnect the current user's Google Calendar integration.
+ * DELETE /api/google-calendar/disconnect
+ */
+export async function disconnectGoogleCalendar() {
+  return request("/api/google-calendar/disconnect", {
+    method: "DELETE",
+  });
+}

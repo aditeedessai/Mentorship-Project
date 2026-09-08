@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   Palette,
@@ -13,11 +13,12 @@ import {
   CheckCircle2,
   X,
   Settings,
+  Calendar,
 } from "lucide-react";
 
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
-import { deleteAccount } from "../services/api";
+import { deleteAccount, getGoogleCalendarStatus, getGoogleCalendarConnectUrl, disconnectGoogleCalendar } from "../services/api";
 
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
@@ -60,6 +61,85 @@ const SettingsPage = ({
 
   const [studySetsDeletedMessage, setStudySetsDeletedMessage] =
     useState("");
+
+  // =========================================================
+  // GOOGLE CALENDAR
+  // =========================================================
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalEmail, setGcalEmail] = useState(null);
+  const [gcalLoading, setGcalLoading] = useState(true);
+  const [gcalActionLoading, setGcalActionLoading] = useState(false);
+  const [gcalError, setGcalError] = useState("");
+  const [gcalSuccess, setGcalSuccess] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    getGoogleCalendarStatus()
+      .then((data) => {
+        if (mounted) {
+          setGcalConnected(data.connected);
+          setGcalEmail(data.email || null);
+        }
+      })
+      .catch(() => {
+        if (mounted) setGcalConnected(false);
+      })
+      .finally(() => {
+        if (mounted) setGcalLoading(false);
+      });
+
+    // Check for OAuth redirect params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gcal_connected") === "true") {
+      setGcalSuccess("Google Calendar connected successfully!");
+      setGcalConnected(true);
+      // Re-fetch to get email
+      getGoogleCalendarStatus()
+        .then((data) => {
+          if (mounted) {
+            setGcalConnected(data.connected);
+            setGcalEmail(data.email || null);
+          }
+        })
+        .catch(() => {});
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("gcal_error")) {
+      setGcalError("Could not connect Google Calendar. Please try again.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    return () => { mounted = false; };
+  }, []);
+
+  const handleConnectGcal = async () => {
+    setGcalActionLoading(true);
+    setGcalError("");
+    try {
+      const data = await getGoogleCalendarConnectUrl();
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      }
+    } catch (err) {
+      setGcalError("Failed to start Google Calendar connection.");
+      setGcalActionLoading(false);
+    }
+  };
+
+  const handleDisconnectGcal = async () => {
+    setGcalActionLoading(true);
+    setGcalError("");
+    try {
+      await disconnectGoogleCalendar();
+      setGcalConnected(false);
+      setGcalEmail(null);
+      setGcalSuccess("");
+    } catch (err) {
+      setGcalError("Failed to disconnect. Please try again.");
+    } finally {
+      setGcalActionLoading(false);
+    }
+  };
 
   // =========================================================
   // CHANGE PASSWORD
@@ -532,6 +612,146 @@ const SettingsPage = ({
                 className="opacity-40"
               />
             </button>
+          </div>
+        </section>
+
+        {/* =====================================================
+            GOOGLE CALENDAR
+        ===================================================== */}
+        <section
+          className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${isDarkMode
+              ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+              : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+            }`}
+        >
+          <div className="mb-5 flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+              <Calendar size={20} />
+            </div>
+
+            <div>
+              <h2 className="font-black tracking-tight">
+                Google Calendar
+              </h2>
+
+              <p
+                className={`text-xs ${isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                  }`}
+              >
+                Manage your Google Calendar integration
+              </p>
+            </div>
+          </div>
+
+          <p
+            className={`mb-4 text-xs leading-relaxed ${isDarkMode
+                ? "text-white/60"
+                : "text-gray-500"
+              }`}
+          >
+            Connect your Google Calendar to sync your Jot planner tasks and exams
+            and receive Google Calendar reminders.
+          </p>
+
+          {/* Success message */}
+          {gcalSuccess && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
+              <CheckCircle2 size={16} />
+              {gcalSuccess}
+            </div>
+          )}
+
+          {/* Error message */}
+          {gcalError && (
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">
+              {gcalError}
+            </div>
+          )}
+
+          <div
+            className={`flex items-center justify-between rounded-2xl border p-4 ${isDarkMode
+                ? "border-white/5 bg-white/5"
+                : "border-gray-200/80 bg-white"
+              }`}
+          >
+            {gcalLoading ? (
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <Loader2 size={16} className="animate-spin text-[#8064C7]" />
+                Checking connection...
+              </div>
+            ) : gcalConnected ? (
+              <>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
+                    <CheckCircle2 size={19} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold">
+                      Google Calendar connected
+                    </p>
+
+                    {gcalEmail && (
+                      <p
+                        className={`truncate text-[11px] ${isDarkMode
+                            ? "text-white/50"
+                            : "text-gray-500"
+                          }`}
+                      >
+                        {gcalEmail}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDisconnectGcal}
+                  disabled={gcalActionLoading}
+                  className={`ml-4 shrink-0 cursor-pointer rounded-xl px-4 py-2 text-xs font-bold transition disabled:opacity-50 ${isDarkMode
+                      ? "bg-white/10 text-white/80 hover:bg-white/20"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                >
+                  {gcalActionLoading ? "Disconnecting..." : "Disconnect"}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                    <Calendar size={19} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold">
+                      Not connected
+                    </p>
+
+                    <p
+                      className={`text-[11px] ${isDarkMode
+                          ? "text-white/50"
+                          : "text-gray-500"
+                        }`}
+                    >
+                      Sync tasks and exams to your calendar
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConnectGcal}
+                  disabled={gcalActionLoading}
+                  className="ml-4 shrink-0 cursor-pointer rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4] disabled:opacity-50"
+                >
+                  {gcalActionLoading ? "Connecting..." : "Connect Google Calendar"}
+                </button>
+              </>
+            )}
           </div>
         </section>
 

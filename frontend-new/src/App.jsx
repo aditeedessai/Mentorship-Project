@@ -27,6 +27,7 @@ import StudentProfilePage from "./pages/StudentProfilePage";
 
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
+import GoogleCalendarPrompt from "./components/GoogleCalendarPrompt";
 
 
 import {
@@ -160,6 +161,10 @@ function AppContent() {
   // other navigation so it never leaks into an unrelated later visit to
   // Configure Session.
   const [preselectType, setPreselectType] = useState(null);
+
+  // ================= GOOGLE CALENDAR PROMPT =================
+  // Shown once after a new user completes the student profile.
+  const [showGcalPrompt, setShowGcalPrompt] = useState(false);
 
   // ================= SCROLL TO TOP ON PAGE SWITCH =================
   useEffect(() => {
@@ -475,7 +480,10 @@ function AppContent() {
     return (
       <StudentProfilePage
         user={user}
-        onProfileComplete={() => setHasProfile(true)}
+        onProfileComplete={() => {
+          setHasProfile(true);
+          setShowGcalPrompt(true);
+        }}
       />
     );
   }
@@ -530,7 +538,7 @@ function AppContent() {
   }
 
   // ================= MAIN AUTHENTICATED APP =================
-  return (
+  const mainContent = (
     <MainAppLayout
       onNavigate={handleNavigate}
       currentPage={currentPage}
@@ -645,6 +653,16 @@ function AppContent() {
         />
       )}
     </MainAppLayout>
+  );
+
+  // Wrap with optional GCal prompt overlay
+  return (
+    <>
+      {mainContent}
+      {showGcalPrompt && (
+        <GoogleCalendarPrompt onDismiss={() => setShowGcalPrompt(false)} />
+      )}
+    </>
   );
 }
 
