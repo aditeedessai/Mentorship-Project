@@ -52,6 +52,44 @@ const extractTopicFromHint = (hint) => {
     .trim();
 };
 
+const extractTopicFromPrompt = (prompt) => {
+  if (!prompt || typeof prompt !== 'string') return null;
+
+  let text = prompt
+    .replace(/^according\s+to\s+(the\s+)?(provided\s+)?(text|passage|document|material|context|notes|chapter)[,\s:]*/i, '')
+    .replace(/^based\s+on\s+(the\s+)?(provided\s+)?(text|passage|document|material|context|notes)[,\s:]*/i, '')
+    .replace(/^(in|from)\s+the\s+context\s+of[,\s:]*/i, '')
+    .replace(/^(per|as\s+per)\s+the\s+(provided\s+)?(text|passage|notes)[,\s:]*/i, '')
+    .trim();
+
+  text = text
+    .replace(/^(what|which)\s+(specific\s+)?(type|types|kind|kinds|model|models|form|forms|category|categories)\s+of\s+/i, '')
+    .replace(/^(what|which)\s+(are|is|was|were|do|does|can|could|would|should)\s+(the\s+)?/i, '')
+    .replace(/^(what|which)\s+/i, '')
+    .replace(/^(how|why|where|when)\s+(does|do|can|could|is|are|was|were)\s+/i, '')
+    .replace(/^(explain|describe|define|discuss|list|identify|name|state|illustrate|outline|mention)\s+(the\s+)?/i, '')
+    .replace(/^(the\s+role\s+of|the\s+concept\s+of|the\s+process\s+of|the\s+purpose\s+of)\s+/i, '')
+    .trim();
+
+  text = text
+    .replace(/\s+(is|are|was|were)\s+(noted|mentioned|described|suitable|best|used|needed|required|defined|associated|referred).*$/i, '')
+    .replace(/\s+(for|in|to)\s+(the|this|a)\s+.*$/i, '')
+    .replace(/\?.*$/, '')
+    .trim();
+
+  text = text.replace(/^[,\s:]+/, '').replace(/[.,:;!?]+$/, '').trim();
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+
+  while (words.length > 0 && /^(a|an|the|of|in|for|and|or|to|with)$/i.test(words[0])) {
+    words.shift();
+  }
+
+  const result = words.slice(0, 4).join(' ');
+  return result ? result.charAt(0).toUpperCase() + result.slice(1) : null;
+};
+
 export default function ResultsPage({ onNavigate, studySetId: propStudySetId, attemptId: propAttemptId }) {
   const { isDarkMode } = useTheme();
   const { attemptId: paramAttemptId } = useParams();
@@ -71,7 +109,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const [revisionStatuses, setRevisionStatuses] = useState([]);
   const [error, setError] = useState(null);
 
-  // If no attemptId is passed, redirect safely to study-set-attempts to select a specific attempt
   useEffect(() => {
     if (!passedAttemptId) {
       if (studySetId) {
@@ -118,6 +155,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           rawList = evalsData.results;
         } else if (Array.isArray(evalsData?.evaluations)) {
           rawList = evalsData.evaluations;
+        } else if (Array.isArray(resData?.evaluations)) {
+          rawList = resData.evaluations;
+        } else if (Array.isArray(resData?.results)) {
+          rawList = resData.results;
         }
         setEvaluations(rawList);
 
@@ -125,7 +166,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           setRevisionStatuses(revStatus.statuses);
         }
 
-        // Auto finish attempt if complete
         finishAttempt(passedAttemptId).catch(() => {});
       } catch (err) {
         console.error('Error loading attempt results:', err);
@@ -146,7 +186,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     };
   }, [passedAttemptId, studySetId]);
 
-  // Determine question type of THIS specific attempt
   const rawQuestionType = useMemo(() => {
     if (performanceData?.question_type) return performanceData.question_type;
     if (evaluations.length > 0 && (evaluations[0].question_type || evaluations[0].type)) {
@@ -159,7 +198,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const questionTypeName = useMemo(() => normalizeTypeName(rawQuestionType), [rawQuestionType]);
   const backendType = useMemo(() => toBackendType(rawQuestionType), [rawQuestionType]);
 
-  // Scores & Statistics for THIS attempt only
   const totalScore = useMemo(() => {
     if (performanceData?.earned_marks !== undefined) {
       return Math.round(Number(performanceData.earned_marks) * 100) / 100;
@@ -167,7 +205,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     if (performanceData?.cumulative?.total_marks_obtained !== undefined) {
       return Math.round(Number(performanceData.cumulative.total_marks_obtained) * 100) / 100;
     }
-    return evaluations.reduce((sum, item) => sum + Number(item.marks_awarded || 0), 0);
+    return evaluations.reduce((sum, item) => sum + Number(item.marks_awarded ?? item.score ?? 0), 0);
   }, [performanceData, evaluations]);
 
   const maxScore = useMemo(() => {
@@ -177,7 +215,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     if (performanceData?.cumulative?.total_maximum_marks !== undefined) {
       return Math.round(Number(performanceData.cumulative.total_maximum_marks) * 100) / 100;
     }
-    return evaluations.reduce((sum, item) => sum + Number(item.max_marks || (rawQuestionType === 'mcq' ? 2 : 10)), 0);
+    return evaluations.reduce((sum, item) => sum + Number(item.max_marks ?? (rawQuestionType === 'mcq' ? 2 : 10)), 0);
   }, [performanceData, evaluations, rawQuestionType]);
 
   const percentage = useMemo(() => {
@@ -191,11 +229,15 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     return performanceData?.overall_remark || performanceData?.cumulative?.overall_remark || null;
   }, [performanceData]);
 
-  // Question Hint Map
   const questionHintMap = useMemo(() => {
     const map = new Map();
     passedQuestions.forEach((q, idx) => {
-      const cleaned = extractTopicFromHint(q.hint) || q.topic || q.hint;
+      const cleaned =
+        extractTopicFromHint(q.hint) ||
+        q.topic ||
+        q.subtopic ||
+        q.concept ||
+        q.hint;
       if (cleaned) {
         if (q.question_id) map.set(String(q.question_id), cleaned);
         if (q.id) map.set(String(q.id), cleaned);
@@ -205,28 +247,40 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     return map;
   }, [passedQuestions]);
 
-  // Formatted questions for THIS attempt
   const processedQuestions = useMemo(() => {
     return evaluations.map((item, idx) => {
       const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
       const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
       const awardedMarks = Number(item.marks_awarded ?? item.score ?? 0);
       const maxMarks = Number(item.max_marks ?? (rawQuestionType === 'mcq' ? 2 : 10));
-      const isCorrect = typeof item.is_correct === 'boolean' ? item.is_correct : awardedMarks >= maxMarks * 0.55;
+
+      const isCorrect =
+        typeof item.is_correct === 'boolean'
+          ? item.is_correct
+          : maxMarks > 0
+          ? awardedMarks >= maxMarks * 0.55
+          : false;
 
       const questionId = item.question_id || item.id;
+      const promptText = item.question_text || item.question || item.prompt || `Question ${idx + 1}`;
+
       const associatedTopic =
         extractTopicFromHint(item.hint) ||
         item.topic ||
+        item.subtopic ||
+        item.concept ||
+        item.concept_tested ||
+        item.topic_name ||
         extractTopicFromHint(item.ai_hint) ||
         questionHintMap.get(String(questionId)) ||
         questionHintMap.get(`index_${idx}`) ||
-        null;
+        extractTopicFromPrompt(promptText) ||
+        `Concept ${idx + 1}`;
 
       return {
         id: idx + 1,
         question_id: questionId,
-        prompt: item.question_text || item.question || item.prompt || `Question ${idx + 1}`,
+        prompt: promptText,
         userAnswer: isSkipped ? 'Skipped' : rawAns,
         correctAnswer: item.correct_answer || item.model_answer || item.expected_answer || 'N/A',
         feedback: item.feedback && String(item.feedback).trim() !== '' ? item.feedback : 'No feedback available.',
@@ -243,18 +297,23 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const skippedCount = useMemo(() => processedQuestions.filter((q) => q.isSkipped).length, [processedQuestions]);
   const wrongCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === false && !q.isSkipped).length, [processedQuestions]);
 
-  // Weak topics calculated ONLY from incorrect/skipped questions of THIS attempt
   const weakTopics = useMemo(() => {
-    const list = [];
+    const map = new Map();
+
     processedQuestions.forEach((q) => {
       if ((q.isCorrect === false || q.isSkipped) && q.topic) {
-        list.push(q.topic);
+        if (!map.has(q.topic)) {
+          map.set(q.topic, {
+            title: q.topic,
+            questionNum: q.id,
+          });
+        }
       }
     });
-    return [...new Set(list)];
+
+    return Array.from(map.values());
   }, [processedQuestions]);
 
-  // Revision status item for THIS question type from the existing revision system
   const currentRevisionStatus = useMemo(() => {
     return revisionStatuses.find((s) => s.question_type === backendType) || null;
   }, [revisionStatuses, backendType]);
@@ -290,7 +349,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     }
   };
 
-  /* Loading State */
   if (loading) {
     return (
       <div
@@ -422,7 +480,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             </p>
           </div>
 
-          {/* Key Score Metrics Grid */}
           <div className="flex w-full flex-wrap items-center justify-around gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md sm:justify-center sm:gap-5 sm:p-5 lg:w-auto">
             <div className="px-2 text-center sm:px-3">
               <div className="text-2xl font-black text-white sm:text-3xl">
@@ -576,21 +633,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
               <p className="text-sm font-bold tracking-tight">{q.prompt}</p>
 
-              {/* Weak Topic Tag on incorrect/skipped question */}
-              {(q.isCorrect === false || q.isSkipped) && q.topic && (
-                <div
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-bold ${
-                    isDarkMode
-                      ? 'border-rose-500/25 bg-rose-500/10 text-rose-400'
-                      : 'border-red-200/80 bg-red-50/80 text-red-600'
-                  }`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${isDarkMode ? 'bg-rose-500' : 'bg-red-500'}`} />
-                  <span>Weak Topic:</span>
-                  <span className="font-extrabold">{q.topic}</span>
-                </div>
-              )}
-
               <div className="grid grid-cols-1 gap-3 pt-1 text-xs font-medium sm:grid-cols-2">
                 <div
                   className={`rounded-xl border p-3 ${
@@ -646,7 +688,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
       {/* 4. Weak Topics & Revision Status Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Card 1: Weak Topics Identified */}
+        {/* Card 1: Weak Topics Identified (Only place weak topics are displayed) */}
         <div
           className={`space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
             isDarkMode
@@ -662,30 +704,34 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           </div>
 
           {weakTopics.length > 0 ? (
-            <div className="space-y-2.5">
-              <p
-                className={`text-xs ${
-                  isDarkMode ? 'text-white/60' : 'text-gray-500'
-                }`}
-              >
-                Review these specific topics before your next revision attempt:
-              </p>
+            <div className="space-y-2 pt-1">
+              {weakTopics.map((topicItem, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all ${
+                    isDarkMode
+                      ? 'border-rose-500/25 bg-rose-500/10'
+                      : 'border-red-200/80 bg-red-50/60 shadow-xs'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${isDarkMode ? 'bg-rose-400' : 'bg-red-500'}`} />
+                    <h4 className={`text-xs font-black truncate ${isDarkMode ? 'text-rose-200' : 'text-red-700'}`}>
+                      {topicItem.title}
+                    </h4>
+                  </div>
 
-              <div className="flex flex-wrap gap-2 pt-1">
-                {weakTopics.map((topic, idx) => (
                   <span
-                    key={idx}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold backdrop-blur-md ${
+                    className={`shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
                       isDarkMode
-                        ? 'border-rose-500/30 bg-rose-500/15 text-rose-300'
-                        : 'border-red-200/80 bg-red-50/90 text-red-600 shadow-xs'
+                        ? 'border-rose-500/30 bg-rose-500/20 text-rose-300'
+                        : 'border-red-200 bg-white/80 text-red-600'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${isDarkMode ? 'bg-rose-400' : 'bg-red-500'}`} />
-                    {topic}
+                    Q{topicItem.questionNum}
                   </span>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="flex items-center gap-2.5 text-xs font-semibold text-emerald-400 pt-2">
@@ -697,7 +743,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           )}
         </div>
 
-        {/* Card 2: Revision & Retest Status (Using Existing Revision System) */}
+        {/* Card 2: Revision & Retest Status */}
         <div
           className={`space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
             isDarkMode
