@@ -1,3 +1,4 @@
+
 import uuid
 from collections import defaultdict
 
@@ -180,6 +181,11 @@ def run_evaluation(
     if not attempt_id:
         attempt_id = str(uuid.uuid4())
 
+    q_type = "short"
+    if questions and len(questions) > 0:
+        raw_type = str(questions[0].get("question_type", "short")).lower().strip()
+        q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
+
     # Guarantees a quiz_attempts row exists before any evaluations are
     # saved below - evaluations.attempt_id is a real foreign key in
     # Postgres, and save_attempt() (with real totals) only runs once,
@@ -187,6 +193,7 @@ def run_evaluation(
     # no-op if the attempt already exists (see its docstring).
     ensure_attempt_exists(
         attempt_id=attempt_id,
+        question_type=q_type,
         study_set_id=study_set_id,
         document_id=document_id
     )
@@ -420,6 +427,7 @@ def run_evaluation(
     # Save/update attempt summary in database
     save_attempt(
         attempt_id=attempt_id,
+        question_type=q_type,
         study_set_id=study_set_id,
         document_id=document_id,
         total_marks=total_marks,
@@ -875,4 +883,4 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
         "cumulative": cumulative,
         "sections": sections,
         "topics": topics,
-    }
+    }

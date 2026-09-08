@@ -29,14 +29,20 @@ from backend.api.schemas.question import QuestionType
 
 
 def get_existing_user_id(conn):
-    """Retrieve an existing user_id from study_sets table to satisfy foreign key constraints if needed."""
-    try:
-        row = conn.execute("SELECT user_id FROM study_sets WHERE user_id IS NOT NULL LIMIT 1").fetchone()
-        if row and row.get("user_id"):
-            return str(row["user_id"])
-    except Exception:
-        pass
-    return None
+    """
+    Returns a dedicated, isolated Supabase Auth test account's id -
+    never a real user's. This used to run
+    "SELECT user_id FROM study_sets ... LIMIT 1", which grabbed whatever
+    real user happened to sort first in this shared, live-connected
+    database and wrote this suite's fixture study sets into their real
+    account every time the suite ran (confirmed twice against the same
+    real account - a test failing partway through skips its own
+    unprotected cleanup call at the end, so fixtures accumulated). This
+    points at auth.users id 51894975-43bb-4e64-8fa1-9492453b558e
+    (backend-test-suite@internal.test), a real Supabase Auth user
+    created specifically to absorb this suite's fixtures.
+    """
+    return "51894975-43bb-4e64-8fa1-9492453b558e"
 
 
 if pytest:

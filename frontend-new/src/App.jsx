@@ -1,32 +1,38 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
-import DashboardPage from "./pages/DashboardPage";
-import UploadPage from "./pages/UploadPage";
-import LoginPage from "./pages/LoginPage";
-import SignUpPage from "./pages/SignUpPage";
-import StudySetsPage from "./pages/StudySetsPage";
-import IndivisualStudySetPage from "./pages/indivisualStudySetPage";
-import StudySetAttemptsPage from "./pages/StudySetAttemptsPage";
-import VerifyOtpPage from "./pages/VerifyOtpPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import ResultsPage from "./pages/ResultsPage";
-import ConfigureSession from "./pages/ConfigureSession";
-import MCQPage from "./pages/MCQPage";
-import QnAPage from "./pages/QnAPage";
-
-import JotLandingTest from "./pages/JotLandingTest";
-import LandingPage from "./pages/LandingPage";
-import AboutPage from "./pages/AboutPage";
-import SettingsPage from "./pages/SettingsPage";
-import PlannerPage from "./pages/PlannerPage";
-import StudentProfilePage from "./pages/StudentProfilePage";
-
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
+
+// Every page is loaded on demand (its own network chunk fetched the
+// first time currentPage/authPage actually selects it) instead of all
+// ~19 pages downloading upfront on first paint - see PageFallback below
+// for what renders while a given page's chunk is in flight. Sidebar and
+// BackToTop above stay as regular imports since they're part of the
+// shell itself, rendered on every authenticated view, not a single page.
+const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const UploadPage = lazy(() => import("./pages/UploadPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignUpPage = lazy(() => import("./pages/SignUpPage"));
+const StudySetsPage = lazy(() => import("./pages/StudySetsPage"));
+const IndivisualStudySetPage = lazy(() => import("./pages/indivisualStudySetPage"));
+const StudySetAttemptsPage = lazy(() => import("./pages/StudySetAttemptsPage"));
+const VerifyOtpPage = lazy(() => import("./pages/VerifyOtpPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const ResultsPage = lazy(() => import("./pages/ResultsPage"));
+const ConfigureSession = lazy(() => import("./pages/ConfigureSession"));
+const MCQPage = lazy(() => import("./pages/MCQPage"));
+const QnAPage = lazy(() => import("./pages/QnAPage"));
+
+const JotLandingTest = lazy(() => import("./pages/JotLandingTest"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AboutPage = lazy(() => import("./pages/AboutPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const PlannerPage = lazy(() => import("./pages/PlannerPage"));
+const StudentProfilePage = lazy(() => import("./pages/StudentProfilePage"));
 
 
 import {
@@ -36,6 +42,19 @@ import {
 } from "./services/api";
 
 import { supabase } from "./services/supabase";
+
+// Shown while a lazy-loaded page's chunk is being fetched - same visual
+// language as the existing "Loading your profile..." gate below, just
+// without a fixed background/min-h-screen wrapper so it also reads
+// correctly nested inside MainAppLayout's <main> (padded, sidebar
+// already visible) rather than only full-screen pre-login.
+function PageFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8064C7] border-t-transparent" />
+    </div>
+  );
+}
 
 function MainAppLayout({ children, onNavigate, currentPage, user }) {
   const { isDarkMode } = useTheme();
@@ -347,12 +366,14 @@ function AppContent() {
   // ================= PASSWORD RESET =================
   if (needsPasswordReset) {
     return (
-      <ResetPasswordPage
-        onComplete={() => {
-          setNeedsPasswordReset(false);
-          setAuthPage("login");
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <ResetPasswordPage
+          onComplete={() => {
+            setNeedsPasswordReset(false);
+            setAuthPage("login");
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -360,15 +381,17 @@ function AppContent() {
   // 1. Jot Landing Page ALWAYS opens first when launching the app
   if (authPage === "landing") {
     return (
-      <JotLandingTest
-        onNavigate={(page) => {
-          if (page === "login" && user) {
-            setAuthPage("app");
-          } else {
-            setAuthPage(page);
-          }
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <JotLandingTest
+          onNavigate={(page) => {
+            if (page === "login" && user) {
+              setAuthPage("app");
+            } else {
+              setAuthPage(page);
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -376,73 +399,83 @@ function AppContent() {
     // About Us
     if (authPage === "about") {
       return (
-        <AboutPage
-          onNavigate={setAuthPage}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <AboutPage
+            onNavigate={setAuthPage}
+          />
+        </Suspense>
       );
     }
 
     // Login
     if (authPage === "login") {
       return (
-        <LoginPage
-          onLogin={(userData) => {
-            setUser(userData);
-            setAuthPage("app");
-          }}
-          onSignUp={() => setAuthPage("signup")}
-          onForgotPassword={() =>
-            setAuthPage("forgot-password")
-          }
-          onBack={() => setAuthPage("landing")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <LoginPage
+            onLogin={(userData) => {
+              setUser(userData);
+              setAuthPage("app");
+            }}
+            onSignUp={() => setAuthPage("signup")}
+            onForgotPassword={() =>
+              setAuthPage("forgot-password")
+            }
+            onBack={() => setAuthPage("landing")}
+          />
+        </Suspense>
       );
     }
 
     // Signup
     if (authPage === "signup") {
       return (
-        <SignUpPage
-          onSignUpSuccess={(email) => {
-            setPendingEmail(email);
-            setOtpType("signup");
-            setAuthPage("verify-otp");
-          }}
-          onLogin={() => setAuthPage("login")}
-          onBack={() => setAuthPage("landing")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <SignUpPage
+            onSignUpSuccess={(email) => {
+              setPendingEmail(email);
+              setOtpType("signup");
+              setAuthPage("verify-otp");
+            }}
+            onLogin={() => setAuthPage("login")}
+            onBack={() => setAuthPage("landing")}
+          />
+        </Suspense>
       );
     }
 
     // Forgot Password
     if (authPage === "forgot-password") {
       return (
-        <ForgotPasswordPage
-          onCodeSent={(email) => {
-            setPendingEmail(email);
-            setOtpType("recovery");
-            setAuthPage("verify-otp");
-          }}
-          onBack={() => setAuthPage("login")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <ForgotPasswordPage
+            onCodeSent={(email) => {
+              setPendingEmail(email);
+              setOtpType("recovery");
+              setAuthPage("verify-otp");
+            }}
+            onBack={() => setAuthPage("login")}
+          />
+        </Suspense>
       );
     }
 
     // OTP Verification
     if (authPage === "verify-otp") {
       return (
-        <VerifyOtpPage
-          email={pendingEmail}
-          type={otpType}
-          onVerified={() => {
-            if (otpType === "recovery") {
-              setNeedsPasswordReset(true);
-            } else {
-              setAuthPage("login");
-            }
-          }}
-          onBack={() => setAuthPage("login")}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <VerifyOtpPage
+            email={pendingEmail}
+            type={otpType}
+            onVerified={() => {
+              if (otpType === "recovery") {
+                setNeedsPasswordReset(true);
+              } else {
+                setAuthPage("login");
+              }
+            }}
+            onBack={() => setAuthPage("login")}
+          />
+        </Suspense>
       );
     }
   }
@@ -473,10 +506,12 @@ function AppContent() {
   // complete this before accessing any authenticated page.
   if (hasProfile === false) {
     return (
-      <StudentProfilePage
-        user={user}
-        onProfileComplete={() => setHasProfile(true)}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <StudentProfilePage
+          user={user}
+          onProfileComplete={() => setHasProfile(true)}
+        />
+      </Suspense>
     );
   }
 
@@ -497,35 +532,47 @@ function AppContent() {
     location.pathname === "/quiz/mcq" ||
     currentPage === "quiz-mcq"
   ) {
-    return <MCQPage onNavigate={handleNavigate} />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <MCQPage onNavigate={handleNavigate} />
+      </Suspense>
+    );
   }
 
   if (
     location.pathname === "/quiz/qna" ||
     currentPage === "quiz-qna"
   ) {
-    return <QnAPage onNavigate={handleNavigate} />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <QnAPage onNavigate={handleNavigate} />
+      </Suspense>
+    );
   }
 
   if (currentPage === "change-password-otp" && user) {
     return (
-      <VerifyOtpPage
-        email={user.email}
-        type="recovery"
-        onVerified={() => handleNavigate("change-password-new")}
-        onBack={() => handleNavigate("settings")}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <VerifyOtpPage
+          email={user.email}
+          type="recovery"
+          onVerified={() => handleNavigate("change-password-new")}
+          onBack={() => handleNavigate("settings")}
+        />
+      </Suspense>
     );
   }
 
   if (currentPage === "change-password-new" && user) {
     return (
-      <ResetPasswordPage
-        onComplete={() => {
-          setSettingsNotice("Your password has been changed successfully.");
-          handleNavigate("settings");
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <ResetPasswordPage
+          onComplete={() => {
+            setSettingsNotice("Your password has been changed successfully.");
+            handleNavigate("settings");
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -536,6 +583,7 @@ function AppContent() {
       currentPage={currentPage}
       user={user}
     >
+      <Suspense fallback={<PageFallback />}>
       {/* ================= ABOUT US ================= */}
       {currentPage === "about" && (
         <AboutPage
@@ -644,6 +692,7 @@ function AppContent() {
           onNavigate={handleNavigate}
         />
       )}
+      </Suspense>
     </MainAppLayout>
   );
 }

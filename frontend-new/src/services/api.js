@@ -42,6 +42,76 @@ async function request(url, options = {}) {
   return res.json();
 }
 
+// ── Client-side response cache + in-flight de-duplication ─────────────
+// Read-only GET calls (fetchStudySets, fetchExams, fetchTasks, etc.) route
+// through cachedGet() below instead of calling request() directly. Two
+// problems this solves:
+//   1. Duplicate simultaneous calls (e.g. Dashboard's cards each calling
+//      fetchStudySets() independently on mount) share one in-flight
+//      network request instead of firing three.
+//   2. Revisiting a page within CACHE_TTL_MS of the last fetch reuses the
+//      cached response instead of re-fetching from scratch, so switching
+//      between pages (e.g. Dashboard <-> Planner) feels instant on a
+//      revisit instead of re-waiting on the network every time.
+//
+// Writes (POST/PATCH/DELETE) never go through cachedGet() - they always
+// call request() directly, and invalidateCache()/clearCache() (called
+// after every mutation below, keyed by the URL prefix it could affect)
+// removes now-stale entries so a page you navigate back to after a write
+// shows the fresh state instead of a cached stale one. A 404/error
+// response is never cached (caching only happens after a successful
+// response below), so e.g. fetchStudySetSummary() before a summary
+// exists correctly keeps re-checking instead of caching "not found".
+
+const CACHE_TTL_MS = 30_000;
+
+const _cache = new Map(); // url -> { data, expiresAt }
+const _inFlight = new Map(); // url -> Promise
+
+async function cachedGet(url) {
+  const cached = _cache.get(url);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const pending = _inFlight.get(url);
+  if (pending) {
+    return pending;
+  }
+
+  const promise = request(url)
+    .then((data) => {
+      _cache.set(url, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+      return data;
+    })
+    .finally(() => {
+      _inFlight.delete(url);
+    });
+
+  _inFlight.set(url, promise);
+  return promise;
+}
+
+/**
+ * Removes cached GET entries whose URL starts with `prefix`, e.g.
+ * invalidateCache("/api/tasks") clears every cached fetchTasks() variant
+ * (base + any due_date/date-range query strings) after a task is
+ * created/updated/deleted, so the next fetchTasks() call anywhere in the
+ * app goes to the network instead of returning outdated data.
+ */
+function invalidateCache(prefix) {
+  for (const key of _cache.keys()) {
+    if (key.startsWith(prefix)) {
+      _cache.delete(key);
+    }
+  }
+}
+
+/** Clears every cached entry - used by broad, everything-changes writes. */
+function clearCache() {
+  _cache.clear();
+}
+
 // ── Question-type mapping ────────────────────────────────────────────
 // Frontend "short-answer" ↔ Backend "short"
 // Frontend "mcq"         ↔ Backend "mcq"
@@ -60,7 +130,7 @@ function fromBackendType(backendType) {
 // ── Study Sets ───────────────────────────────────────────────────────
 
 export async function fetchStudySets() {
-  const data = await request("/api/study-sets");
+  const data = await cachedGet("/api/study-sets");
   return data.study_sets;
 }
 
@@ -69,7 +139,7 @@ export async function fetchStudySets() {
  * GET /api/study-sets/progress
  */
 export async function fetchStudySetProgress() {
-  const data = await request("/api/study-sets/progress");
+  const data = await cachedGet("/api/study-sets/progress");
   return data.progress;
 }
 
@@ -78,10 +148,12 @@ export async function fetchStudySetProgress() {
  * POST /api/study-sets
  */
 export async function createStudySet(name) {
-  return request("/api/study-sets", {
+  const result = await request("/api/study-sets", {
     method: "POST",
     body: JSON.stringify({ name }),
   });
+  invalidateCache("/api/study-sets");
+  return result;
 }
 
 /**
@@ -89,16 +161,18 @@ export async function createStudySet(name) {
  * GET /api/study-sets/{studySetId}
  */
 export async function fetchStudySet(studySetId) {
-  return request(`/api/study-sets/${studySetId}`);
+  return cachedGet(`/api/study-sets/${studySetId}`);
 }
 /**
  * Delete a study set.
  * DELETE /api/study-sets/{studySetId}
  */
 export async function deleteStudySet(studySetId) {
-  return request(`/api/study-sets/${studySetId}`, {
+  const result = await request(`/api/study-sets/${studySetId}`, {
     method: "DELETE",
   });
+  invalidateCache("/api/study-sets");
+  return result;
 }
 
 /**
@@ -106,9 +180,11 @@ export async function deleteStudySet(studySetId) {
  * DELETE /api/study-sets/all
  */
 export async function deleteAllStudySets() {
-  return request("/api/study-sets/all", {
+  const result = await request("/api/study-sets/all", {
     method: "DELETE",
   });
+  clearCache();
+  return result;
 }
 
 /**
@@ -116,9 +192,11 @@ export async function deleteAllStudySets() {
  * POST /api/study-sets/{studySetId}/summary
  */
 export async function generateStudySetSummary(studySetId) {
-  return request(`/api/study-sets/${studySetId}/summary`, {
+  const result = await request(`/api/study-sets/${studySetId}/summary`, {
     method: "POST",
   });
+  invalidateCache(`/api/study-sets/${studySetId}/summary`);
+  return result;
 }
 
 /**
@@ -128,7 +206,7 @@ export async function generateStudySetSummary(studySetId) {
  */
 export async function fetchStudySetSummary(studySetId) {
   try {
-    return await request(`/api/study-sets/${studySetId}/summary`);
+    return await cachedGet(`/api/study-sets/${studySetId}/summary`);
   } catch (err) {
     if (err.message && err.message.includes("404")) {
       return null;
@@ -142,9 +220,11 @@ export async function fetchStudySetSummary(studySetId) {
  * POST /api/study-sets/{studySetId}/flashcards
  */
 export async function generateStudySetFlashcards(studySetId) {
-  return request(`/api/study-sets/${studySetId}/flashcards`, {
+  const result = await request(`/api/study-sets/${studySetId}/flashcards`, {
     method: "POST",
   });
+  invalidateCache(`/api/study-sets/${studySetId}/flashcards`);
+  return result;
 }
 
 /**
@@ -154,7 +234,7 @@ export async function generateStudySetFlashcards(studySetId) {
  */
 export async function fetchStudySetFlashcards(studySetId) {
   try {
-    const data = await request(`/api/study-sets/${studySetId}/flashcards`);
+    const data = await cachedGet(`/api/study-sets/${studySetId}/flashcards`);
     return data.flashcards || [];
   } catch (err) {
     if (err.message && err.message.includes("404")) {
@@ -182,7 +262,7 @@ export async function generateStudySetMnemonic(studySetId, topic, style = "acron
  * GET /api/study-sets/{studySetId}/documents
  */
 export async function fetchStudySetDocuments(studySetId) {
-  const data = await request(`/api/study-sets/${studySetId}/documents`);
+  const data = await cachedGet(`/api/study-sets/${studySetId}/documents`);
   return data.documents || [];
 }
 
@@ -199,10 +279,12 @@ export async function uploadDocuments(studySetId, files) {
     formData.append("files", file);
   });
 
-  return request(`/api/study-sets/${studySetId}/documents`, {
+  const result = await request(`/api/study-sets/${studySetId}/documents`, {
     method: "POST",
     body: formData,
   });
+  invalidateCache(`/api/study-sets/${studySetId}/documents`);
+  return result;
 }
 
 /**
@@ -221,10 +303,12 @@ export async function uploadDocument(studySetId, fileOrFormData) {
     body.append("files", fileOrFormData);
   }
 
-  return request(`/api/study-sets/${studySetId}/documents`, {
+  const result = await request(`/api/study-sets/${studySetId}/documents`, {
     method: "POST",
     body,
   });
+  invalidateCache(`/api/study-sets/${studySetId}/documents`);
+  return result;
 }
 
 // ── Questions ────────────────────────────────────────────────────────
@@ -257,10 +341,12 @@ export async function generateQuestions(
     payload.attempt_id = attemptId;
   }
 
-  return request(`/api/study-sets/${studySetId}/questions/generate`, {
+  const result = await request(`/api/study-sets/${studySetId}/questions/generate`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  invalidateCache(`/api/study-sets/${studySetId}/questions`);
+  return result;
 }
 
 /**
@@ -282,7 +368,7 @@ export async function fetchQuestions(studySetId, frontendType, attemptId = null)
     url += `&attempt_id=${encodeURIComponent(attemptId)}`;
   }
 
-  const data = await request(url);
+  const data = await cachedGet(url);
 
   return data.questions.map((q, idx) => {
     const normalized = {
@@ -364,6 +450,11 @@ export async function fetchAttemptsForStudySet(studySetId) {
  * to exactly one question type from creation, so "the active attempt for
  * a study set" is no longer a well-formed question on its own (more than
  * one type can be genuinely in-progress at once).
+ *
+ * Deliberately NOT routed through cachedGet(): this call's result
+ * directly decides whether getOrCreateAttempt() creates a new attempt,
+ * so it always needs the true current state, not a value that could be
+ * up to CACHE_TTL_MS stale.
  */
 export async function fetchActiveAttempt(studySetId, frontendType) {
   const backendType = toBackendType(frontendType);
@@ -397,13 +488,15 @@ export async function getOrCreateAttempt(studySetId, frontendType) {
  */
 export async function createAttempt(studySetId, frontendType) {
   const backendType = toBackendType(frontendType);
-  return request("/api/attempts", {
+  const result = await request("/api/attempts", {
     method: "POST",
     body: JSON.stringify({
       study_set_id: studySetId,
       question_type: backendType,
     }),
   });
+  invalidateCache(`/api/study-sets/${studySetId}/revision-status`);
+  return result;
 }
 
 /**
@@ -412,7 +505,7 @@ export async function createAttempt(studySetId, frontendType) {
  * for each of the 4 types. GET /api/study-sets/{studySetId}/revision-status
  */
 export async function fetchRevisionStatus(studySetId) {
-  return request(`/api/study-sets/${studySetId}/revision-status`);
+  return cachedGet(`/api/study-sets/${studySetId}/revision-status`);
 }
 
 /**
@@ -422,7 +515,7 @@ export async function fetchRevisionStatus(studySetId) {
  * GET /api/planner/revisions-due
  */
 export async function fetchRevisionsDue() {
-  const data = await request("/api/planner/revisions-due");
+  const data = await cachedGet("/api/planner/revisions-due");
   return data.revisions_due || [];
 }
 
@@ -439,7 +532,7 @@ export async function submitAnswers(
 ) {
   const backendType = toBackendType(frontendType);
 
-  return request(`/api/attempts/${attemptId}/answers`, {
+  const result = await request(`/api/attempts/${attemptId}/answers`, {
     method: "POST",
     body: JSON.stringify({
       question_type: backendType,
@@ -447,6 +540,12 @@ export async function submitAnswers(
       answers,
     }),
   });
+  invalidateCache(`/api/attempts/${attemptId}`);
+  // Section completion affects progress + revision-status across study
+  // sets, and we only have attemptId here (not studySetId), so this
+  // invalidates broadly rather than guessing which set it belongs to.
+  invalidateCache("/api/study-sets");
+  return result;
 }
 
 // ── Finish Attempt ───────────────────────────────────────────────────
@@ -456,9 +555,12 @@ export async function submitAnswers(
  * POST /api/attempts/{attemptId}/finish
  */
 export async function finishAttempt(attemptId) {
-  return request(`/api/attempts/${attemptId}/finish`, {
+  const result = await request(`/api/attempts/${attemptId}/finish`, {
     method: "POST",
   });
+  invalidateCache(`/api/attempts/${attemptId}`);
+  invalidateCache("/api/study-sets");
+  return result;
 }
 
 // ── Evaluations / Results ────────────────────────────────────────────
@@ -468,7 +570,7 @@ export async function finishAttempt(attemptId) {
  * GET /api/attempts/{attemptId}/evaluations
  */
 export async function fetchEvaluations(attemptId) {
-  return request(`/api/attempts/${attemptId}/evaluations`);
+  return cachedGet(`/api/attempts/${attemptId}/evaluations`);
 }
 
 /**
@@ -476,7 +578,7 @@ export async function fetchEvaluations(attemptId) {
  * GET /api/attempts/{attemptId}/performance
  */
 export async function fetchPerformance(attemptId) {
-  return request(`/api/attempts/${attemptId}/performance`);
+  return cachedGet(`/api/attempts/${attemptId}/performance`);
 }
 
 /**
@@ -484,7 +586,7 @@ export async function fetchPerformance(attemptId) {
  * GET /api/attempts/{attemptId}/results
  */
 export async function fetchResults(attemptId) {
-  return request(`/api/attempts/${attemptId}/results`);
+  return cachedGet(`/api/attempts/${attemptId}/results`);
 }
 
 /**
@@ -495,7 +597,7 @@ export async function fetchResults(attemptId) {
  * GET /api/study-sets/{studySetId}/results-summary
  */
 export async function fetchStudySetResultsSummary(studySetId) {
-  return request(`/api/study-sets/${studySetId}/results-summary`);
+  return cachedGet(`/api/study-sets/${studySetId}/results-summary`);
 }
 
 // ── Tasks ────────────────────────────────────────────────────────────
@@ -511,7 +613,7 @@ export async function fetchTasks({ dueDate, startDate, endDate } = {}) {
   if (endDate) params.append("end_date", endDate);
 
   const queryString = params.toString() ? `?${params.toString()}` : "";
-  const data = await request(`/api/tasks${queryString}`);
+  const data = await cachedGet(`/api/tasks${queryString}`);
   return data.tasks || [];
 }
 
@@ -562,10 +664,12 @@ export async function createTask(
     if (payload[key] === undefined) delete payload[key];
   });
 
-  return request("/api/tasks", {
+  const result = await request("/api/tasks", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  invalidateCache("/api/tasks");
+  return result;
 }
 
 /**
@@ -592,10 +696,12 @@ export async function updateTask(taskId, updates) {
     delete payload.studySetId;
   }
 
-  return request(`/api/tasks/${taskId}`, {
+  const result = await request(`/api/tasks/${taskId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+  invalidateCache("/api/tasks");
+  return result;
 }
 
 /**
@@ -603,10 +709,12 @@ export async function updateTask(taskId, updates) {
  * PATCH /api/tasks/{taskId}/complete
  */
 export async function toggleTaskCompletion(taskId, completed) {
-  return request(`/api/tasks/${taskId}/complete`, {
+  const result = await request(`/api/tasks/${taskId}/complete`, {
     method: "PATCH",
     body: JSON.stringify({ completed }),
   });
+  invalidateCache("/api/tasks");
+  return result;
 }
 
 /**
@@ -614,9 +722,11 @@ export async function toggleTaskCompletion(taskId, completed) {
  * DELETE /api/tasks/{taskId}
  */
 export async function deleteTask(taskId) {
-  return request(`/api/tasks/${taskId}`, {
+  const result = await request(`/api/tasks/${taskId}`, {
     method: "DELETE",
   });
+  invalidateCache("/api/tasks");
+  return result;
 }
 
 // ── Exams ────────────────────────────────────────────────────────────
@@ -626,7 +736,7 @@ export async function deleteTask(taskId) {
  * GET /api/exams
  */
 export async function fetchExams() {
-  const data = await request("/api/exams");
+  const data = await cachedGet("/api/exams");
   return data.exams;
 }
 
@@ -642,10 +752,12 @@ export async function createExam(subject, examType, examDate, studySetId) {
   };
   if (studySetId) payload.study_set_id = studySetId;
 
-  return request("/api/exams", {
+  const result = await request("/api/exams", {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  invalidateCache("/api/exams");
+  return result;
 }
 
 /**
@@ -653,9 +765,11 @@ export async function createExam(subject, examType, examDate, studySetId) {
  * DELETE /api/exams/{examId}
  */
 export async function deleteExam(examId) {
-  return request(`/api/exams/${examId}`, {
+  const result = await request(`/api/exams/${examId}`, {
     method: "DELETE",
   });
+  invalidateCache("/api/exams");
+  return result;
 }
 
 // ── Activity ─────────────────────────────────────────────────────────
@@ -666,7 +780,7 @@ export async function deleteExam(examId) {
  * GET /api/activity/studied-days?year=YYYY&month=MM
  */
 export async function fetchStudiedDays(year, month) {
-  const data = await request(`/api/activity/studied-days?year=${year}&month=${month}`);
+  const data = await cachedGet(`/api/activity/studied-days?year=${year}&month=${month}`);
   return data.studied_days;
 }
 
@@ -677,7 +791,9 @@ export async function fetchStudiedDays(year, month) {
  * DELETE /api/account
  */
 export async function deleteAccount() {
-  return request("/api/account", {
+  const result = await request("/api/account", {
     method: "DELETE",
   });
+  clearCache();
+  return result;
 }

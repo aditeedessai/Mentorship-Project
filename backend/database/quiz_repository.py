@@ -371,3 +371,52 @@ def get_question_by_id(question_id: str):
 
     finally:
         connection.close()
+
+
+def get_recent_question_texts_for_study_set(
+    study_set_id: str,
+    question_type: str = None,
+    limit: int = 15
+) -> list[str]:
+    """
+    Retrieve distinct recent question texts for a study set (and optional question_type)
+    for duplicate question prevention during revision quiz generation.
+    Bounded to `limit` items (default 15).
+    """
+    connection = get_connection()
+    try:
+        if question_type:
+            rows = connection.execute(
+                """
+                SELECT question
+                FROM questions
+                WHERE study_set_id = ? AND question_type = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (study_set_id, question_type, limit * 2)
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT question
+                FROM questions
+                WHERE study_set_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (study_set_id, limit * 2)
+            ).fetchall()
+        
+        seen = set()
+        result = []
+        for row in rows:
+            q_text = row.get("question")
+            if q_text and q_text not in seen:
+                seen.add(q_text)
+                result.append(q_text)
+                if len(result) >= limit:
+                    break
+        return result
+    finally:
+        connection.close()

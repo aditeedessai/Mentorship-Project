@@ -4,9 +4,13 @@ import traceback
 
 from .gemini_client import client
 from .prompt_builder import build_quiz_prompt
-from backend.database.quiz_repository import save_questions
+from backend.database.quiz_repository import (
+    save_questions,
+    get_recent_question_texts_for_study_set
+)
 from backend.database.student_profile_repository import get_student_profile
 from backend.embeddings.retriever import retrieve_chunks
+from backend.services.revision_service import get_latest_completed_attempt_weak_topics
 
 
 def find_best_matching_chunks(question_text: str, reference_answer: str, chunks: list[dict]) -> list[dict]:
@@ -40,6 +44,7 @@ def find_best_matching_chunks(question_text: str, reference_answer: str, chunks:
     return []
 
 
+
 def generate_quiz(
     study_set_id: str = None,
     question_type: str = "mcq",
@@ -68,18 +73,77 @@ def generate_quiz(
             f"Expected one of: {valid_types}"
         )
 
-    # Retrieve structured chunk objects from vector store
-    chunks = retrieve_chunks(
+    # Check for weak topics from the latest completed attempt for adaptive revision
+    weak_topics = []
+    if study_set_id:
+        weak_topics = get_latest_completed_attempt_weak_topics(
+            study_set_id=study_set_id,
+            question_type=question_type,
+            user_id=user_id
+        )
+
+    topic_allocations = {}
+    if weak_topics:
+        total_weak_q = 4
+        num_wt = len(weak_topics)
+        if num_wt == 1:
+            topic_allocations[weak_topics[0]] = 4
+        elif num_wt == 2:
+            topic_allocations[weak_topics[0]] = 2
+            topic_allocations[weak_topics[1]] = 2
+        elif num_wt == 3:
+            topic_allocations[weak_topics[0]] = 2
+            topic_allocations[weak_topics[1]] = 1
+            topic_allocations[weak_topics[2]] = 1
+        else:
+            for i in range(4):
+                topic_allocations[weak_topics[i]] = 1
+        topic_allocations["__general__"] = 1
+
+    # Retrieve structured chunk objects from vector store (preserving balanced multi-source retrieval)
+    chunks = []
+    seen_chunk_ids = set()
+
+    if weak_topics and study_set_id:
+        for wt in weak_topics[:4]:
+            wt_chunks = retrieve_chunks(
+                f"Target weak topic: {wt}",
+                study_set_id=study_set_id,
+                document_ids=document_ids,
+                top_k=4
+            )
+            for chk in wt_chunks:
+                chk_id = chk.get("id") if isinstance(chk, dict) else str(chk)
+                if chk_id and chk_id not in seen_chunk_ids:
+                    seen_chunk_ids.add(chk_id)
+                    chunks.append(chk)
+
+    # Retrieve general chunks for general question + general fallback
+    gen_chunks = retrieve_chunks(
         "Generate an exam quiz from the uploaded study material.",
         study_set_id=study_set_id,
         document_ids=document_ids
     )
+    for chk in gen_chunks:
+        chk_id = chk.get("id") if isinstance(chk, dict) else str(chk)
+        if chk_id and chk_id not in seen_chunk_ids:
+            seen_chunk_ids.add(chk_id)
+            chunks.append(chk)
 
     print("Retrieved chunks:", len(chunks))
 
     if not chunks:
         raise ValueError(
             "No study material was found for the uploaded study set / documents."
+        )
+
+    # Retrieve recent previous question texts for duplicate prevention
+    previous_questions = []
+    if study_set_id:
+        previous_questions = get_recent_question_texts_for_study_set(
+            study_set_id=study_set_id,
+            question_type=question_type,
+            limit=15
         )
 
     # Extract raw text string for prompt builder
@@ -110,6 +174,9 @@ def generate_quiz(
         student_grade_or_year=student_grade_or_year,
         student_field=student_field,
         student_curriculum=student_curriculum,
+        weak_topics=weak_topics,
+        topic_allocations=topic_allocations,
+        previous_questions=previous_questions,
     )
 
     print("Calling Gemini...")

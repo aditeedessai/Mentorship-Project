@@ -18,7 +18,7 @@ try:
 except ImportError:
     pytest = None
 
-from backend.database.database import get_connection, init_db
+from backend.database.database import init_db
 from backend.config.word_limits import (
     BASE_WORD_LIMITS,
     QUESTION_TYPE_WORD_LIMITS,
@@ -100,10 +100,15 @@ from backend.api.deps import AuthenticatedUser
 
 def test_over_limit_answer_rejected_before_evaluation():
     """Requirement 8: Over-limit answers are rejected BEFORE Gemini/evaluation is called."""
-    conn = get_connection()
-    user_row = conn.execute("SELECT user_id FROM study_sets WHERE user_id IS NOT NULL LIMIT 1").fetchone()
-    user_id = str(user_row["user_id"]) if user_row and user_row.get("user_id") else None
-    conn.close()
+    # Dedicated, isolated Supabase Auth test account - never a real
+    # user's. This used to run "SELECT user_id FROM study_sets ...
+    # LIMIT 1", which grabbed whatever real user happened to sort first
+    # in this shared, live-connected database and wrote this suite's
+    # fixture study sets into their real account every time the suite
+    # ran. auth.users id 51894975-43bb-4e64-8fa1-9492453b558e
+    # (backend-test-suite@internal.test) was created specifically to
+    # absorb this suite's fixtures instead.
+    user_id = "51894975-43bb-4e64-8fa1-9492453b558e"
 
     user_obj = AuthenticatedUser(user_id=user_id)
 
