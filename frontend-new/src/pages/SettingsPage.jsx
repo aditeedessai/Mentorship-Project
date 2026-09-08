@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   Palette,
@@ -12,11 +12,18 @@ import {
   Loader2,
   CheckCircle2,
   X,
+  Settings,
+  Calendar,
 } from "lucide-react";
 
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
-import { deleteAccount } from "../services/api";
+import {
+  deleteAccount,
+  getGoogleCalendarStatus,
+  getGoogleCalendarConnectUrl,
+  disconnectGoogleCalendar,
+} from "../services/api";
 
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
@@ -35,39 +42,109 @@ const SettingsPage = ({
   // =========================================================
   // CHANGE PASSWORD
   // =========================================================
-  const [isSendingResetEmail, setIsSendingResetEmail] =
-    useState(false);
-
-  const [changePasswordError, setChangePasswordError] =
-    useState("");
+  const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState("");
 
   // =========================================================
   // PRIVACY POLICY
   // =========================================================
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] =
-    useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   // =========================================================
   // DELETE CONFIRMATION
   // =========================================================
   const [confirmAction, setConfirmAction] = useState(null);
-
-  const [isConfirmLoading, setIsConfirmLoading] =
-    useState(false);
-
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState(null);
+  const [studySetsDeletedMessage, setStudySetsDeletedMessage] = useState("");
 
-  const [studySetsDeletedMessage, setStudySetsDeletedMessage] =
-    useState("");
+  // =========================================================
+  // GOOGLE CALENDAR
+  // =========================================================
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalEmail, setGcalEmail] = useState(null);
+  const [gcalLoading, setGcalLoading] = useState(true);
+  const [gcalActionLoading, setGcalActionLoading] = useState(false);
+  const [gcalError, setGcalError] = useState("");
+  const [gcalSuccess, setGcalSuccess] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    getGoogleCalendarStatus()
+      .then((data) => {
+        if (mounted) {
+          setGcalConnected(data.connected);
+          setGcalEmail(data.email || null);
+        }
+      })
+      .catch(() => {
+        if (mounted) setGcalConnected(false);
+      })
+      .finally(() => {
+        if (mounted) setGcalLoading(false);
+      });
+
+    // Check for OAuth redirect params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gcal_connected") === "true") {
+      setGcalSuccess("Google Calendar connected successfully!");
+      setGcalConnected(true);
+      // Re-fetch to get email
+      getGoogleCalendarStatus()
+        .then((data) => {
+          if (mounted) {
+            setGcalConnected(data.connected);
+            setGcalEmail(data.email || null);
+          }
+        })
+        .catch(() => {});
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("gcal_error")) {
+      setGcalError("Could not connect Google Calendar. Please try again.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleConnectGcal = async () => {
+    setGcalActionLoading(true);
+    setGcalError("");
+    try {
+      const data = await getGoogleCalendarConnectUrl();
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      }
+    } catch (err) {
+      setGcalError("Failed to start Google Calendar connection.");
+      setGcalActionLoading(false);
+    }
+  };
+
+  const handleDisconnectGcal = async () => {
+    setGcalActionLoading(true);
+    setGcalError("");
+    try {
+      await disconnectGoogleCalendar();
+      setGcalConnected(false);
+      setGcalEmail(null);
+      setGcalSuccess("");
+    } catch (err) {
+      setGcalError("Failed to disconnect. Please try again.");
+    } finally {
+      setGcalActionLoading(false);
+    }
+  };
 
   // =========================================================
   // CHANGE PASSWORD
   // =========================================================
   const handleChangePasswordClick = async () => {
     if (!user?.email) {
-      setChangePasswordError(
-        "No email on file for this account."
-      );
+      setChangePasswordError("No email on file for this account.");
       return;
     }
 
@@ -75,15 +152,11 @@ const SettingsPage = ({
     setIsSendingResetEmail(true);
 
     try {
-      const { error } =
-        await supabase.auth.resetPasswordForEmail(
-          user.email
-        );
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email);
 
       if (error) {
         setChangePasswordError(
-          error.message ||
-            "Failed to send verification code."
+          error.message || "Failed to send verification code."
         );
         return;
       }
@@ -91,8 +164,7 @@ const SettingsPage = ({
       onNavigate?.("change-password-otp");
     } catch (err) {
       setChangePasswordError(
-        err.message ||
-          "An unexpected error occurred."
+        err.message || "An unexpected error occurred."
       );
     } finally {
       setIsSendingResetEmail(false);
@@ -777,9 +849,8 @@ const SettingsPage = ({
           PAGE
       ===================================================== */}
       <div className="settings-page-enter max-w-4xl space-y-6 pb-12">
-
         {/* =====================================================
-            HEADER
+            1. HEADER / JOJO
         ===================================================== */}
         <div
           className={`settings-header-enter mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 ${
@@ -789,7 +860,6 @@ const SettingsPage = ({
           }`}
         >
           <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
-
             {/* LEFT CONTENT */}
             <div className="min-w-0">
               <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
@@ -798,20 +868,15 @@ const SettingsPage = ({
 
               <p
                 className={`mt-2 text-xs font-medium sm:text-sm ${
-                  isDarkMode
-                    ? "text-white/50"
-                    : "text-[#706A78]"
+                  isDarkMode ? "text-white/50" : "text-[#706A78]"
                 }`}
               >
                 Manage your account and application preferences.
               </p>
             </div>
 
-            {/* =================================================
-                JOJO
-            ================================================= */}
+            {/* JOJO */}
             <div className="relative flex h-[150px] w-[330px] shrink-0 items-end">
-
               {/* Glow */}
               <div className="jojo-glow pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl" />
 
@@ -825,7 +890,6 @@ const SettingsPage = ({
               {/* Thought bubble */}
               <div className="thought-bubble absolute left-[145px] top-[18px] z-20">
                 <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
-
                   <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
                     Need a hand? 🤔
                   </p>
@@ -849,10 +913,7 @@ const SettingsPage = ({
             MAIN SETTINGS CONTENT
         ===================================================== */}
         <div className="space-y-6">
-
-          {/* =================================================
-              NOTICE
-          ================================================= */}
+          {/* NOTICE */}
           {notice && (
             <div className="success-message flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
@@ -872,7 +933,7 @@ const SettingsPage = ({
           )}
 
           {/* =================================================
-              PROFILE
+              2. PROFILE
           ================================================= */}
           <section
             className={`settings-profile-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
@@ -882,21 +943,16 @@ const SettingsPage = ({
             }`}
           >
             <div className="mb-6 flex items-center gap-3">
-
               <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
                 <User size={20} />
               </div>
 
               <div>
-                <h2 className="font-black tracking-tight">
-                  Profile
-                </h2>
+                <h2 className="font-black tracking-tight">Profile</h2>
 
                 <p
                   className={`text-xs ${
-                    isDarkMode
-                      ? "text-white/50"
-                      : "text-gray-500"
+                    isDarkMode ? "text-white/50" : "text-gray-500"
                   }`}
                 >
                   Manage your personal information
@@ -905,10 +961,8 @@ const SettingsPage = ({
             </div>
 
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-
               {/* Avatar */}
               <div className="settings-avatar relative">
-
                 <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#8064C7] text-2xl font-black text-[#F3F0F8] shadow-md transition-transform duration-300 hover:scale-[1.04]">
                   {user?.name?.charAt(0)?.toUpperCase() || "U"}
                 </div>
@@ -930,9 +984,7 @@ const SettingsPage = ({
 
                 <p
                   className={`mt-0.5 break-all text-xs font-semibold ${
-                    isDarkMode
-                      ? "text-white/60"
-                      : "text-gray-500"
+                    isDarkMode ? "text-white/60" : "text-gray-500"
                   }`}
                 >
                   {user?.email || "No email available"}
@@ -940,9 +992,7 @@ const SettingsPage = ({
 
                 <p
                   className={`mt-1 text-[11px] ${
-                    isDarkMode
-                      ? "text-white/40"
-                      : "text-gray-400"
+                    isDarkMode ? "text-white/40" : "text-gray-400"
                   }`}
                 >
                   Your account information
@@ -960,7 +1010,7 @@ const SettingsPage = ({
           </section>
 
           {/* =================================================
-              APPEARANCE
+              3. APPEARANCE
           ================================================= */}
           <section
             className={`settings-appearance-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
@@ -970,21 +1020,16 @@ const SettingsPage = ({
             }`}
           >
             <div className="mb-6 flex items-center gap-3">
-
               <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
                 <Palette size={20} />
               </div>
 
               <div>
-                <h2 className="font-black tracking-tight">
-                  Appearance
-                </h2>
+                <h2 className="font-black tracking-tight">Appearance</h2>
 
                 <p
                   className={`text-xs ${
-                    isDarkMode
-                      ? "text-white/50"
-                      : "text-gray-500"
+                    isDarkMode ? "text-white/50" : "text-gray-500"
                   }`}
                 >
                   Choose how Jot looks
@@ -1000,31 +1045,20 @@ const SettingsPage = ({
               }`}
             >
               <div className="flex min-w-0 items-center gap-3">
-
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
                   {isDarkMode ? (
-                    <Moon
-                      size={19}
-                      className="theme-icon-animated"
-                    />
+                    <Moon size={19} className="theme-icon-animated" />
                   ) : (
-                    <Sun
-                      size={19}
-                      className="theme-icon-animated"
-                    />
+                    <Sun size={19} className="theme-icon-animated" />
                   )}
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-xs font-bold">
-                    Theme
-                  </p>
+                  <p className="text-xs font-bold">Theme</p>
 
                   <p
                     className={`text-[11px] ${
-                      isDarkMode
-                        ? "text-white/50"
-                        : "text-gray-500"
+                      isDarkMode ? "text-white/50" : "text-gray-500"
                     }`}
                   >
                     Switch between light and dark mode
@@ -1037,30 +1071,158 @@ const SettingsPage = ({
                 onClick={toggleDarkMode}
                 aria-label="Toggle dark mode"
                 className={`theme-toggle relative ml-4 flex h-9 w-[68px] shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 ${
-                  isDarkMode
-                    ? "bg-[#8064C7]"
-                    : "bg-gray-200"
+                  isDarkMode ? "bg-[#8064C7]" : "bg-gray-200"
                 }`}
               >
                 <span
                   className={`flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#8064C7] shadow-md ${
-                    isDarkMode
-                      ? "translate-x-[32px]"
-                      : "translate-x-0"
+                    isDarkMode ? "translate-x-[32px]" : "translate-x-0"
                   }`}
                 >
-                  {isDarkMode ? (
-                    <Moon size={15} />
-                  ) : (
-                    <Sun size={15} />
-                  )}
+                  {isDarkMode ? <Moon size={15} /> : <Sun size={15} />}
                 </span>
               </button>
             </div>
           </section>
 
           {/* =================================================
-              SECURITY & PRIVACY
+              4. GOOGLE CALENDAR
+          ================================================= */}
+          <section
+            className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+              isDarkMode
+                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+            }`}
+          >
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                <Calendar size={20} />
+              </div>
+
+              <div>
+                <h2 className="font-black tracking-tight">Google Calendar</h2>
+
+                <p
+                  className={`text-xs ${
+                    isDarkMode ? "text-white/50" : "text-gray-500"
+                  }`}
+                >
+                  Manage your Google Calendar integration
+                </p>
+              </div>
+            </div>
+
+            <p
+              className={`mb-4 text-xs leading-relaxed ${
+                isDarkMode ? "text-white/60" : "text-gray-500"
+              }`}
+            >
+              Connect your Google Calendar to sync your Jot planner tasks and exams
+              and receive Google Calendar reminders.
+            </p>
+
+            {/* Success message */}
+            {gcalSuccess && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
+                <CheckCircle2 size={16} />
+                {gcalSuccess}
+              </div>
+            )}
+
+            {/* Error message */}
+            {gcalError && (
+              <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">
+                {gcalError}
+              </div>
+            )}
+
+            <div
+              className={`flex items-center justify-between rounded-2xl border p-4 ${
+                isDarkMode
+                  ? "border-white/5 bg-white/5"
+                  : "border-gray-200/80 bg-white"
+              }`}
+            >
+              {gcalLoading ? (
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <Loader2 size={16} className="animate-spin text-[#8064C7]" />
+                  Checking connection...
+                </div>
+              ) : gcalConnected ? (
+                <>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
+                      <CheckCircle2 size={19} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold">
+                        Google Calendar connected
+                      </p>
+
+                      {gcalEmail && (
+                        <p
+                          className={`truncate text-[11px] ${
+                            isDarkMode ? "text-white/50" : "text-gray-500"
+                          }`}
+                        >
+                          {gcalEmail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGcal}
+                    disabled={gcalActionLoading}
+                    className={`ml-4 shrink-0 cursor-pointer rounded-xl px-4 py-2 text-xs font-bold transition disabled:opacity-50 ${
+                      isDarkMode
+                        ? "bg-white/10 text-white/80 hover:bg-white/20"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    {gcalActionLoading ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                      <Calendar size={19} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold">Not connected</p>
+
+                      <p
+                        className={`text-[11px] ${
+                          isDarkMode ? "text-white/50" : "text-gray-500"
+                        }`}
+                      >
+                        Sync tasks and exams to your calendar
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConnectGcal}
+                    disabled={gcalActionLoading}
+                    className="ml-4 shrink-0 cursor-pointer rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4] disabled:opacity-50"
+                  >
+                    {gcalActionLoading
+                      ? "Connecting..."
+                      : "Connect Google Calendar"}
+                  </button>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* =================================================
+              5. SECURITY & PRIVACY
           ================================================= */}
           <section
             className={`settings-security-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
@@ -1070,7 +1232,6 @@ const SettingsPage = ({
             }`}
           >
             <div className="mb-5 flex items-center gap-3">
-
               <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
                 <Shield size={20} />
               </div>
@@ -1082,9 +1243,7 @@ const SettingsPage = ({
 
                 <p
                   className={`text-xs ${
-                    isDarkMode
-                      ? "text-white/50"
-                      : "text-gray-500"
+                    isDarkMode ? "text-white/50" : "text-gray-500"
                   }`}
                 >
                   Manage your account security
@@ -1093,7 +1252,6 @@ const SettingsPage = ({
             </div>
 
             <div className="divide-y divide-inherit">
-
               {/* CHANGE PASSWORD */}
               <button
                 type="button"
@@ -1102,15 +1260,11 @@ const SettingsPage = ({
                 className="security-action flex w-full cursor-pointer items-center justify-between py-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <div>
-                  <p className="text-xs font-bold">
-                    Change Password
-                  </p>
+                  <p className="text-xs font-bold">Change Password</p>
 
                   <p
                     className={`mt-0.5 text-[11px] ${
-                      isDarkMode
-                        ? "text-white/50"
-                        : "text-gray-500"
+                      isDarkMode ? "text-white/50" : "text-gray-500"
                     }`}
                   >
                     {isSendingResetEmail
@@ -1146,15 +1300,11 @@ const SettingsPage = ({
                 className="security-action flex w-full cursor-pointer items-center justify-between py-4 text-left"
               >
                 <div>
-                  <p className="text-xs font-bold">
-                    Privacy Policy
-                  </p>
+                  <p className="text-xs font-bold">Privacy Policy</p>
 
                   <p
                     className={`mt-0.5 text-[11px] ${
-                      isDarkMode
-                        ? "text-white/50"
-                        : "text-gray-500"
+                      isDarkMode ? "text-white/50" : "text-gray-500"
                     }`}
                   >
                     Learn how your information is handled
@@ -1170,7 +1320,7 @@ const SettingsPage = ({
           </section>
 
           {/* =================================================
-              DANGER ZONE
+              6. DANGER ZONE
           ================================================= */}
           <section
             className={`danger-section-animated space-y-4 rounded-3xl border p-6 backdrop-blur-2xl ${
@@ -1180,7 +1330,6 @@ const SettingsPage = ({
             }`}
           >
             <div className="flex items-center gap-3">
-
               <div
                 className={`danger-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
                   isDarkMode
@@ -1194,9 +1343,7 @@ const SettingsPage = ({
               <div>
                 <h2
                   className={`font-black tracking-tight ${
-                    isDarkMode
-                      ? "text-red-400"
-                      : "text-red-600"
+                    isDarkMode ? "text-red-400" : "text-red-600"
                   }`}
                 >
                   Danger Zone
@@ -1204,9 +1351,7 @@ const SettingsPage = ({
 
                 <p
                   className={`text-xs font-semibold ${
-                    isDarkMode
-                      ? "text-red-300/70"
-                      : "text-red-600/60"
+                    isDarkMode ? "text-red-300/70" : "text-red-600/60"
                   }`}
                 >
                   These actions cannot be easily undone
@@ -1215,7 +1360,6 @@ const SettingsPage = ({
             </div>
 
             <div className="space-y-3 pt-2">
-
               {/* SUCCESS MESSAGE */}
               {studySetsDeletedMessage && (
                 <div className="success-message flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
@@ -1227,9 +1371,7 @@ const SettingsPage = ({
               {/* DELETE ALL STUDY SETS */}
               <button
                 type="button"
-                onClick={() =>
-                  openConfirm("all-study-sets")
-                }
+                onClick={() => openConfirm("all-study-sets")}
                 className={`danger-action flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left ${
                   isDarkMode
                     ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
@@ -1239,9 +1381,7 @@ const SettingsPage = ({
                 <div>
                   <p
                     className={`text-xs font-bold ${
-                      isDarkMode
-                        ? "text-red-400"
-                        : "text-red-600"
+                      isDarkMode ? "text-red-400" : "text-red-600"
                     }`}
                   >
                     Delete all study sets
@@ -1249,9 +1389,7 @@ const SettingsPage = ({
 
                   <p
                     className={`mt-0.5 text-[11px] ${
-                      isDarkMode
-                        ? "text-red-300/70"
-                        : "text-gray-500"
+                      isDarkMode ? "text-red-300/70" : "text-gray-500"
                     }`}
                   >
                     Permanently remove all your study sets
@@ -1261,9 +1399,7 @@ const SettingsPage = ({
                 <Trash2
                   size={17}
                   className={
-                    isDarkMode
-                      ? "text-red-400"
-                      : "text-red-500"
+                    isDarkMode ? "text-red-400" : "text-red-500"
                   }
                 />
               </button>
@@ -1281,9 +1417,7 @@ const SettingsPage = ({
                 <div>
                   <p
                     className={`text-xs font-bold ${
-                      isDarkMode
-                        ? "text-red-400"
-                        : "text-red-600"
+                      isDarkMode ? "text-red-400" : "text-red-600"
                     }`}
                   >
                     Delete account
@@ -1291,9 +1425,7 @@ const SettingsPage = ({
 
                   <p
                     className={`mt-0.5 text-[11px] ${
-                      isDarkMode
-                        ? "text-red-300/70"
-                        : "text-gray-500"
+                      isDarkMode ? "text-red-300/70" : "text-gray-500"
                     }`}
                   >
                     Permanently delete your account and data
@@ -1303,9 +1435,7 @@ const SettingsPage = ({
                 <Trash2
                   size={17}
                   className={
-                    isDarkMode
-                      ? "text-red-400"
-                      : "text-red-500"
+                    isDarkMode ? "text-red-400" : "text-red-500"
                   }
                 />
               </button>
@@ -1329,7 +1459,7 @@ const SettingsPage = ({
       </div>
 
       {/* =====================================================
-          DELETE CONFIRMATION MODAL
+          7. DELETE CONFIRMATION MODAL
       ===================================================== */}
       <DeleteConfirmModal
         isOpen={!!confirmAction}
@@ -1345,7 +1475,7 @@ const SettingsPage = ({
       />
 
       {/* =====================================================
-          PRIVACY POLICY MODAL
+          8. PRIVACY POLICY MODAL
       ===================================================== */}
       <PrivacyPolicyModal
         isOpen={isPrivacyModalOpen}

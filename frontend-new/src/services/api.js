@@ -377,9 +377,9 @@ export async function fetchQuestions(studySetId, frontendType, attemptId = null)
       question: q.question,
       hint: q.topic
         ? `Think about the key concepts related to ${q.topic.replace(
-            /_/g,
-            " "
-          )}.`
+          /_/g,
+          " "
+        )}.`
         : "Consider the fundamental principles involved.",
       question_type: fromBackendType(q.question_type),
       marks: q.marks,
@@ -796,4 +796,33 @@ export async function deleteAccount() {
   });
   clearCache();
   return result;
+}
+
+
+// ── Google Calendar ──────────────────────────────────────────────────
+
+/**
+ * Check whether the current user has an active Google Calendar connection.
+ * GET /api/google-calendar/status
+ */
+export async function getGoogleCalendarStatus() {
+  return request("/api/google-calendar/status");
+}
+
+/**
+ * Get the Google OAuth authorization URL to start the connection flow.
+ * GET /api/google-calendar/connect
+ */
+export async function getGoogleCalendarConnectUrl() {
+  return request("/api/google-calendar/connect");
+}
+
+/**
+ * Disconnect the current user's Google Calendar integration.
+ * DELETE /api/google-calendar/disconnect
+ */
+export async function disconnectGoogleCalendar() {
+  return request("/api/google-calendar/disconnect", {
+    method: "DELETE",
+  });
 }

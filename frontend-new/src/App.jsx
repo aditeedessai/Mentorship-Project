@@ -5,6 +5,7 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
+import GoogleCalendarPrompt from "./components/GoogleCalendarPrompt";
 
 // Every page is loaded on demand (its own network chunk fetched the
 // first time currentPage/authPage actually selects it) instead of all
@@ -84,15 +85,15 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
       {/* Top Header Bar for Mobile / Tablet (< 1024px) */}
       <header
         className={`lg:hidden fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between px-4 border-b backdrop-blur-2xl transition-colors duration-300 ${isDarkMode
-            ? "border-white/10 bg-[#13101A]/90 text-[#F3F0F8]"
-            : "border-black/5 bg-[#F8F8FC]/90 text-[#231B33]"
+          ? "border-white/10 bg-[#13101A]/90 text-[#F3F0F8]"
+          : "border-black/5 bg-[#F8F8FC]/90 text-[#231B33]"
           }`}
       >
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${isDarkMode
-              ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
-              : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
+            ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+            : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
             }`}
           aria-label="Open Mobile Menu"
         >
@@ -104,8 +105,8 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           <span className="text-[#8064C7]">.</span>
           <span
             className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${isDarkMode
-                ? "bg-[#8064C7]/20 text-[#A78BFA]"
-                : "bg-[#8064C7]/10 text-[#8064C7]"
+              ? "bg-[#8064C7]/20 text-[#A78BFA]"
+              : "bg-[#8064C7]/10 text-[#8064C7]"
               }`}
           >
             Study
@@ -179,6 +180,10 @@ function AppContent() {
   // other navigation so it never leaks into an unrelated later visit to
   // Configure Session.
   const [preselectType, setPreselectType] = useState(null);
+
+  // ================= GOOGLE CALENDAR PROMPT =================
+  // Shown once after a new user completes the student profile.
+  const [showGcalPrompt, setShowGcalPrompt] = useState(false);
 
   // ================= SCROLL TO TOP ON PAGE SWITCH =================
   useEffect(() => {
@@ -487,9 +492,8 @@ function AppContent() {
   if (hasProfile === null || profileLoading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${
-          isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
-        }`}
+        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+          }`}
       >
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#8064C7] border-t-transparent" />
@@ -504,12 +508,17 @@ function AppContent() {
   // If the profile doesn't exist yet, show the mandatory form.
   // There is no skip, close, or back button — the user MUST
   // complete this before accessing any authenticated page.
+
+
   if (hasProfile === false) {
     return (
       <Suspense fallback={<PageFallback />}>
         <StudentProfilePage
           user={user}
-          onProfileComplete={() => setHasProfile(true)}
+          onProfileComplete={() => {
+            setHasProfile(true);
+            setShowGcalPrompt(true);
+          }}
         />
       </Suspense>
     );
@@ -577,123 +586,133 @@ function AppContent() {
   }
 
   // ================= MAIN AUTHENTICATED APP =================
-  return (
+  const mainContent = (
     <MainAppLayout
       onNavigate={handleNavigate}
       currentPage={currentPage}
       user={user}
     >
       <Suspense fallback={<PageFallback />}>
-      {/* ================= ABOUT US ================= */}
-      {currentPage === "about" && (
-        <AboutPage
-          onNavigate={handleNavigate}
-        />
-      )}
-
-      {/* ================= UPLOAD ================= */}
-      {currentPage === "upload" && (
-        <UploadPage
-          studySetId={selectedStudySetId}
-          onNavigate={handleNavigate}
-          onStudySetCreated={(newStudySet) => {
-            setStudySets((prev) => [
-              newStudySet,
-              ...prev,
-            ]);
-
-            setSelectedStudySetId(
-              newStudySet.study_set_id
-            );
-          }}
-        />
-      )}
-
-      {/* ================= STUDY SETS ================= */}
-      {currentPage === "study-sets" && (
-        <StudySetsPage
-          studySets={studySets}
-          studySetsLoading={studySetsLoading}
-          studySetsError={studySetsError}
-          onCreateClick={() => {
-            handleNavigate("upload");
-          }}
-          onDeleteStudySet={handleDeleteStudySet}
-          onContinueStudying={(studySetId) => {
-            handleNavigate("study-set", {
-              studySetId,
-            });
-          }}
-        />
-      )}
-
-      {/* ================= INDIVIDUAL STUDY SET ================= */}
-      {currentPage === "study-set" && (
-        <IndivisualStudySetPage
-          studySetId={selectedStudySetId}
-          studySets={studySets}
-          onNavigate={handleNavigate}
-        />
-      )}
-
-      {/* ================= VIEW ATTEMPTS ================= */}
-      {(currentPage === "study-set-attempts" || currentPage === "attempts") && (
-        <StudySetAttemptsPage
-          studySetId={selectedStudySetId}
-          studySets={studySets}
-          onNavigate={handleNavigate}
-        />
-      )}
-
-      {/* ================= RESULTS / PROGRESS ================= */}
-      {(currentPage === "results" ||
-        currentPage === "progress") && (
-          <ResultsPage
+        {/* ================= ABOUT US ================= */}
+        {currentPage === "about" && (
+          <AboutPage
             onNavigate={handleNavigate}
-            studySetId={selectedStudySetId}
-            attemptId={selectedAttemptId}
           />
         )}
 
-      {/* ================= QUIZ CONFIGURATION ================= */}
-      {currentPage === "quiz" && (
-        <ConfigureSession
-          studySetId={selectedStudySetId}
-          studySetName={
-            studySets.find(
-              (s) =>
-                s.study_set_id === selectedStudySetId
-            )?.name
-          }
-          preselectType={preselectType}
-        />
-      )}
+        {/* ================= UPLOAD ================= */}
+        {currentPage === "upload" && (
+          <UploadPage
+            studySetId={selectedStudySetId}
+            onNavigate={handleNavigate}
+            onStudySetCreated={(newStudySet) => {
+              setStudySets((prev) => [
+                newStudySet,
+                ...prev,
+              ]);
 
-      {/* ================= SETTINGS ================= */}
-      {currentPage === "settings" && (
-        <SettingsPage
-          onNavigate={handleNavigate}
-          user={user}
-          notice={settingsNotice}
-          onDismissNotice={() => setSettingsNotice("")}
-          onDeleteAllStudySets={handleDeleteAllStudySets}
-        />
-      )}
+              setSelectedStudySetId(
+                newStudySet.study_set_id
+              );
+            }}
+          />
+        )}
 
-      {/* ================= PLANNER ================= */}
-      {currentPage === "planner" && (
-        <PlannerPage onNavigate={handleNavigate} />
-      )}
+        {/* ================= STUDY SETS ================= */}
+        {currentPage === "study-sets" && (
+          <StudySetsPage
+            studySets={studySets}
+            studySetsLoading={studySetsLoading}
+            studySetsError={studySetsError}
+            onCreateClick={() => {
+              handleNavigate("upload");
+            }}
+            onDeleteStudySet={handleDeleteStudySet}
+            onContinueStudying={(studySetId) => {
+              handleNavigate("study-set", {
+                studySetId,
+              });
+            }}
+          />
+        )}
 
-      {/* ================= DASHBOARD ================= */}
-      {currentPage === "dashboard" && (
-        <DashboardPage
-          user={user}
-          onNavigate={handleNavigate}
-        />
-      )}
+        {/* ================= INDIVIDUAL STUDY SET ================= */}
+        {currentPage === "study-set" && (
+          <IndivisualStudySetPage
+            studySetId={selectedStudySetId}
+            studySets={studySets}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* ================= VIEW ATTEMPTS ================= */}
+        {(currentPage === "study-set-attempts" || currentPage === "attempts") && (
+          <StudySetAttemptsPage
+            studySetId={selectedStudySetId}
+            studySets={studySets}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* ================= RESULTS / PROGRESS ================= */}
+        {(currentPage === "results" ||
+          currentPage === "progress") && (
+            <ResultsPage
+              onNavigate={handleNavigate}
+              studySetId={selectedStudySetId}
+              attemptId={selectedAttemptId}
+            />
+          )}
+
+        {/* ================= QUIZ CONFIGURATION ================= */}
+        {currentPage === "quiz" && (
+          <ConfigureSession
+            studySetId={selectedStudySetId}
+            studySetName={
+              studySets.find(
+                (s) =>
+                  s.study_set_id === selectedStudySetId
+              )?.name
+            }
+            preselectType={preselectType}
+          />
+        )}
+
+        {/* ================= SETTINGS ================= */}
+        {currentPage === "settings" && (
+          <SettingsPage
+            onNavigate={handleNavigate}
+            user={user}
+            notice={settingsNotice}
+            onDismissNotice={() => setSettingsNotice("")}
+            onDeleteAllStudySets={handleDeleteAllStudySets}
+          />
+        )}
+
+        {/* ================= PLANNER ================= */}
+        {currentPage === "planner" && (
+          <PlannerPage onNavigate={handleNavigate} />
+        )}
+
+        {/* ================= DASHBOARD ================= */}
+        {currentPage === "dashboard" && (
+          <DashboardPage
+            user={user}
+            onNavigate={handleNavigate}
+          />
+        )}
       </Suspense>
     </MainAppLayout>
+  );
+
+  // Wrap with optional GCal prompt overlay
+  return (
+    <>
+      {mainContent}
+      {showGcalPrompt && (
+        <GoogleCalendarPrompt onDismiss={() => setShowGcalPrompt(false)} />
+      )}
+    </>
   );
 }
 

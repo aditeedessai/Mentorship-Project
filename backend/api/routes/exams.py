@@ -9,6 +9,7 @@ from backend.api.schemas.exam import (
     ExamResponse,
 )
 from backend.database import exam_repository
+from backend.services import google_calendar_service
 
 router = APIRouter(prefix="/exams", tags=["Exams"])
 
@@ -52,7 +53,9 @@ def create_exam(
             user_id=current_user.user_id,
             study_set_id=str(payload.study_set_id) if payload.study_set_id else None
         )
-        return ExamResponse(**data)
+        response = ExamResponse(**data)
+        google_calendar_service.sync_exam_to_calendar(current_user.user_id, data)
+        return response
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -78,6 +81,7 @@ def delete_exam(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Exam with ID '{exam_id}' not found"
             )
+        google_calendar_service.delete_exam_from_calendar(current_user.user_id, str(exam_id))
         return DeleteExamResponse(
             message="Exam deleted successfully",
             exam_id=exam_id
