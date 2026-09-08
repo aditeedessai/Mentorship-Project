@@ -23,8 +23,53 @@ import {
 import { useTheme } from "../context/ThemeContext";
 
 import jojoWaving from "../assets/jojo-waving.png";
+import riyaPic from "../assets/team/riya.png";
+import shanalliePic from "../assets/team/shanallie.png";
+import nylaPic from "../assets/team/nyla.png";
+import aditeePic from "../assets/team/aditee.png";
+import sandraPic from "../assets/team/sandra.png";
 
 import JotFooter from "../components/JotFooter";
+
+/* Inline Brand SVGs */
+function GithubIcon({ size = 15, className = "" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
+
+function LinkedinIcon({ size = 15, className = "" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect width="4" height="12" x="2" y="9" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  );
+}
 
 /* =========================================================
    ABOUT PAGE
@@ -37,7 +82,6 @@ export default function AboutPage({ onNavigate }) {
     window.scrollTo(0, 0);
 
     const mainElement = document.querySelector("main");
-
     if (mainElement) {
       mainElement.scrollTop = 0;
     }
@@ -47,13 +91,8 @@ export default function AboutPage({ onNavigate }) {
      TEXT COLORS
   ======================================================= */
 
-  const textPrimary = isDarkMode
-    ? "text-white"
-    : "text-[#171326]";
-
-  const textSecondary = isDarkMode
-    ? "text-slate-400"
-    : "text-slate-600";
+  const textPrimary = isDarkMode ? "text-white" : "text-[#171326]";
+  const textSecondary = isDarkMode ? "text-slate-400" : "text-slate-600";
 
   /* =======================================================
      CARD STYLING
@@ -169,158 +208,108 @@ export default function AboutPage({ onNavigate }) {
 
   const teamMembers = [
     {
+      id: "aditee",
       name: "Aditee",
       initials: "AD",
       role: "Full-Stack Engineer",
       focus: "Service Integration",
+      image: aditeePic,
+      imagePos: "object-center",
+      github: "https://github.com",
+      linkedin: "https://linkedin.com",
     },
     {
+      id: "sandra",
       name: "Sandra",
       initials: "SD",
       role: "Platform Engineer",
       focus: "Architecture & CI/CD",
+      image: sandraPic,
+      imagePos: "object-center",
+      github: "https://github.com",
+      linkedin: "https://linkedin.com",
     },
     {
+      id: "shanallie",
       name: "Shanallie",
       initials: "SN",
       role: "RAG & Vector Lead",
-      focus: "Embedding & ChromaDB",
+      focus: "Embedding & PgVector",
+      image: shanalliePic,
+      imagePos: "object-[center_32%]",
+      github: "https://github.com",
+      linkedin: "https://linkedin.com",
     },
     {
+      id: "riya",
       name: "Riya",
       initials: "RY",
       role: "Evaluation Architect",
       focus: "Semantic Rubrics",
+      image: riyaPic,
+      imagePos: "object-[center_20%]",
+      github: "https://github.com",
+      linkedin: "https://linkedin.com",
     },
     {
+      id: "nyla",
       name: "Nyla",
       initials: "NY",
       role: "Frontend Engineer",
       focus: "UI/UX & Experience",
+      image: nylaPic,
+      imagePos: "object-[center_20%]",
+      github: "https://github.com",
+      linkedin: "https://linkedin.com",
     },
   ];
 
   return (
     <div
-      className={`
-        min-h-screen
-        overflow-x-hidden
-        transition-colors
-        duration-500
-        ${
-          isDarkMode
-            ? "bg-[#0B0910] text-[#F3F0F8]"
-            : "bg-[#F7F5FA] text-[#231B33]"
-        }
-      `}
+      className={`min-h-screen overflow-x-hidden transition-colors duration-500 ${
+        isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F7F5FA] text-[#231B33]"
+      }`}
     >
-      {/* =====================================================
-          BACKGROUND
-      ===================================================== */}
-
+      {/* Background Ambience */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
-          className={`
-            absolute
-            -right-40
-            -top-40
-            h-[600px]
-            w-[600px]
-            rounded-full
-            blur-[150px]
-            ${
-              isDarkMode
-                ? "bg-[#8064C7]/15"
-                : "bg-[#8064C7]/10"
-            }
-          `}
+          className={`absolute -right-40 -top-40 h-[600px] w-[600px] rounded-full blur-[150px] ${
+            isDarkMode ? "bg-[#8064C7]/15" : "bg-[#8064C7]/10"
+          }`}
         />
-
         <div
-          className={`
-            absolute
-            -left-40
-            top-[40%]
-            h-[500px]
-            w-[500px]
-            rounded-full
-            blur-[150px]
-            ${
-              isDarkMode
-                ? "bg-[#6D45B8]/10"
-                : "bg-[#A78BFA]/10"
-            }
-          `}
+          className={`absolute -left-40 top-[40%] h-[500px] w-[500px] rounded-full blur-[150px] ${
+            isDarkMode ? "bg-[#6D45B8]/10" : "bg-[#A78BFA]/10"
+          }`}
         />
-
         <div
-          className={`
-            absolute
-            bottom-[-250px]
-            right-[15%]
-            h-[450px]
-            w-[450px]
-            rounded-full
-            blur-[150px]
-            ${
-              isDarkMode
-                ? "bg-[#8B5CF6]/8"
-                : "bg-[#C084FC]/8"
-            }
-          `}
+          className={`absolute bottom-[-250px] right-[15%] h-[450px] w-[450px] rounded-full blur-[150px] ${
+            isDarkMode ? "bg-[#8B5CF6]/8" : "bg-[#C084FC]/8"
+          }`}
         />
       </div>
 
-      {/* =====================================================
-          NAVBAR
-      ===================================================== */}
-
+      {/* Navbar */}
       <header
-        className={`
-          sticky
-          top-0
-          z-50
-          border-b
-          backdrop-blur-xl
-          ${
-            isDarkMode
-              ? "border-white/10 bg-[#0B0910]/85"
-              : "border-[#E8E3EF] bg-white/85"
-          }
-        `}
+        className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
+          isDarkMode
+            ? "border-white/10 bg-[#0B0910]/85"
+            : "border-[#E8E3EF] bg-white/85"
+        }`}
       >
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
-
-          {/* Back Button */}
-
           <button
             type="button"
-            onClick={() =>
-              onNavigate && onNavigate("landing")
-            }
-            className={`
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              px-4
-              py-2
-              text-sm
-              font-bold
-              transition
-              ${
-                isDarkMode
-                  ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
-                  : "border-[#E5DFEE] bg-white text-slate-600 hover:bg-slate-50"
-              }
-            `}
+            onClick={() => onNavigate && onNavigate("landing")}
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition ${
+              isDarkMode
+                ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                : "border-[#E5DFEE] bg-white text-slate-600 hover:bg-slate-50"
+            }`}
           >
             <ArrowLeft size={16} />
             Back to Home
           </button>
-
-          {/* Logo */}
 
           <div className="hidden items-center gap-3 sm:flex">
             <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl">
@@ -330,358 +319,179 @@ export default function AboutPage({ onNavigate }) {
                 className="h-full w-full object-contain"
               />
             </div>
-
             <div>
               <div
-                className={`
-                  font-black
-                  tracking-tight
-                  ${
-                    isDarkMode
-                      ? "text-white"
-                      : "text-[#231B33]"
-                  }
-                `}
+                className={`font-black tracking-tight ${
+                  isDarkMode ? "text-white" : "text-[#231B33]"
+                }`}
               >
                 JOT
               </div>
-
               <div
-                className={`
-                  text-[9px]
-                  font-bold
-                  tracking-wider
-                  ${
-                    isDarkMode
-                      ? "text-purple-300"
-                      : "text-purple-600"
-                  }
-                `}
+                className={`text-[9px] font-bold tracking-wider ${
+                  isDarkMode ? "text-purple-300" : "text-purple-600"
+                }`}
               >
                 JOT IT • ORGANISE IT • TOP IT
               </div>
             </div>
           </div>
 
-          {/* Theme Toggle */}
-
           <button
             type="button"
             onClick={toggleDarkMode}
-            className={`
-              flex
-              h-11
-              w-11
-              items-center
-              justify-center
-              rounded-xl
-              border
-              text-lg
-              transition-all
-              duration-300
-              ${
-                isDarkMode
-                  ? "border-white/10 bg-white/5 hover:bg-white/10"
-                  : "border-[#E5DFEE] bg-white hover:bg-purple-50"
-              }
-            `}
-            aria-label="Toggle theme"
-            title={
+            className={`flex h-11 w-11 items-center justify-center rounded-xl border text-lg transition-all duration-300 ${
               isDarkMode
-                ? "Switch to light mode"
-                : "Switch to dark mode"
-            }
+                ? "border-white/10 bg-white/5 hover:bg-white/10 text-white"
+                : "border-[#E5DFEE] bg-white hover:bg-purple-50 text-[#231B33]"
+            }`}
+            aria-label="Toggle theme"
           >
-            {isDarkMode ? (
-              <Sun size={19} />
-            ) : (
-              <Moon size={19} />
-            )}
+            {isDarkMode ? <Sun size={19} /> : <Moon size={19} />}
           </button>
         </div>
       </header>
 
-      {/* =====================================================
-          MAIN
-      ===================================================== */}
-
+      {/* Main Container */}
       <main className="relative z-10 mx-auto max-w-6xl space-y-24 px-6 py-14">
-
-        {/* ===================================================
-            HERO
-        =================================================== */}
-
+        {/* Hero Section */}
         <section className="relative flex min-h-[470px] items-center">
-
           <div className="grid w-full items-center gap-14 lg:grid-cols-2">
-
-            {/* LEFT */}
-
             <div className="space-y-7">
-
               <div
-                className={`
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-full
-                  border
-                  px-4
-                  py-2
-                  text-xs
-                  font-black
-                  ${
-                    isDarkMode
-                      ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
-                      : "border-purple-200 bg-purple-50 text-purple-700"
-                  }
-                `}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black ${
+                  isDarkMode
+                    ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
+                    : "border-purple-200 bg-purple-50 text-purple-700"
+                }`}
               >
                 <Sparkles size={14} />
                 A LITTLE ABOUT JOT
               </div>
 
               <h1
-                className={`
-                  text-5xl
-                  font-black
-                  leading-[1.02]
-                  tracking-tight
-                  sm:text-6xl
-                  ${textPrimary}
-                `}
+                className={`text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl ${textPrimary}`}
               >
                 Studying doesn't
                 <br />
                 have to feel like
                 <br />
-
                 <span className="bg-gradient-to-r from-[#A78BFA] via-[#8B5CF6] to-[#C084FC] bg-clip-text text-transparent">
                   chaos.
                 </span>
               </h1>
 
               <p
-                className={`
-                  max-w-xl
-                  text-base
-                  leading-8
-                  sm:text-lg
-                  ${textSecondary}
-                `}
+                className={`max-w-xl text-base leading-8 sm:text-lg ${textSecondary}`}
               >
-                JOT turns your ordinary study material into
-                something you can actually work with — from
-                summaries and questions to practice and
-                progress tracking.
+                JOT turns your ordinary study material into something you can
+                actually work with — from summaries and questions to practice
+                and progress tracking.
               </p>
 
               <div className="flex flex-wrap gap-3">
-
                 <div
-                  className={`
-                    rounded-xl
-                    border
-                    px-4
-                    py-2
-                    text-xs
-                    font-bold
-                    ${
-                      isDarkMode
-                        ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
-                        : "border-purple-200 bg-purple-50 text-purple-700"
-                    }
-                  `}
+                  className={`rounded-xl border px-4 py-2 text-xs font-bold ${
+                    isDarkMode
+                      ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                      : "border-purple-200 bg-purple-50 text-purple-700"
+                  }`}
                 >
                   ✨ Jot It.
                 </div>
-
                 <div
-                  className={`
-                    rounded-xl
-                    border
-                    px-4
-                    py-2
-                    text-xs
-                    font-bold
-                    ${
-                      isDarkMode
-                        ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
-                        : "border-purple-200 bg-purple-50 text-purple-700"
-                    }
-                  `}
+                  className={`rounded-xl border px-4 py-2 text-xs font-bold ${
+                    isDarkMode
+                      ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                      : "border-purple-200 bg-purple-50 text-purple-700"
+                  }`}
                 >
                   📚 Organise It.
                 </div>
-
                 <div
-                  className={`
-                    rounded-xl
-                    border
-                    px-4
-                    py-2
-                    text-xs
-                    font-bold
-                    ${
-                      isDarkMode
-                        ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
-                        : "border-purple-200 bg-purple-50 text-purple-700"
-                    }
-                  `}
+                  className={`rounded-xl border px-4 py-2 text-xs font-bold ${
+                    isDarkMode
+                      ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                      : "border-purple-200 bg-purple-50 text-purple-700"
+                  }`}
                 >
                   🚀 Top It.
                 </div>
-
               </div>
             </div>
 
-            {/* RIGHT — JOJO */}
-
             <div className="relative flex items-center justify-center">
-
               <div
-                className={`
-                  absolute
-                  h-[340px]
-                  w-[340px]
-                  rounded-full
-                  blur-[80px]
-                  ${
-                    isDarkMode
-                      ? "bg-purple-500/20"
-                      : "bg-purple-400/20"
-                  }
-                `}
+                className={`absolute h-[340px] w-[340px] rounded-full blur-[80px] ${
+                  isDarkMode ? "bg-purple-500/20" : "bg-purple-400/20"
+                }`}
               />
-
               <div
-                className={`
-                  relative
-                  flex
-                  h-[350px]
-                  w-[350px]
-                  items-center
-                  justify-center
-                  rounded-[44px]
-                  border
-                  ${
-                    isDarkMode
-                      ? "border-white/10 bg-white/[0.035] shadow-[0_30px_80px_rgba(0,0,0,0.25)]"
-                      : "border-purple-100 bg-white shadow-[0_25px_70px_rgba(80,60,120,0.10)]"
-                  }
-                `}
+                className={`relative flex h-[350px] w-[350px] items-center justify-center rounded-[44px] border ${
+                  isDarkMode
+                    ? "border-white/10 bg-white/[0.035] shadow-[0_30px_80px_rgba(0,0,0,0.25)]"
+                    : "border-purple-100 bg-white shadow-[0_25px_70px_rgba(80,60,120,0.10)]"
+                }`}
               >
-
                 <img
                   src={jojoWaving}
                   alt="Jojo the JOT pencil mascot"
                   className="h-[270px] w-[270px] object-contain"
                 />
-
                 <div
-                  className={`
-                    absolute
-                    bottom-5
-                    rounded-2xl
-                    border
-                    px-5
-                    py-2.5
-                    text-xs
-                    font-black
-                    ${
-                      isDarkMode
-                        ? "border-white/10 bg-[#181321] text-purple-200"
-                        : "border-purple-100 bg-white text-purple-700 shadow-sm"
-                    }
-                  `}
+                  className={`absolute bottom-5 rounded-2xl border px-5 py-2.5 text-xs font-black ${
+                    isDarkMode
+                      ? "border-white/10 bg-[#181321] text-purple-200"
+                      : "border-purple-100 bg-white text-purple-700 shadow-sm"
+                  }`}
                 >
                   Hi! I'm Jojo ✨
                 </div>
-
               </div>
             </div>
-
           </div>
         </section>
 
-        {/* ===================================================
-            MISSION
-        =================================================== */}
-
+        {/* Mission Section */}
         <section
-          className={`
-            rounded-[36px]
-            border
-            p-8
-            sm:p-12
-            ${
-              isDarkMode
-                ? "border-white/10 bg-white/[0.035]"
-                : "border-[#E7E0F0] bg-white shadow-sm"
-            }
-          `}
+          className={`rounded-[36px] border p-8 sm:p-12 ${
+            isDarkMode
+              ? "border-white/10 bg-white/[0.035]"
+              : "border-[#E7E0F0] bg-white shadow-sm"
+          }`}
         >
-
           <div className="mb-6 flex items-center gap-3">
-
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
               <Rocket size={20} />
             </div>
-
             <span className="text-xs font-black uppercase tracking-widest text-purple-400">
               Our Mission
             </span>
-
           </div>
 
-          <h2
-            className={`
-              mb-7
-              text-3xl
-              font-black
-              sm:text-4xl
-              ${textPrimary}
-            `}
-          >
+          <h2 className={`mb-7 text-3xl font-black sm:text-4xl ${textPrimary}`}>
             Make studying feel less
             <br />
             overwhelming.
           </h2>
 
           <div
-            className={`
-              max-w-4xl
-              space-y-5
-              text-sm
-              leading-8
-              sm:text-base
-              ${textSecondary}
-            `}
+            className={`max-w-4xl space-y-5 text-sm leading-8 sm:text-base ${textSecondary}`}
           >
             <p>
-              We've all been there — a giant PDF, twenty
-              lecture slides, a notebook full of half-finished
-              notes, and an exam that somehow feels way too
-              close.
+              We've all been there — a giant PDF, twenty lecture slides, a
+              notebook full of half-finished notes, and an exam that somehow
+              feels way too close.
             </p>
-
             <p>
-              JOT was created to make that process simpler.
-              Instead of staring at a mountain of material and
-              wondering where to begin, you can give your
-              material to JOT and turn it into something
-              structured, interactive, and easier to learn from.
+              JOT was created to make that process simpler. Instead of staring
+              at a mountain of material and wondering where to begin, you can
+              give your material to JOT and turn it into something structured,
+              interactive, and easier to learn from.
             </p>
-
             <p>
               The goal isn't to study more.
-              <strong
-                className={
-                  isDarkMode
-                    ? "text-white"
-                    : "text-[#231B33]"
-                }
-              >
+              <strong className={isDarkMode ? "text-white" : "text-[#231B33]"}>
                 {" "}
                 It's to study smarter.
               </strong>
@@ -689,19 +499,9 @@ export default function AboutPage({ onNavigate }) {
           </div>
 
           <div
-            className={`
-              mt-9
-              grid
-              gap-4
-              border-t
-              pt-7
-              sm:grid-cols-3
-              ${
-                isDarkMode
-                  ? "border-white/10"
-                  : "border-slate-200"
-              }
-            `}
+            className={`mt-9 grid gap-4 border-t pt-7 sm:grid-cols-3 ${
+              isDarkMode ? "border-white/10" : "border-slate-200"
+            }`}
           >
             {[
               "Less Scrolling",
@@ -710,415 +510,184 @@ export default function AboutPage({ onNavigate }) {
             ].map((item) => (
               <div
                 key={item}
-                className={`
-                  flex
-                  items-center
-                  gap-2
-                  text-xs
-                  font-bold
-                  ${textSecondary}
-                `}
+                className={`flex items-center gap-2 text-xs font-bold ${textSecondary}`}
               >
-                <CheckCircle2
-                  size={16}
-                  className="shrink-0 text-purple-400"
-                />
+                <CheckCircle2 size={16} className="shrink-0 text-purple-400" />
                 {item}
               </div>
             ))}
           </div>
-
         </section>
 
-        {/* ===================================================
-            ASSESSMENT FRAMEWORK
-        =================================================== */}
-
+        {/* Assessment Tiers */}
         <section className="space-y-9">
-
           <div className="text-center">
-
             <span className="text-xs font-black uppercase tracking-widest text-purple-400">
               How JOT Thinks
             </span>
-
-            <h2
-              className={`
-                mt-3
-                text-3xl
-                font-black
-                sm:text-4xl
-                ${textPrimary}
-              `}
-            >
+            <h2 className={`mt-3 text-3xl font-black sm:text-4xl ${textPrimary}`}>
               From "I know this"
               <br />
               to "I can actually use this."
             </h2>
-
-            <p
-              className={`
-                mx-auto
-                mt-4
-                max-w-2xl
-                text-sm
-                ${textSecondary}
-              `}
-            >
-              JOT helps you move through different levels of
-              understanding instead of stopping at memorization.
+            <p className={`mx-auto mt-4 max-w-2xl text-sm ${textSecondary}`}>
+              JOT helps you move through different levels of understanding
+              instead of stopping at memorization.
             </p>
-
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-
             {tiers.map((tier) => {
               const Icon = tier.icon;
-
               return (
                 <div
                   key={tier.tier}
-                  className={`
-                    rounded-3xl
-                    border
-                    p-7
-                    transition-all
-                    duration-300
-                    hover:-translate-y-1
-                    ${card}
-                  `}
+                  className={`rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1 ${card}`}
                 >
-
                   <div className="mb-5 flex items-center justify-between">
-
                     <span className="text-xs font-black text-purple-400">
                       {tier.tier}
                     </span>
-
                     <span
-                      className={`
-                        rounded-lg
-                        px-3
-                        py-1
-                        text-xs
-                        font-bold
-                        ${
-                          isDarkMode
-                            ? "bg-white/10 text-slate-300"
-                            : "bg-purple-50 text-purple-700"
-                        }
-                      `}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold ${
+                        isDarkMode
+                          ? "bg-white/10 text-slate-300"
+                          : "bg-purple-50 text-purple-700"
+                      }`}
                     >
                       {tier.badge}
                     </span>
-
                   </div>
-
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
                     <Icon size={22} />
                   </div>
-
-                  <h3
-                    className={`
-                      mb-2
-                      text-xl
-                      font-black
-                      ${textPrimary}
-                    `}
-                  >
+                  <h3 className={`mb-2 text-xl font-black ${textPrimary}`}>
                     {tier.title}
                   </h3>
-
-                  <p
-                    className={`
-                      text-sm
-                      leading-7
-                      ${textSecondary}
-                    `}
-                  >
+                  <p className={`text-sm leading-7 ${textSecondary}`}>
                     {tier.desc}
                   </p>
-
                 </div>
               );
             })}
-
           </div>
         </section>
 
-        {/* ===================================================
-            HOW TO USE
-        =================================================== */}
-
+        {/* How To Use Steps */}
         <section className="space-y-9">
-
           <div className="text-center">
-
             <span className="text-xs font-black uppercase tracking-widest text-purple-400">
               Your JOT Journey
             </span>
-
-            <h2
-              className={`
-                mt-3
-                text-3xl
-                font-black
-                sm:text-4xl
-                ${textPrimary}
-              `}
-            >
+            <h2 className={`mt-3 text-3xl font-black sm:text-4xl ${textPrimary}`}>
               Six steps from notes
               <br />
               to "I've got this."
             </h2>
-
-            <p
-              className={`
-                mt-4
-                text-sm
-                ${textSecondary}
-              `}
-            >
-              No complicated setup. Just upload, practise,
-              learn, and keep improving.
+            <p className={`mt-4 text-sm ${textSecondary}`}>
+              No complicated setup. Just upload, practise, learn, and keep
+              improving.
             </p>
-
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-
             {steps.map((step) => {
               const Icon = step.icon;
-
               return (
                 <div
                   key={step.num}
-                  className={`
-                    rounded-3xl
-                    border
-                    p-6
-                    transition-all
-                    duration-300
-                    hover:-translate-y-1
-                    ${card}
-                  `}
+                  className={`rounded-3xl border p-6 transition-all duration-300 hover:-translate-y-1 ${card}`}
                 >
-
                   <div className="mb-5 flex items-center justify-between">
-
                     <div
-                      className={`
-                        flex
-                        h-12
-                        w-12
-                        items-center
-                        justify-center
-                        rounded-2xl
-                        ${
-                          isDarkMode
-                            ? "bg-purple-500/10 text-purple-300"
-                            : "bg-purple-50 text-purple-600"
-                        }
-                      `}
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                        isDarkMode
+                          ? "bg-purple-500/10 text-purple-300"
+                          : "bg-purple-50 text-purple-600"
+                      }`}
                     >
                       <Icon size={22} />
                     </div>
-
                     <span
-                      className={`
-                        text-2xl
-                        font-black
-                        ${
-                          isDarkMode
-                            ? "text-white/10"
-                            : "text-slate-200"
-                        }
-                      `}
+                      className={`text-2xl font-black ${
+                        isDarkMode ? "text-white/10" : "text-slate-200"
+                      }`}
                     >
                       {step.num}
                     </span>
-
                   </div>
-
-                  <h3
-                    className={`
-                      mb-2
-                      font-black
-                      ${textPrimary}
-                    `}
-                  >
+                  <h3 className={`mb-2 font-black ${textPrimary}`}>
                     {step.title}
                   </h3>
-
-                  <p
-                    className={`
-                      text-xs
-                      leading-7
-                      ${textSecondary}
-                    `}
-                  >
+                  <p className={`text-xs leading-7 ${textSecondary}`}>
                     {step.desc}
                   </p>
-
                 </div>
               );
             })}
-
           </div>
         </section>
 
-        {/* ===================================================
-            CORE FEATURES
-        =================================================== */}
-
+        {/* Core Values */}
         <section className="space-y-9">
-
           <div>
-
             <span className="text-xs font-black uppercase tracking-widest text-purple-400">
               What Makes JOT Different
             </span>
-
-            <h2
-              className={`
-                mt-3
-                text-3xl
-                font-black
-                sm:text-4xl
-                ${textPrimary}
-              `}
-            >
+            <h2 className={`mt-3 text-3xl font-black sm:text-4xl ${textPrimary}`}>
               More than just
               <br />
               question generation.
             </h2>
-
           </div>
 
           <div className="grid gap-5 md:grid-cols-3">
-
             {values.map((value) => {
               const Icon = value.icon;
-
               return (
                 <div
                   key={value.title}
-                  className={`
-                    rounded-3xl
-                    border
-                    p-7
-                    transition-all
-                    duration-300
-                    hover:-translate-y-1
-                    ${card}
-                  `}
+                  className={`rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1 ${card}`}
                 >
-
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
                     <Icon size={22} />
                   </div>
-
-                  <h3
-                    className={`
-                      mb-3
-                      font-black
-                      ${textPrimary}
-                    `}
-                  >
+                  <h3 className={`mb-3 font-black ${textPrimary}`}>
                     {value.title}
                   </h3>
-
-                  <p
-                    className={`
-                      text-sm
-                      leading-7
-                      ${textSecondary}
-                    `}
-                  >
+                  <p className={`text-sm leading-7 ${textSecondary}`}>
                     {value.desc}
                   </p>
-
                 </div>
               );
             })}
-
           </div>
         </section>
 
-        {/* ===================================================
-            JOJO CTA
-        =================================================== */}
-
+        {/* CTA Section */}
         <section
-          className={`
-            relative
-            overflow-hidden
-            rounded-[36px]
-            border
-            p-8
-            text-center
-            sm:p-12
-            ${
-              isDarkMode
-                ? "border-purple-400/20 bg-gradient-to-br from-[#24163A] via-[#181329] to-[#100D17]"
-                : "border-purple-100 bg-gradient-to-br from-purple-50 via-white to-indigo-50"
-            }
-          `}
+          className={`relative overflow-hidden rounded-[36px] border p-8 text-center sm:p-12 ${
+            isDarkMode
+              ? "border-purple-400/20 bg-gradient-to-br from-[#24163A] via-[#181329] to-[#100D17]"
+              : "border-purple-100 bg-gradient-to-br from-purple-50 via-white to-indigo-50"
+          }`}
         >
-
           <div
-            className={`
-              absolute
-              -right-20
-              -top-20
-              h-64
-              w-64
-              rounded-full
-              blur-3xl
-              ${
-                isDarkMode
-                  ? "bg-purple-500/15"
-                  : "bg-purple-300/20"
-              }
-            `}
+            className={`absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl ${
+              isDarkMode ? "bg-purple-500/15" : "bg-purple-300/20"
+            }`}
           />
-
           <div
-            className={`
-              absolute
-              -bottom-20
-              -left-20
-              h-64
-              w-64
-              rounded-full
-              blur-3xl
-              ${
-                isDarkMode
-                  ? "bg-purple-500/10"
-                  : "bg-purple-200/20"
-              }
-            `}
+            className={`absolute -bottom-20 -left-20 h-64 w-64 rounded-full blur-3xl ${
+              isDarkMode ? "bg-purple-500/10" : "bg-purple-200/20"
+            }`}
           />
-
           <div className="relative">
-
             <div className="mb-5 flex justify-center">
-
               <div
-                className={`
-                  flex
-                  h-28
-                  w-28
-                  items-center
-                  justify-center
-                  rounded-full
-                  ${
-                    isDarkMode
-                      ? "bg-white/5"
-                      : "bg-white shadow-sm"
-                  }
-                `}
+                className={`flex h-28 w-28 items-center justify-center rounded-full ${
+                  isDarkMode ? "bg-white/5" : "bg-white shadow-sm"
+                }`}
               >
                 <img
                   src={jojoWaving}
@@ -1126,254 +695,184 @@ export default function AboutPage({ onNavigate }) {
                   className="h-24 w-24 object-contain"
                 />
               </div>
-
             </div>
-
-            <h2
-              className={`
-                text-3xl
-                font-black
-                sm:text-4xl
-                ${textPrimary}
-              `}
-            >
+            <h2 className={`text-3xl font-black sm:text-4xl ${textPrimary}`}>
               Ready to JOT?
             </h2>
-
             <p
-              className={`
-                mx-auto
-                mt-4
-                max-w-lg
-                text-sm
-                leading-7
-                ${textSecondary}
-              `}
+              className={`mx-auto mt-4 max-w-lg text-sm leading-7 ${textSecondary}`}
             >
-              Your notes are waiting. Give Jojo something
-              to work with and turn that study chaos into
-              something a little more manageable.
+              Your notes are waiting. Give Jojo something to work with and turn
+              that study chaos into something a little more manageable.
             </p>
-
             <button
               type="button"
-              onClick={() =>
-                onNavigate && onNavigate("signup")
-              }
-              className="
-                mt-7
-                rounded-2xl
-                bg-[#8064C7]
-                px-8
-                py-4
-                text-sm
-                font-black
-                text-white
-                shadow-lg
-                shadow-purple-500/20
-                transition
-                hover:scale-105
-                hover:bg-[#9275D8]
-              "
+              onClick={() => onNavigate && onNavigate("signup")}
+              className="mt-7 rounded-2xl bg-[#8064C7] px-8 py-4 text-sm font-black text-white shadow-lg shadow-purple-500/20 transition hover:scale-105 hover:bg-[#9275D8]"
             >
               Create Free Account ✨
             </button>
-
           </div>
-
         </section>
 
         {/* ===================================================
-            TEAM
+            TEAM SECTION (Minimalist Icon Actions)
         =================================================== */}
-
-        <section className="space-y-9">
-
+        <section className="space-y-12">
           <div className="text-center">
-
-            <span className="text-xs font-black uppercase tracking-widest text-purple-400">
-              The People Behind JOT
-            </span>
-
+            <div
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-black uppercase tracking-wider ${
+                isDarkMode
+                  ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
+                  : "border-purple-200 bg-purple-50 text-purple-700"
+              }`}
+            >
+              <Sparkles size={13} />
+              THE PEOPLE BEHIND JOT
+            </div>
             <h2
-              className={`
-                mt-3
-                text-3xl
-                font-black
-                sm:text-4xl
-                ${textPrimary}
-              `}
+              className={`mt-3 text-3xl font-black tracking-tight sm:text-4xl ${textPrimary}`}
             >
               Meet the Team
             </h2>
-
-            <p
-              className={`
-                mx-auto
-                mt-4
-                max-w-2xl
-                text-sm
-                ${textSecondary}
-              `}
-            >
-              Five people, different strengths, one very
-              ambitious study buddy.
+            <p className={`mx-auto mt-2 max-w-xl text-sm ${textSecondary}`}>
+              Five minds building one ambitious AI study companion.
             </p>
-
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-
-            {teamMembers.map((member, index) => (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            {teamMembers.map((member) => (
               <div
-                key={member.name}
-                className={`
-                  rounded-3xl
-                  border
-                  p-5
-                  transition-all
-                  duration-300
-                  hover:-translate-y-2
-                  ${card}
-                `}
+                key={member.id}
+                className={`group relative flex flex-col justify-between overflow-hidden rounded-[30px] border transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${
+                  isDarkMode
+                    ? "border-white/10 bg-[#120F1D]/90 hover:border-purple-500/50 hover:shadow-[0_20px_40px_rgba(128,100,199,0.15)]"
+                    : "border-[#E7E2EE] bg-white hover:border-purple-400/60 hover:shadow-[0_20px_40px_rgba(128,100,199,0.12)]"
+                }`}
               >
-
-                <div className="mb-5 flex justify-between">
-
+                {/* Clean Top Ambient Header */}
+                <div
+                  className={`relative h-20 w-full transition-colors ${
+                    isDarkMode
+                      ? "bg-gradient-to-b from-purple-900/30 via-purple-950/10 to-transparent"
+                      : "bg-gradient-to-b from-purple-100/70 via-purple-50/20 to-transparent"
+                  }`}
+                >
                   <div
-                    className={`
-                      flex
-                      h-12
-                      w-12
-                      items-center
-                      justify-center
-                      rounded-2xl
-                      font-black
-                      ${
-                        isDarkMode
-                          ? "bg-purple-500/10 text-purple-300"
-                          : "bg-purple-50 text-purple-700"
-                      }
-                    `}
+                    className={`absolute -top-12 left-1/2 h-24 w-32 -translate-x-1/2 rounded-full blur-2xl transition-opacity duration-500 group-hover:opacity-100 ${
+                      isDarkMode
+                        ? "bg-purple-500/25 opacity-40"
+                        : "bg-purple-300/40 opacity-50"
+                    }`}
+                  />
+                </div>
+
+                {/* Overlapping Avatar */}
+                <div className="-mt-12 flex flex-col items-center px-4">
+                  <div
+                    className={`flex h-24 w-24 items-center justify-center overflow-hidden rounded-full ring-4 shadow-lg transition-all duration-500 group-hover:scale-105 ${
+                      isDarkMode
+                        ? "bg-[#181325] ring-[#120F1D] group-hover:ring-purple-400/50"
+                        : "bg-white ring-white group-hover:ring-purple-200"
+                    }`}
                   >
-                    {member.initials}
+                    {member.image ? (
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        loading="eager"
+                        decoding="sync"
+                        className={`h-full w-full object-cover ${
+                          member.imagePos || "object-center"
+                        } brightness-[0.96] contrast-[1.08] transition-transform duration-500 ease-out group-hover:scale-115`}
+                        style={{
+                          imageRendering: "-webkit-optimize-contrast",
+                          transform: "translateZ(0)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className={`flex h-full w-full items-center justify-center font-black ${
+                          isDarkMode
+                            ? "bg-gradient-to-br from-purple-900/50 to-purple-950/70 text-purple-300"
+                            : "bg-gradient-to-br from-purple-100 to-purple-200 text-purple-800"
+                        }`}
+                      >
+                        <span className="text-2xl font-black tracking-wider">
+                          {member.initials}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  <span
-                    className={`
-                      text-xs
-                      font-black
-                      ${
-                        isDarkMode
-                          ? "text-white/20"
-                          : "text-slate-300"
-                      }
-                    `}
+                  {/* Name & Role */}
+                  <h3
+                    className={`mt-3.5 text-base font-black tracking-tight ${textPrimary}`}
                   >
-                    0{index + 1}
-                  </span>
+                    {member.name}
+                  </h3>
+                  <p
+                    className={`mt-0.5 text-xs font-semibold ${textSecondary}`}
+                  >
+                    {member.role}
+                  </p>
 
-                </div>
-
-                <h3
-                  className={`
-                    font-black
-                    ${textPrimary}
-                  `}
-                >
-                  {member.name}
-                </h3>
-
-                <p
-                  className={`
-                    mt-1
-                    text-xs
-                    font-bold
-                    ${textSecondary}
-                  `}
-                >
-                  {member.role}
-                </p>
-
-                <div className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-purple-500/10 px-2.5 py-1 text-[10px] font-black text-purple-400">
-                  <Zap size={10} />
-                  {member.focus}
-                </div>
-
-                <div
-                  className={`
-                    mt-5
-                    flex
-                    gap-2
-                    border-t
-                    pt-4
-                    ${
+                  {/* Focus Pill */}
+                  <div
+                    className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[10px] font-bold transition-all duration-300 ${
                       isDarkMode
-                        ? "border-white/10"
-                        : "border-slate-200"
-                    }
-                  `}
-                >
-
-                  <a
-                    href="https://github.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`
-                      flex
-                      flex-1
-                      items-center
-                      justify-center
-                      rounded-xl
-                      border
-                      py-2
-                      text-xs
-                      font-bold
-                      ${
-                        isDarkMode
-                          ? "border-white/10 hover:bg-white/5"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }
-                    `}
+                        ? "border-purple-500/20 bg-purple-500/10 text-purple-300 group-hover:border-purple-500/40"
+                        : "border-purple-200/80 bg-purple-50 text-purple-700 group-hover:border-purple-300"
+                    }`}
                   >
-                    GitHub
-                  </a>
-
-                  <a
-                    href="https://linkedin.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`
-                      flex
-                      items-center
-                      justify-center
-                      rounded-xl
-                      border
-                      px-3
-                      ${
-                        isDarkMode
-                          ? "border-white/10 hover:bg-white/5"
-                          : "border-slate-200 hover:bg-slate-50"
-                      }
-                    `}
-                  >
-                    LinkedIn
-                  </a>
-
+                    <Zap size={10} className="shrink-0 text-purple-400" />
+                    <span className="truncate max-w-[125px]">
+                      {member.focus}
+                    </span>
+                  </div>
                 </div>
 
+                {/* Minimalist Centered Icon Actions */}
+                <div
+                  className={`mt-5 flex items-center justify-center gap-3 border-t px-4 py-3.5 ${
+                    isDarkMode ? "border-white/5" : "border-slate-100"
+                  }`}
+                >
+                  <a
+                    href={member.github}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="GitHub"
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-200 hover:scale-110 ${
+                      isDarkMode
+                        ? "border-white/10 bg-white/5 text-slate-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white"
+                        : "border-slate-200 bg-slate-50/80 text-slate-600 shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                    }`}
+                  >
+                    <GithubIcon size={14} />
+                  </a>
+
+                  <a
+                    href={member.linkedin}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="LinkedIn"
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-200 hover:scale-110 ${
+                      isDarkMode
+                        ? "border-white/10 bg-white/5 text-slate-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white"
+                        : "border-slate-200 bg-slate-50/80 text-slate-600 shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                    }`}
+                  >
+                    <LinkedinIcon size={14} />
+                  </a>
+                </div>
               </div>
             ))}
-
           </div>
         </section>
-
       </main>
 
-      {/* =====================================================
-          SHARED FOOTER
-      ===================================================== */}
-
+      {/* Shared Footer */}
       <JotFooter />
     </div>
   );
