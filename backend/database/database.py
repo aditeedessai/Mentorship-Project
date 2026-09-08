@@ -87,6 +87,14 @@ def init_pool() -> _VectorAwareConnectionPool:
                     DB_POOL_MAX_CONN,
                     dsn=DATABASE_URL,
                     cursor_factory=psycopg2.extras.RealDictCursor,
+                    # Supabase's session pooler silently drops connections that
+                    # sit idle too long; TCP keepalives make the OS notice a
+                    # dead socket sooner instead of leaving a connection that
+                    # *looks* open in the pool indefinitely.
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=3,
                 )
     return _pool
 
@@ -158,6 +166,27 @@ class ConnectionWrapper:
         return self._conn.cursor()
 
 
+def _is_connection_alive(conn) -> bool:
+    """
+    Pings a pooled connection with a cheap query before it's handed to a
+    caller. Supabase's session pooler closes connections that sit idle
+    past its own timeout without telling psycopg2 - the pool still thinks
+    they're open, and the first real query on one raises
+    "server closed the connection unexpectedly" deep inside repository
+    code. Catching that here, on a throwaway SELECT 1, means the caller
+    never sees it.
+    """
+    if conn.closed:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+    except psycopg2.OperationalError:
+        conn.rollback()
+        return False
+    return True
+
+
 def get_connection():
     """
     Returns a pooled Postgres connection (via Supabase) wrapped so
@@ -189,7 +218,6 @@ def get_connection():
     while True:
         try:
             conn = conn_pool.getconn()
-            return ConnectionWrapper(conn, conn_pool)
         except (psycopg2.pool.PoolError, psycopg2.OperationalError):
             # PoolError: our own pool's bookkeeping says every connection
             # up to DB_POOL_MAX_CONN is already checked out.
@@ -203,6 +231,20 @@ def get_connection():
             if remaining <= 0:
                 raise
             time.sleep(min(DB_POOL_ACQUIRE_RETRY_INTERVAL_SECONDS, remaining))
+            continue
+
+        if _is_connection_alive(conn):
+            return ConnectionWrapper(conn, conn_pool)
+
+        # Dead connection the pooler dropped server-side - discard it
+        # (the pool opens a fresh one in its place, up to DB_POOL_MAX_CONN)
+        # and loop back around to get another.
+        conn_pool.putconn(conn, close=True)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise psycopg2.OperationalError(
+                "Timed out replacing dead pooled connections"
+            )
 
 
 def init_db():
