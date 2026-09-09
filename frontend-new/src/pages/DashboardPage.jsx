@@ -6,6 +6,7 @@ import UpcomingExamsCard from "../components/dashboard/UpcomingExamsCard";
 import StudySetProgressCard from "../components/dashboard/StudySetProgressCard";
 import ActivityCalendarCard from "../components/dashboard/ActivityCalendarCard";
 import MotivationalTaglineCard from "../components/dashboard/MotivationalTaglineCard";
+import PerformanceGraphCard from "../components/dashboard/PerformanceGraphCard";
 import jojoImage from "../assets/jojo-transparent-clean.png";
 
 /* =========================================================
@@ -592,6 +593,12 @@ function DashboardPage({ user, onNavigate }) {
               className="dashboard-card-reveal dashboard-delay-1 dashboard-interactive-card rounded-3xl"
             >
               <TodaysTasksCard onNavigate={onNavigate} />
+            </div>
+
+            <div
+              className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl"
+            >
+              <PerformanceGraphCard onNavigate={onNavigate} />
             </div>
 
             <div

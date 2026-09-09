@@ -18,6 +18,7 @@ from backend.api.routes import (
     health,
     performance,
     planner,
+    progress,
     questions,
     revision,
     study_sets,
@@ -126,6 +127,7 @@ api_router.include_router(exams.router)
 api_router.include_router(activity.router)
 api_router.include_router(account.router)
 api_router.include_router(google_calendar.router)
+api_router.include_router(progress.router)
 
 # Mount API router to app
 app.include_router(api_router)
