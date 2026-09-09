@@ -7,6 +7,8 @@ import QuizCenter from '../components/quiz/QuizCenter'
 import RoughWorkPanel from '../components/quiz/RoughWorkPanel'
 import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
+import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
+import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
 import { submitAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import jojoCelebration from '../assets/jojo-celebration.png'
@@ -63,13 +65,14 @@ export default function MCQPage({ onNavigate } = {}) {
   })
 
   const [scratchpad, setScratchpad] = useState({})
-  const [bookmarkedQuestions, setBookmarkedQuestions] = useState({})
 
   const [remainingSeconds, setRemainingSeconds] = useState(
     questionCount * 90
   )
 
   const [showAbortModal, setShowAbortModal] = useState(false)
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false)
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showNavDrawer, setShowNavDrawer] = useState(false)
   const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
@@ -330,15 +333,6 @@ export default function MCQPage({ onNavigate } = {}) {
     antiCheatCleanup,
   ])
 
-  // ── Bookmark ───────────────────────────────────────────────────
-
-  const toggleBookmark = useCallback(() => {
-    setBookmarkedQuestions((prev) => ({
-      ...prev,
-      [currentQuestion]: !prev[currentQuestion],
-    }))
-  }, [currentQuestion])
-
   // ── Scratchpad ────────────────────────────────────────────────
 
   const handleScratchpadChange = useCallback(
@@ -357,6 +351,75 @@ export default function MCQPage({ onNavigate } = {}) {
       [currentQuestion]: '',
     }))
   }, [currentQuestion])
+
+  // ── Keyboard Shortcuts ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isFullscreenReady || quizTerminated || isViolationActive) return
+
+    const handleKeyDown = (e) => {
+      if (showInstructionsModal || showShortcutsModal || showAbortModal || showFinishModal) return
+
+      const target = e.target
+      if (
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      ) {
+        return
+      }
+
+      const key = e.key
+
+      if (key === 'ArrowLeft') {
+        e.preventDefault()
+        handlePrevious()
+      } else if (key === 'ArrowRight') {
+        e.preventDefault()
+        if (currentQuestion === questionCount) {
+          handleFinishClick()
+        } else {
+          handleConfirmNext()
+        }
+      } else if (key === '1' || key === 'a' || key === 'A') {
+        e.preventDefault()
+        handleSelectAnswer(0)
+      } else if (key === '2' || key === 'b' || key === 'B') {
+        e.preventDefault()
+        handleSelectAnswer(1)
+      } else if (key === '3' || key === 'c' || key === 'C') {
+        e.preventDefault()
+        handleSelectAnswer(2)
+      } else if (key === '4' || key === 'd' || key === 'D') {
+        e.preventDefault()
+        handleSelectAnswer(3)
+      } else if (key === 'Enter') {
+        e.preventDefault()
+        if (currentQuestion === questionCount) {
+          handleFinishClick()
+        } else {
+          handleConfirmNext()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    isFullscreenReady,
+    quizTerminated,
+    isViolationActive,
+    showInstructionsModal,
+    showShortcutsModal,
+    showAbortModal,
+    showFinishModal,
+    currentQuestion,
+    questionCount,
+    handlePrevious,
+    handleConfirmNext,
+    handleFinishClick,
+    handleSelectAnswer,
+  ])
 
   // Don't render if no questions or quiz was terminated
   if (questionCount === 0 || quizTerminated) {
@@ -569,8 +632,6 @@ export default function MCQPage({ onNavigate } = {}) {
 
       <QuizHeader
         remainingSeconds={remainingSeconds}
-        isBookmarked={!!bookmarkedQuestions[currentQuestion]}
-        onToggleBookmark={toggleBookmark}
         onAbort={() => setShowAbortModal(true)}
         onToggleNavigator={() =>
           setShowNavDrawer((prev) => !prev)
@@ -578,6 +639,8 @@ export default function MCQPage({ onNavigate } = {}) {
         onToggleRoughWork={() =>
           setShowRoughWorkDrawer((prev) => !prev)
         }
+        onOpenInstructions={() => setShowInstructionsModal(true)}
+        onOpenShortcuts={() => setShowShortcutsModal(true)}
       />
 
       <div className="relative flex flex-1 overflow-hidden">
@@ -685,6 +748,18 @@ export default function MCQPage({ onNavigate } = {}) {
           </div>
         </div>
       )}
+
+      <QuizInstructionsModal
+        isOpen={showInstructionsModal}
+        onClose={() => setShowInstructionsModal(false)}
+        quizType="mcq"
+      />
+
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        quizType="mcq"
+      />
     </div>
   )
 }

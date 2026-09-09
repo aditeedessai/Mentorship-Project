@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { Clock, Star, MoreVertical, Sparkles, LayoutGrid, PenLine } from 'lucide-react'
+import { Clock, MoreVertical, Sparkles, LayoutGrid, PenLine } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
 export default function QuizHeader({
   remainingSeconds,
-  isBookmarked,
-  onToggleBookmark,
   onAbort,
   onToggleNavigator,
   onToggleRoughWork,
+  onOpenInstructions,
+  onOpenShortcuts,
 }) {
   const { isDarkMode } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -84,21 +84,6 @@ export default function QuizHeader({
           <span>{formatTime(remainingSeconds)}<span className="hidden sm:inline"> remaining</span></span>
         </div>
 
-        {/* Bookmark */}
-        <button
-          type="button"
-          onClick={onToggleBookmark}
-          className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-            isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-gray-200 bg-white hover:bg-gray-50"
-          }`}
-          aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark question'}
-        >
-          <Star
-            className={`w-4 h-4 ${isBookmarked ? 'fill-amber-400 text-amber-400' : isDarkMode ? 'text-white/40' : 'text-gray-400'}`}
-            strokeWidth={1.8}
-          />
-        </button>
-
         <div className={`hidden sm:block w-px h-5 ${isDarkMode ? "bg-white/10" : "bg-gray-200"}`} />
 
         {/* Menu */}
@@ -118,14 +103,28 @@ export default function QuizHeader({
             <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-1.5 z-50 backdrop-blur-2xl ${
               isDarkMode ? "border-white/10 bg-[#17131F] text-white" : "border-gray-200 bg-white text-[#292530]"
             }`}>
-              <button className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
-              }`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onOpenInstructions?.()
+                }}
+                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
+                }`}
+              >
                 Quiz Instructions
               </button>
-              <button className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
-              }`}>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onOpenShortcuts?.()
+                }}
+                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  isDarkMode ? "hover:bg-white/10" : "hover:bg-gray-100"
+                }`}
+              >
                 Keyboard Shortcuts
               </button>
             </div>

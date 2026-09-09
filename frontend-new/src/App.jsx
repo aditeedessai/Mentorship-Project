@@ -585,6 +585,20 @@ function AppContent() {
     );
   }
 
+  if (currentPage === "student-profile" && user) {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <StudentProfilePage
+          user={user}
+          onProfileComplete={() => {
+            handleNavigate("settings");
+          }}
+          onBack={() => handleNavigate("settings")}
+        />
+      </Suspense>
+    );
+  }
+
   // ================= MAIN AUTHENTICATED APP =================
   const mainContent = (
     <MainAppLayout
