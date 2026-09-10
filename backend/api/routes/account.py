@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.account import DeleteAccountResponse
 from backend.services.account_service import delete_own_account
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/account", tags=["Account"])
     description="Permanently deletes the authenticated user's Supabase Auth account and all associated app data. Always operates on the caller's own id from their verified token - never accepts a user id from the request body."
 )
 def delete_account(
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> DeleteAccountResponse:
     try:
         delete_own_account(current_user.user_id)

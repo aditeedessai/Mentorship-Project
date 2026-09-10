@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.question import (
     GenerateQuestionsRequest,
     QuestionListResponse,
@@ -26,7 +27,7 @@ router = APIRouter(tags=["Questions"])
 def generate_questions(
     study_set_id: UUID,
     payload: GenerateQuestionsRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(5, 600, scope="question_generation"))
 ) -> QuestionListResponse:
     # 1. Verify study set exists and belongs to current_user.user_id
     study_set = study_set_repository.get_study_set(str(study_set_id), user_id=current_user.user_id)
@@ -137,7 +138,7 @@ def list_questions(
                      "an in-progress or just-started attempt). Omit to get every "
                      "question ever generated for this study set (+ type)."
     ),
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> QuestionListResponse:
     # 1. Verify study set exists and belongs to current_user.user_id
     study_set = study_set_repository.get_study_set(str(study_set_id), user_id=current_user.user_id)
@@ -198,7 +199,7 @@ def list_questions(
 )
 def get_question(
     question_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> QuestionResponse:
     try:
         q = quiz_repository.get_question_by_id(question_id)

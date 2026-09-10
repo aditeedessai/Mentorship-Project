@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.activity import StudiedDaysResponse
 from backend.database import evaluation_repository
 
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/activity", tags=["Activity"])
 def get_studied_days(
     year: int = Query(..., ge=2000, le=2100, description="Calendar year, e.g. 2026"),
     month: int = Query(..., ge=1, le=12, description="Calendar month (1-12)"),
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudiedDaysResponse:
     try:
         studied_days = evaluation_repository.get_studied_dates(

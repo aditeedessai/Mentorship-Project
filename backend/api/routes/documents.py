@@ -4,12 +4,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
 )
 from backend.database import study_set_repository
 from backend.document_processing.extractor import SUPPORTED_EXTENSIONS
+from backend.document_processing.image_validator import ImageValidationError
 from backend.services import document_service
 
 router = APIRouter(tags=["Documents"])
@@ -25,7 +27,7 @@ router = APIRouter(tags=["Documents"])
 def upload_documents(
     study_set_id: UUID,
     files: list[UploadFile] = File(...),
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(5, 600, scope="document_upload")),
 ) -> DocumentListResponse:
   if not files:
     raise HTTPException(
@@ -80,6 +82,11 @@ def upload_documents(
         if doc_record:
           uploaded_docs.append(DocumentResponse(**doc_record))
 
+      except (ImageValidationError, ValueError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
       except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -97,7 +104,7 @@ def upload_documents(
 )
 def list_study_set_documents(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated")),
 ) -> DocumentListResponse:
   study_set = study_set_repository.get_study_set(
       str(study_set_id), user_id=current_user.user_id
@@ -128,7 +135,7 @@ def list_study_set_documents(
 )
 def get_document(
     document_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated")),
 ) -> DocumentResponse:
   try:
     doc = study_set_repository.get_document_by_id(str(document_id))

@@ -137,6 +137,89 @@ const dashboardAnimationStyles = `
   }
 
   /* =======================================================
+     JOJO ORBIT
+  ======================================================= */
+
+  @keyframes dashboardOrbitClockwise {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes dashboardOrbitCounter {
+    from {
+      transform: rotate(360deg);
+    }
+
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes dashboardOrbitBubble {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 0.8;
+    }
+
+    50% {
+      transform: scale(1.22) rotate(20deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes dashboardOrbitSparkle {
+    0%,
+    100% {
+      transform: scale(0.8) rotate(0deg);
+      opacity: 0.55;
+    }
+
+    50% {
+      transform: scale(1.25) rotate(90deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes dashboardOrbitPulse {
+    0%,
+    100% {
+      opacity: 0.18;
+      transform: scale(0.96);
+    }
+
+    50% {
+      opacity: 0.35;
+      transform: scale(1.02);
+    }
+  }
+
+  .dashboard-orbit-clockwise {
+    animation: dashboardOrbitClockwise 14s linear infinite;
+  }
+
+  .dashboard-orbit-counter {
+    animation: dashboardOrbitCounter 19s linear infinite;
+  }
+
+  .dashboard-orbit-bubble {
+    animation: dashboardOrbitBubble 2.6s ease-in-out infinite;
+  }
+
+  .dashboard-orbit-sparkle {
+    animation: dashboardOrbitSparkle 3s ease-in-out infinite;
+  }
+
+  .dashboard-orbit-pulse {
+    animation: dashboardOrbitPulse 4s ease-in-out infinite;
+  }
+
+  /* =======================================================
      MOVING LIGHT
   ======================================================= */
 
@@ -227,6 +310,7 @@ const dashboardAnimationStyles = `
   }
 
   /* Cursor-following spotlight */
+
   .dashboard-interactive-card::before {
     content: "";
     position: absolute;
@@ -371,6 +455,20 @@ const dashboardAnimationStyles = `
     .dashboard-interactive-card:hover {
       transform: none !important;
     }
+
+    .dashboard-orbit-outer {
+      width: 150px !important;
+      height: 150px !important;
+      margin-left: -75px !important;
+      margin-top: -75px !important;
+    }
+
+    .dashboard-orbit-inner {
+      width: 120px !important;
+      height: 120px !important;
+      margin-left: -60px !important;
+      margin-top: -60px !important;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -500,6 +598,7 @@ function DashboardPage({ user, onNavigate }) {
           }`}
         >
           {/* Moving background glow */}
+
           <div
             className="pointer-events-none absolute -left-24 top-0 h-48 w-72 rounded-full bg-[#8064C7]/10 blur-3xl"
             style={{
@@ -508,6 +607,7 @@ function DashboardPage({ user, onNavigate }) {
           />
 
           {/* Moving light streak */}
+
           <div
             className="pointer-events-none absolute inset-y-0 left-0 w-24"
             style={{
@@ -549,10 +649,112 @@ function DashboardPage({ user, onNavigate }) {
             </button>
           </div>
 
-          {/* JOJO */}
+          {/* =================================================
+              JOJO + ROTATING ELEMENTS
+          ================================================= */}
 
-          <div className="relative z-10 flex h-32 w-32 sm:h-40 sm:w-40 shrink-0 items-end justify-center">
+          <div className="relative z-10 flex h-40 w-40 sm:h-48 sm:w-48 shrink-0 items-center justify-center">
+
+            {/* Outer soft orbit glow */}
+
+            <div
+              className="dashboard-orbit-pulse pointer-events-none absolute left-1/2 top-1/2 h-[210px] w-[210px] -ml-[105px] -mt-[105px] rounded-full bg-[#8064C7]/5 blur-xl"
+            />
+
+            {/* Outer orbit ring */}
+
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[190px] w-[190px] -ml-[95px] -mt-[95px] rounded-full border border-[#8064C7]/15"
+            />
+
+            {/* Outer rotating orbit */}
+
+            <div
+              className="dashboard-orbit-clockwise dashboard-orbit-outer pointer-events-none absolute left-1/2 top-1/2 h-[190px] w-[190px] -ml-[95px] -mt-[95px]"
+            >
+              {/* Top bubble */}
+
+              <span
+                className="dashboard-orbit-bubble absolute left-1/2 top-[-5px] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#8064C7]/60"
+              />
+
+              {/* Right sparkle */}
+
+              <span
+                className="dashboard-orbit-sparkle absolute right-[-6px] top-1/2 text-[#8064C7]"
+                style={{
+                  fontSize: "15px",
+                }}
+              >
+                ✦
+              </span>
+
+              {/* Bottom bubble */}
+
+              <span
+                className="dashboard-orbit-bubble absolute bottom-[-5px] left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-[#8064C7]/45"
+                style={{
+                  animationDelay: "0.8s",
+                }}
+              />
+
+              {/* Left sparkle */}
+
+              <span
+                className="dashboard-orbit-sparkle absolute left-[-7px] top-1/2 text-[#8064C7]"
+                style={{
+                  fontSize: "11px",
+                  animationDelay: "1.2s",
+                }}
+              >
+                ✦
+              </span>
+            </div>
+
+            {/* Inner dashed orbit */}
+
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px] rounded-full border border-dashed border-[#8064C7]/15"
+            />
+
+            {/* Inner counter-rotating orbit */}
+
+            <div
+              className="dashboard-orbit-counter dashboard-orbit-inner pointer-events-none absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px]"
+            >
+              {/* Top-left sparkle */}
+
+              <span
+                className="dashboard-orbit-sparkle absolute left-[15px] top-[13px] text-[#8064C7]"
+                style={{
+                  fontSize: "10px",
+                  animationDelay: "0.4s",
+                }}
+              >
+                ✦
+              </span>
+
+              {/* Bottom-right dot */}
+
+              <span
+                className="dashboard-orbit-bubble absolute bottom-[11px] right-[13px] h-2 w-2 rounded-full bg-[#8064C7]/50"
+                style={{
+                  animationDelay: "1.5s",
+                }}
+              />
+
+              {/* Small top-right dot */}
+
+              <span
+                className="dashboard-orbit-bubble absolute right-[17px] top-[18px] h-1.5 w-1.5 rounded-full bg-[#8064C7]/40"
+                style={{
+                  animationDelay: "0.5s",
+                }}
+              />
+            </div>
+
             {/* Jojo glow */}
+
             <div
               className={`absolute bottom-4 h-24 w-24 rounded-full blur-3xl ${
                 isDarkMode ? "bg-[#8064C7]/20" : "bg-[#8064C7]/15"
@@ -563,12 +765,15 @@ function DashboardPage({ user, onNavigate }) {
             />
 
             {/* Jojo shadow */}
+
             <div
               className="absolute bottom-1 h-3 w-20 rounded-full bg-black/20 blur-md"
               style={{
                 animation: "jojoShadow 3.5s ease-in-out infinite",
               }}
             />
+
+            {/* Jojo */}
 
             <img
               src={jojoImage}
@@ -586,30 +791,24 @@ function DashboardPage({ user, onNavigate }) {
         ================================================= */}
 
         <div className="flex flex-col gap-6 lg:flex-row">
+
           {/* LEFT COLUMN */}
 
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <div
-              className="dashboard-card-reveal dashboard-delay-1 dashboard-interactive-card rounded-3xl"
-            >
+
+            <div className="dashboard-card-reveal dashboard-delay-1 dashboard-interactive-card rounded-3xl">
               <TodaysTasksCard onNavigate={onNavigate} />
             </div>
 
-            <div
-              className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl"
-            >
+            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
               <PerformanceGraphCard onNavigate={onNavigate} />
             </div>
 
-            <div
-              className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl"
-            >
+            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
               <StudySetProgressCard onNavigate={onNavigate} />
             </div>
 
-            <div
-              className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl"
-            >
+            <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl">
               <MotivationalTaglineCard />
             </div>
           </div>
@@ -617,20 +816,18 @@ function DashboardPage({ user, onNavigate }) {
           {/* RIGHT COLUMN */}
 
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <div
-              className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl"
-            >
+
+            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
               <UpcomingExamsCard
                 onNavigate={onNavigate}
                 onSeeAll={() => onNavigate("planner")}
               />
             </div>
 
-            <div
-              className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl"
-            >
+            <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl">
               <ActivityCalendarCard />
             </div>
+
           </div>
         </div>
       </div>

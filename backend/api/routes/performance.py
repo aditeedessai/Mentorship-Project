@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.performance import (
     PerformanceResponse,
     ResultResponse,
@@ -27,7 +28,7 @@ router = APIRouter(tags=["Performance"])
 )
 def get_current_performance(
     attempt_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> PerformanceResponse:
     # Verify attempt ownership through relationship: user_id -> study_set -> quiz_attempt
     att = get_attempt(attempt_id, user_id=current_user.user_id)
@@ -56,7 +57,7 @@ def get_current_performance(
 )
 def get_attempt_results(
     attempt_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> ResultResponse:
     # Verify attempt ownership through relationship: user_id -> study_set -> quiz_attempt
     att = get_attempt(attempt_id, user_id=current_user.user_id)
@@ -90,7 +91,7 @@ def get_attempt_results(
 )
 def get_study_set_results(
     study_set_id: uuid.UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudySetResultsSummaryResponse:
     study_set_id_str = str(study_set_id)
 

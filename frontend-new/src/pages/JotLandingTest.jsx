@@ -120,6 +120,177 @@ const Jojo = ({
         `}
       />
 
+      {/* =================================================
+          ROTATING ORBIT ELEMENTS
+          These are attached directly to the orbit
+          circumference so they rotate around Jojo.
+      ================================================= */}
+
+      {/* OUTER ORBIT */}
+
+      <div
+        className="
+          pointer-events-none
+          absolute
+          left-1/2
+          top-1/2
+          h-[375px]
+          w-[375px]
+          -ml-[187.5px]
+          -mt-[187.5px]
+          rounded-full
+          border
+          border-[#8064C7]/10
+          md:h-[415px]
+          md:w-[415px]
+          md:-ml-[207.5px]
+          md:-mt-[207.5px]
+        "
+      >
+        {/* Rotating wrapper */}
+
+        <div
+          className="
+            absolute
+            inset-0
+            rounded-full
+            orbit-animation
+          "
+        >
+          {/* Top bubble */}
+
+          <span
+            className="
+              absolute
+              left-1/2
+              top-[-6px]
+              h-3.5
+              w-3.5
+              -translate-x-1/2
+              rounded-full
+              bg-[#8064C7]
+              shadow-[0_0_18px_rgba(128,100,199,.45)]
+            "
+          />
+
+          {/* Right bubble */}
+
+          <span
+            className="
+              absolute
+              right-[-6px]
+              top-1/2
+              h-3
+              w-3
+              -translate-y-1/2
+              rounded-full
+              bg-[#98E8DE]
+              shadow-[0_0_16px_rgba(152,232,222,.45)]
+            "
+          />
+
+          {/* Bottom bubble */}
+
+          <span
+            className="
+              absolute
+              bottom-[-6px]
+              left-1/2
+              h-2.5
+              w-2.5
+              -translate-x-1/2
+              rounded-full
+              bg-[#A58CDD]
+              shadow-[0_0_16px_rgba(165,140,221,.4)]
+            "
+          />
+
+          {/* Left sparkle */}
+
+          <span
+            className="
+              absolute
+              left-[-5px]
+              top-1/2
+              flex
+              h-3
+              w-3
+              -translate-y-1/2
+              items-center
+              justify-center
+              text-[#45A9A9]
+            "
+          >
+            ✦
+          </span>
+        </div>
+      </div>
+
+      {/* INNER ORBIT */}
+
+      <div
+        className="
+          pointer-events-none
+          absolute
+          left-1/2
+          top-1/2
+          h-[345px]
+          w-[345px]
+          -ml-[172.5px]
+          -mt-[172.5px]
+          rounded-full
+          md:h-[385px]
+          md:w-[385px]
+          md:-ml-[192.5px]
+          md:-mt-[192.5px]
+        "
+      >
+        <div
+          className="
+            absolute
+            inset-0
+            rounded-full
+            orbit-animation
+          "
+          style={{
+            animationDirection: "reverse",
+            animationDuration: "15s",
+          }}
+        >
+          {/* Small lavender bubble */}
+
+          <span
+            className="
+              absolute
+              left-1/2
+              top-[-4px]
+              h-2
+              w-2
+              -translate-x-1/2
+              rounded-full
+              bg-[#A58CDD]
+              shadow-[0_0_12px_rgba(165,140,221,.5)]
+            "
+          />
+
+          {/* Small mint bubble */}
+
+          <span
+            className="
+              absolute
+              bottom-[-4px]
+              left-1/2
+              h-2
+              w-2
+              -translate-x-1/2
+              rounded-full
+              bg-[#98E8DE]
+              shadow-[0_0_12px_rgba(152,232,222,.5)]
+            "
+          />
+        </div>
+      </div>
+
       {/* Circle */}
 
       <div
@@ -2012,7 +2183,7 @@ const JotLandingTest = ({
                 text-4xl
                 font-black
                 leading-[.94]
-                tracking-[-.065em]
+                tracking-[-0.045em]
                 sm:text-5xl
                 md:text-6xl
                 lg:text-7xl
@@ -2024,7 +2195,9 @@ const JotLandingTest = ({
                 }
               `}
             >
-              Turn your notes
+              <span className="tracking-[0.001em]">
+                Turn your notes
+              </span>
               <br />
 
               <span
@@ -2042,7 +2215,9 @@ const JotLandingTest = ({
 
               <br />
 
-              study.
+              <span className="tracking-[0.001em]">
+                study.
+              </span>
             </h1>
 
             {/* UNDERLINE */}
