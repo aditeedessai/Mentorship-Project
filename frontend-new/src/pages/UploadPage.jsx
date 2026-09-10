@@ -34,6 +34,7 @@ const uploadAnimationStyles = `
       opacity: 0;
       transform: translateY(18px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -45,6 +46,7 @@ const uploadAnimationStyles = `
       opacity: 0;
       transform: translateY(-18px) scale(0.98);
     }
+
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
@@ -56,11 +58,16 @@ const uploadAnimationStyles = `
       opacity: 0;
       transform: translateY(25px) scale(0.985);
     }
+
     to {
       opacity: 1;
       transform: translateY(0) scale(1);
     }
   }
+
+  /* =======================================================
+     JOJO
+  ======================================================= */
 
   @keyframes jojoFloat {
     0%,
@@ -110,6 +117,93 @@ const uploadAnimationStyles = `
     }
   }
 
+  /* =======================================================
+     JOJO ORBIT
+  ======================================================= */
+
+  @keyframes uploadOrbitClockwise {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes uploadOrbitCounter {
+    from {
+      transform: rotate(360deg);
+    }
+
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes uploadOrbitBubble {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 0.75;
+    }
+
+    50% {
+      transform: scale(1.25) rotate(20deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes uploadOrbitSparkle {
+    0%,
+    100% {
+      transform: scale(0.85) rotate(0deg);
+      opacity: 0.55;
+    }
+
+    50% {
+      transform: scale(1.2) rotate(90deg);
+      opacity: 1;
+    }
+  }
+
+  @keyframes uploadOrbitGlow {
+    0%,
+    100% {
+      opacity: 0.12;
+      transform: scale(0.96);
+    }
+
+    50% {
+      opacity: 0.28;
+      transform: scale(1.03);
+    }
+  }
+
+  .upload-orbit-clockwise {
+    animation: uploadOrbitClockwise 13s linear infinite;
+  }
+
+  .upload-orbit-counter {
+    animation: uploadOrbitCounter 18s linear infinite;
+  }
+
+  .upload-orbit-bubble {
+    animation: uploadOrbitBubble 2.7s ease-in-out infinite;
+  }
+
+  .upload-orbit-sparkle {
+    animation: uploadOrbitSparkle 3s ease-in-out infinite;
+  }
+
+  .upload-orbit-glow {
+    animation: uploadOrbitGlow 4s ease-in-out infinite;
+  }
+
+  /* =======================================================
+     UPLOAD ICON
+  ======================================================= */
+
   @keyframes uploadIconFloat {
     0%,
     100% {
@@ -132,6 +226,10 @@ const uploadAnimationStyles = `
     }
   }
 
+  /* =======================================================
+     BORDER
+  ======================================================= */
+
   @keyframes borderGlow {
     0% {
       background-position: 0% 50%;
@@ -148,6 +246,10 @@ const uploadAnimationStyles = `
       opacity: 0.15;
     }
   }
+
+  /* =======================================================
+     BUTTON
+  ======================================================= */
 
   @keyframes buttonShine {
     0% {
@@ -170,6 +272,10 @@ const uploadAnimationStyles = `
       transform: translateY(-3px);
     }
   }
+
+  /* =======================================================
+     FILES
+  ======================================================= */
 
   @keyframes fileEnter {
     from {
@@ -197,6 +303,10 @@ const uploadAnimationStyles = `
     }
   }
 
+  /* =======================================================
+     FORMAT CARDS
+  ======================================================= */
+
   @keyframes formatEnter {
     from {
       opacity: 0;
@@ -220,6 +330,10 @@ const uploadAnimationStyles = `
     }
   }
 
+  /* =======================================================
+     INFO
+  ======================================================= */
+
   @keyframes infoShimmer {
     0% {
       transform: translateX(-120%);
@@ -229,6 +343,10 @@ const uploadAnimationStyles = `
       transform: translateX(120%);
     }
   }
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
 
   @keyframes loadingJojo {
     0%,
@@ -279,6 +397,10 @@ const uploadAnimationStyles = `
     }
   }
 
+  /* =======================================================
+     ANIMATION CLASSES
+  ======================================================= */
+
   .upload-page-animation {
     animation: uploadPageEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -313,11 +435,19 @@ const uploadAnimationStyles = `
     transform-origin: left center;
   }
 
+  /* =======================================================
+     UPLOAD ICON
+  ======================================================= */
+
   .upload-icon-animation {
     animation:
       uploadIconFloat 3s ease-in-out infinite,
       uploadIconPulse 2.5s ease-in-out infinite;
   }
+
+  /* =======================================================
+     UPLOAD ZONE
+  ======================================================= */
 
   .upload-zone-animation {
     position: relative;
@@ -331,6 +461,7 @@ const uploadAnimationStyles = `
     pointer-events: none;
     border-radius: inherit;
     padding: 1px;
+
     background: linear-gradient(
       110deg,
       transparent,
@@ -339,11 +470,14 @@ const uploadAnimationStyles = `
       rgba(128, 100, 199, 0.05),
       transparent
     );
+
     background-size: 250% 100%;
     animation: borderGlow 4s ease-in-out infinite;
+
     -webkit-mask:
       linear-gradient(#fff 0 0) content-box,
       linear-gradient(#fff 0 0);
+
     -webkit-mask-composite: xor;
     mask-composite: exclude;
   }
@@ -352,6 +486,10 @@ const uploadAnimationStyles = `
     position: relative;
     z-index: 1;
   }
+
+  /* =======================================================
+     SHINE
+  ======================================================= */
 
   .animated-shine {
     position: relative;
@@ -365,12 +503,14 @@ const uploadAnimationStyles = `
     left: 0;
     width: 35%;
     height: 100%;
+
     background: linear-gradient(
       90deg,
       transparent,
       rgba(255, 255, 255, 0.18),
       transparent
     );
+
     transform: translateX(-140%);
     pointer-events: none;
   }
@@ -395,6 +535,10 @@ const uploadAnimationStyles = `
     transform: rotate(-8deg) scale(1.1);
   }
 
+  /* =======================================================
+     SELECTED FILES
+  ======================================================= */
+
   .selected-file-animation {
     animation: fileEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -406,6 +550,10 @@ const uploadAnimationStyles = `
   .selected-file-animation:hover .selected-file-icon-animation {
     transform: scale(1.08) rotate(3deg);
   }
+
+  /* =======================================================
+     FORMAT CARDS
+  ======================================================= */
 
   .format-card-animation {
     animation: formatEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -423,6 +571,10 @@ const uploadAnimationStyles = `
     transition: transform 0.3s ease;
   }
 
+  /* =======================================================
+     INFO CARD
+  ======================================================= */
+
   .info-card-animation {
     position: relative;
     overflow: hidden;
@@ -436,18 +588,24 @@ const uploadAnimationStyles = `
     width: 35%;
     height: 100%;
     pointer-events: none;
+
     background: linear-gradient(
       90deg,
       transparent,
       rgba(128, 100, 199, 0.08),
       transparent
     );
+
     transform: translateX(-120%);
   }
 
   .info-card-animation:hover::after {
     animation: infoShimmer 0.9s ease-out;
   }
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
 
   .sparkle-animation {
     animation: sparkleSpin 2.5s ease-in-out infinite;
@@ -460,6 +618,10 @@ const uploadAnimationStyles = `
   .loading-glow-animation {
     animation: loadingGlow 3s ease-in-out infinite;
   }
+
+  /* =======================================================
+     CREATE BUTTON
+  ======================================================= */
 
   .create-button-animation {
     position: relative;
@@ -474,12 +636,14 @@ const uploadAnimationStyles = `
     width: 30%;
     height: 100%;
     pointer-events: none;
+
     background: linear-gradient(
       90deg,
       transparent,
       rgba(255, 255, 255, 0.18),
       transparent
     );
+
     transform: translateX(-140%);
   }
 
@@ -495,6 +659,10 @@ const uploadAnimationStyles = `
     transform: translateY(-3px);
   }
 
+  /* =======================================================
+     CANCEL / REMOVE
+  ======================================================= */
+
   .cancel-button-animation:hover {
     transform: translateY(-2px);
   }
@@ -505,6 +673,26 @@ const uploadAnimationStyles = `
 
   .remove-button-animation svg {
     transition: transform 0.25s ease;
+  }
+
+  /* =======================================================
+     ACCESSIBILITY
+  ======================================================= */
+
+  @media (max-width: 768px) {
+    .upload-orbit-outer {
+      width: 150px !important;
+      height: 150px !important;
+      margin-left: -75px !important;
+      margin-top: -75px !important;
+    }
+
+    .upload-orbit-inner {
+      width: 115px !important;
+      height: 115px !important;
+      margin-left: -57.5px !important;
+      margin-top: -57.5px !important;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -522,7 +710,12 @@ const uploadAnimationStyles = `
     .selected-file-icon-animation,
     .sparkle-animation,
     .loading-jojo-animation,
-    .loading-glow-animation {
+    .loading-glow-animation,
+    .upload-orbit-clockwise,
+    .upload-orbit-counter,
+    .upload-orbit-bubble,
+    .upload-orbit-sparkle,
+    .upload-orbit-glow {
       animation: none !important;
     }
 
@@ -743,8 +936,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
         <div className="flex w-full max-w-xl flex-col items-center px-6 py-12 text-center upload-page-animation">
           {/* JOJO */}
+
           <div className="relative mb-8 flex h-56 w-56 items-center justify-center">
             {/* Soft glow */}
+
             <div
               className={`absolute inset-0 rounded-full blur-3xl loading-glow-animation ${
                 isDarkMode
@@ -761,11 +956,13 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* HEADING */}
+
           <h2 className="text-2xl font-black tracking-tight sm:text-3xl">
             Jojo is reading...
           </h2>
 
           {/* STATUS MESSAGE */}
+
           <p
             className={`mt-3 max-w-md text-sm leading-relaxed ${
               isDarkMode
@@ -778,15 +975,18 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </p>
 
           {/* LOADING DOTS */}
+
           <div className="mt-7 flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: "0ms" }}
             />
+
             <span
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: "150ms" }}
             />
+
             <span
               className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
               style={{ animationDelay: "300ms" }}
@@ -794,6 +994,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* INFORMATION CARD */}
+
           <div
             className={`mt-8 w-full max-w-sm rounded-2xl border px-5 py-4 backdrop-blur-xl ${
               isDarkMode
@@ -821,6 +1022,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* DON'T CLOSE MESSAGE */}
+
           <p
             className={`mt-5 text-[11px] ${
               isDarkMode
@@ -843,6 +1045,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       {/* =====================================================
           HEADER
       ===================================================== */}
+
       <div
         className={`relative mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 upload-header-animation ${
           isDarkMode
@@ -851,7 +1054,9 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         }`}
       >
         <div className="relative z-10 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+
           {/* LEFT CONTENT */}
+
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
               Create Study Set
@@ -870,21 +1075,132 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* =================================================
-              JOJO HEADER MASCOT
+              JOJO HEADER MASCOT + ROTATING ELEMENTS
           ================================================= */}
-          <div className="relative flex h-[145px] w-[320px] shrink-0 items-end">
-            {/* Soft glow */}
-            <div className="pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl jojo-upload-glow" />
 
-            {/* Jojo */}
-            <img
-              src={jojoReading}
-              alt="Jojo reading"
-              className="absolute bottom-0 left-0 z-10 h-[135px] w-[135px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px] jojo-upload-float"
+          <div className="relative flex h-[170px] w-[330px] shrink-0 items-center justify-center">
+
+            {/* Outer soft orbit glow */}
+
+            <div
+              className="upload-orbit-glow pointer-events-none absolute left-1/2 top-1/2 h-[205px] w-[205px] -ml-[102.5px] -mt-[102.5px] rounded-full bg-[#8064C7]/5 blur-xl"
             />
 
-            {/* Speech Bubble */}
-            <div className="absolute left-[145px] top-[18px] z-20 speech-bubble-animation">
+            {/* Outer static orbit ring */}
+
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[190px] w-[190px] -ml-[95px] -mt-[95px] rounded-full border border-[#8064C7]/15"
+            />
+
+            {/* Outer rotating orbit */}
+
+            <div
+              className="upload-orbit-clockwise upload-orbit-outer pointer-events-none absolute left-1/2 top-1/2 h-[190px] w-[190px] -ml-[95px] -mt-[95px]"
+            >
+              {/* Top dot */}
+
+              <span className="upload-orbit-bubble absolute left-1/2 top-[-5px] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#8064C7]/60" />
+
+              {/* Right sparkle */}
+
+              <span
+                className="upload-orbit-sparkle absolute right-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]"
+                style={{
+                  fontSize: "16px",
+                }}
+              >
+                ✦
+              </span>
+
+              {/* Bottom dot */}
+
+              <span
+                className="upload-orbit-bubble absolute bottom-[-5px] left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-[#8064C7]/45"
+                style={{
+                  animationDelay: "0.8s",
+                }}
+              />
+
+              {/* Left sparkle */}
+
+              <span
+                className="upload-orbit-sparkle absolute left-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]"
+                style={{
+                  fontSize: "11px",
+                  animationDelay: "1.1s",
+                }}
+              >
+                ✦
+              </span>
+            </div>
+
+            {/* Inner static dashed ring */}
+
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px] rounded-full border border-dashed border-[#8064C7]/15"
+            />
+
+            {/* Inner counter-clockwise orbit */}
+
+            <div
+              className="upload-orbit-counter upload-orbit-inner pointer-events-none absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px]"
+            >
+              {/* Top-left sparkle */}
+
+              <span
+                className="upload-orbit-sparkle absolute left-[13px] top-[12px] text-[#8064C7]"
+                style={{
+                  fontSize: "10px",
+                }}
+              >
+                ✦
+              </span>
+
+              {/* Top-right dot */}
+
+              <span
+                className="upload-orbit-bubble absolute right-[15px] top-[16px] h-1.5 w-1.5 rounded-full bg-[#8064C7]/40"
+                style={{
+                  animationDelay: "0.5s",
+                }}
+              />
+
+              {/* Bottom-right dot */}
+
+              <span
+                className="upload-orbit-bubble absolute bottom-[10px] right-[12px] h-2 w-2 rounded-full bg-[#8064C7]/50"
+                style={{
+                  animationDelay: "1.4s",
+                }}
+              />
+            </div>
+
+            {/* =================================================
+                JOJO
+            ================================================= */}
+
+            <div className="relative z-10 flex h-[145px] w-[145px] items-end justify-center">
+
+              {/* Jojo glow */}
+
+              <div
+                className="pointer-events-none absolute bottom-0 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full bg-[#8064C7]/10 blur-3xl jojo-upload-glow"
+              />
+
+              {/* Jojo */}
+
+              <img
+                src={jojoReading}
+                alt="Jojo reading"
+                className="absolute bottom-0 left-1/2 z-10 h-[135px] w-[135px] -translate-x-1/2 object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px] jojo-upload-float"
+              />
+            </div>
+
+            {/* =================================================
+                SPEECH BUBBLE
+            ================================================= */}
+
+            <div className="absolute left-[calc(50%+65px)] top-[3px] z-20 speech-bubble-animation">
               <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
                 <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
                   Ready when you are! 📖
@@ -895,6 +1211,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 </p>
 
                 {/* Bubble tail */}
+
                 <div className="absolute left-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-b border-l border-[#8064C7]/15 bg-white" />
               </div>
             </div>
@@ -903,6 +1220,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       </div>
 
       {/* ================= SUCCESS MESSAGE ================= */}
+
       {uploadSuccess && (
         <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
           <p className="text-sm font-semibold text-emerald-400">
@@ -912,6 +1230,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       )}
 
       {/* ================= ERROR MESSAGE ================= */}
+
       {uploadError && (
         <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
           <p className="text-sm font-semibold text-red-400">
@@ -921,8 +1240,11 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       )}
 
       {/* ================= MAIN UPLOAD AREA ================= */}
+
       <div className="grid items-stretch gap-6 lg:grid-cols-3">
+
         {/* ================= UPLOAD CARD ================= */}
+
         <div
           className={`flex h-full flex-col rounded-3xl border p-4 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 sm:p-6 upload-main-card-animation ${
             isDarkMode
@@ -982,6 +1304,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   </label>
 
                   {/* Direct Mobile Camera Button */}
+
                   <label
                     className={`animated-shine flex cursor-pointer items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
                       isDarkMode
@@ -1118,6 +1441,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         </div>
 
         {/* ================= STUDY SET NAME & ACTIONS ================= */}
+
         <div
           className={`flex h-full flex-col justify-between rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 upload-name-card-animation ${
             isDarkMode
@@ -1195,6 +1519,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       </div>
 
       {/* ================= SUPPORTED FORMATS ================= */}
+
       <div
         className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 upload-formats-animation ${
           isDarkMode
@@ -1218,7 +1543,9 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
           {/* PDF */}
+
           <div
             style={{ animationDelay: "0.42s" }}
             className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
@@ -1252,6 +1579,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* DOCX */}
+
           <div
             style={{ animationDelay: "0.51s" }}
             className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
@@ -1285,6 +1613,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* PPTX */}
+
           <div
             style={{ animationDelay: "0.60s" }}
             className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
@@ -1318,6 +1647,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           </div>
 
           {/* CAMERA / OCR */}
+
           <div
             style={{ animationDelay: "0.69s" }}
             className={`format-card-animation flex items-center gap-3 rounded-2xl border p-3.5 transition-all ${
@@ -1352,6 +1682,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         </div>
 
         {/* INFO */}
+
         <div
           className={`info-card-animation mt-5 rounded-2xl border p-4 ${
             isDarkMode

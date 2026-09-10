@@ -1,24 +1,27 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import {
   User,
   Palette,
   Shield,
   Trash2,
   ChevronRight,
+  Camera,
   Moon,
   Sun,
   LogOut,
   Loader2,
   CheckCircle2,
   X,
-  Settings,
   Calendar,
   GraduationCap,
+  Sparkles,
 } from "lucide-react";
-import { EDUCATION_LEVELS } from "../data/academicOptions";
 
+import { EDUCATION_LEVELS } from "../data/academicOptions";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
+
 import {
   deleteAccount,
   getGoogleCalendarStatus,
@@ -31,6 +34,7 @@ import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 import jojoThinking from "../assets/jojo-thinking.png";
 
+
 const SettingsPage = ({
   user,
   onNavigate,
@@ -40,146 +44,199 @@ const SettingsPage = ({
 }) => {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
-  // =========================================================
-  // STUDENT PROFILE
-  // =========================================================
-  const [studentProfile, setStudentProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  /* =====================================================
+     STATES
+  ===================================================== */
+
+  const [isSendingResetEmail, setIsSendingResetEmail] =
+    useState(false);
+
+  const [changePasswordError, setChangePasswordError] =
+    useState("");
+
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] =
+    useState(false);
+
+  const [confirmAction, setConfirmAction] =
+    useState(null);
+
+  const [isConfirmLoading, setIsConfirmLoading] =
+    useState(false);
+
+  const [confirmError, setConfirmError] =
+    useState(null);
+
+  const [studySetsDeletedMessage, setStudySetsDeletedMessage] =
+    useState("");
+
+  const [studentProfile, setStudentProfile] =
+    useState(null);
+
+  const [profileLoading, setProfileLoading] =
+    useState(true);
+
+  const [googleCalendarConnected, setGoogleCalendarConnected] =
+    useState(false);
+
+  const [googleCalendarLoading, setGoogleCalendarLoading] =
+    useState(false);
+
+  const [googleCalendarError, setGoogleCalendarError] =
+    useState("");
+
+  const [googleCalendarSuccess, setGoogleCalendarSuccess] =
+    useState("");
+
+
+  /* =====================================================
+     LOAD STUDENT PROFILE
+  ===================================================== */
 
   useEffect(() => {
     let isMounted = true;
-    const fetchStudentProfile = async () => {
-      if (!user?.id) return;
-      setLoadingProfile(true);
+
+    const loadProfile = async () => {
+      if (!user?.id) {
+        if (isMounted) {
+          setProfileLoading(false);
+        }
+        return;
+      }
+
       try {
+        setProfileLoading(true);
+
         const { data, error } = await supabase
           .from("student_profiles")
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (!error && data && isMounted) {
-          setStudentProfile(data);
+        if (error) {
+          console.error(
+            "Failed to load student profile:",
+            error
+          );
+          return;
         }
-      } catch (err) {
-        console.error("Error fetching student profile in Settings:", err);
+
+        if (isMounted) {
+          setStudentProfile(data || null);
+        }
+      } catch (error) {
+        console.error(
+          "Unexpected error loading student profile:",
+          error
+        );
       } finally {
-        if (isMounted) setLoadingProfile(false);
+        if (isMounted) {
+          setProfileLoading(false);
+        }
       }
     };
 
-    fetchStudentProfile();
+    loadProfile();
+
     return () => {
       isMounted = false;
     };
   }, [user]);
 
-  // =========================================================
-  // CHANGE PASSWORD
-  // =========================================================
-  const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
-  const [changePasswordError, setChangePasswordError] = useState("");
 
-  // =========================================================
-  // PRIVACY POLICY
-  // =========================================================
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-
-  // =========================================================
-  // DELETE CONFIRMATION
-  // =========================================================
-  const [confirmAction, setConfirmAction] = useState(null);
-  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
-  const [confirmError, setConfirmError] = useState(null);
-  const [studySetsDeletedMessage, setStudySetsDeletedMessage] = useState("");
-
-  // =========================================================
-  // GOOGLE CALENDAR
-  // =========================================================
-  const [gcalConnected, setGcalConnected] = useState(false);
-  const [gcalEmail, setGcalEmail] = useState(null);
-  const [gcalLoading, setGcalLoading] = useState(true);
-  const [gcalActionLoading, setGcalActionLoading] = useState(false);
-  const [gcalError, setGcalError] = useState("");
-  const [gcalSuccess, setGcalSuccess] = useState("");
+  /* =====================================================
+     GOOGLE CALENDAR STATUS
+  ===================================================== */
 
   useEffect(() => {
-    let mounted = true;
-    getGoogleCalendarStatus()
-      .then((data) => {
-        if (mounted) {
-          setGcalConnected(data.connected);
-          setGcalEmail(data.email || null);
-        }
-      })
-      .catch(() => {
-        if (mounted) setGcalConnected(false);
-      })
-      .finally(() => {
-        if (mounted) setGcalLoading(false);
-      });
+    let isMounted = true;
 
-    // Check for OAuth redirect params
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("gcal_connected") === "true") {
-      setGcalSuccess("Google Calendar connected successfully!");
-      setGcalConnected(true);
-      // Re-fetch to get email
-      getGoogleCalendarStatus()
-        .then((data) => {
-          if (mounted) {
-            setGcalConnected(data.connected);
-            setGcalEmail(data.email || null);
-          }
-        })
-        .catch(() => {});
-      // Clean URL
-      window.history.replaceState({}, "", window.location.pathname);
-    } else if (params.get("gcal_error")) {
-      setGcalError("Could not connect Google Calendar. Please try again.");
-      window.history.replaceState({}, "", window.location.pathname);
-    }
+    const loadGoogleCalendarStatus = async () => {
+      if (!user?.id) return;
+
+      try {
+        const status = await getGoogleCalendarStatus();
+
+        if (!isMounted) return;
+
+        if (typeof status === "boolean") {
+          setGoogleCalendarConnected(status);
+        } else {
+          setGoogleCalendarConnected(
+            Boolean(
+              status?.connected ??
+                status?.is_connected ??
+                status?.google_calendar_connected
+            )
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Could not load Google Calendar status:",
+          error
+        );
+      }
+    };
+
+    loadGoogleCalendarStatus();
 
     return () => {
-      mounted = false;
+      isMounted = false;
     };
+  }, [user]);
+
+
+  /* =====================================================
+     GOOGLE CALENDAR CALLBACK
+  ===================================================== */
+
+  useEffect(() => {
+    const params = new URLSearchParams(
+      window.location.search
+    );
+
+    const connected =
+      params.get("gcal_connected");
+
+    const calendarError =
+      params.get("gcal_error");
+
+    if (connected === "true") {
+      setGoogleCalendarConnected(true);
+
+      setGoogleCalendarSuccess(
+        "Google Calendar connected successfully."
+      );
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    }
+
+    if (calendarError) {
+      setGoogleCalendarError(
+        decodeURIComponent(calendarError)
+      );
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    }
   }, []);
 
-  const handleConnectGcal = async () => {
-    setGcalActionLoading(true);
-    setGcalError("");
-    try {
-      const data = await getGoogleCalendarConnectUrl();
-      if (data.auth_url) {
-        window.location.href = data.auth_url;
-      }
-    } catch (err) {
-      setGcalError("Failed to start Google Calendar connection.");
-      setGcalActionLoading(false);
-    }
-  };
 
-  const handleDisconnectGcal = async () => {
-    setGcalActionLoading(true);
-    setGcalError("");
-    try {
-      await disconnectGoogleCalendar();
-      setGcalConnected(false);
-      setGcalEmail(null);
-      setGcalSuccess("");
-    } catch (err) {
-      setGcalError("Failed to disconnect. Please try again.");
-    } finally {
-      setGcalActionLoading(false);
-    }
-  };
+  /* =====================================================
+     CHANGE PASSWORD
+  ===================================================== */
 
-  // =========================================================
-  // CHANGE PASSWORD
-  // =========================================================
   const handleChangePasswordClick = async () => {
     if (!user?.email) {
-      setChangePasswordError("No email on file for this account.");
+      setChangePasswordError(
+        "No email on file for this account."
+      );
       return;
     }
 
@@ -187,28 +244,35 @@ const SettingsPage = ({
     setIsSendingResetEmail(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+      const { error } =
+        await supabase.auth.resetPasswordForEmail(
+          user.email
+        );
 
       if (error) {
         setChangePasswordError(
-          error.message || "Failed to send verification code."
+          error.message ||
+            "Failed to send verification code."
         );
         return;
       }
 
       onNavigate?.("change-password-otp");
-    } catch (err) {
+    } catch (error) {
       setChangePasswordError(
-        err.message || "An unexpected error occurred."
+        error.message ||
+          "An unexpected error occurred."
       );
     } finally {
       setIsSendingResetEmail(false);
     }
   };
 
-  // =========================================================
-  // DELETE CONFIRMATION
-  // =========================================================
+
+  /* =====================================================
+     DELETE MODAL
+  ===================================================== */
+
   const openConfirm = (action) => {
     setConfirmAction(action);
     setConfirmError(null);
@@ -237,11 +301,18 @@ const SettingsPage = ({
         setStudySetsDeletedMessage(
           "All your study sets have been permanently deleted."
         );
-      } else if (confirmAction === "account") {
+      }
+
+      if (confirmAction === "account") {
         await deleteAccount();
         await supabase.auth.signOut();
       }
-    } catch {
+    } catch (error) {
+      console.error(
+        "Settings destructive action failed:",
+        error
+      );
+
       setConfirmError(
         confirmAction === "account"
           ? "Couldn't delete your account. Please try again."
@@ -252,9 +323,11 @@ const SettingsPage = ({
     }
   };
 
-  // =========================================================
-  // DELETE MODAL CONFIG
-  // =========================================================
+
+  /* =====================================================
+     DELETE MODAL CONFIG
+  ===================================================== */
+
   const confirmModalConfig =
     confirmAction === "account"
       ? {
@@ -272,21 +345,141 @@ const SettingsPage = ({
           confirmText: "Delete All",
         };
 
+
+  /* =====================================================
+     GOOGLE CALENDAR CONNECT
+  ===================================================== */
+
+  const handleConnectGoogleCalendar = async () => {
+    try {
+      setGoogleCalendarError("");
+      setGoogleCalendarSuccess("");
+      setGoogleCalendarLoading(true);
+
+      const url =
+        await getGoogleCalendarConnectUrl();
+
+      if (!url) {
+        throw new Error(
+          "Could not generate Google Calendar connection URL."
+        );
+      }
+
+      window.location.href = url;
+    } catch (error) {
+      console.error(
+        "Google Calendar connection failed:",
+        error
+      );
+
+      setGoogleCalendarError(
+        error.message ||
+          "Could not connect Google Calendar."
+      );
+
+      setGoogleCalendarLoading(false);
+    }
+  };
+
+
+  /* =====================================================
+     GOOGLE CALENDAR DISCONNECT
+  ===================================================== */
+
+  const handleDisconnectGoogleCalendar = async () => {
+    try {
+      setGoogleCalendarError("");
+      setGoogleCalendarSuccess("");
+      setGoogleCalendarLoading(true);
+
+      await disconnectGoogleCalendar();
+
+      setGoogleCalendarConnected(false);
+
+      setGoogleCalendarSuccess(
+        "Google Calendar disconnected successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Google Calendar disconnect failed:",
+        error
+      );
+
+      setGoogleCalendarError(
+        error.message ||
+          "Could not disconnect Google Calendar."
+      );
+    } finally {
+      setGoogleCalendarLoading(false);
+    }
+  };
+
+
+  /* =====================================================
+     EDUCATION LABEL
+  ===================================================== */
+
+  const getEducationLabel = () => {
+    if (!studentProfile?.education_level) {
+      return "Not provided";
+    }
+
+    const found = EDUCATION_LEVELS?.find(
+      (level) =>
+        level.value ===
+        studentProfile.education_level
+    );
+
+    return (
+      found?.label ||
+      studentProfile.education_level
+    );
+  };
+
+
+  /* =====================================================
+     COMPETITIVE EXAMS
+  ===================================================== */
+
+  const getCompetitiveExams = () => {
+    const exams =
+      studentProfile?.competitive_exams;
+
+    if (!exams) {
+      return "None";
+    }
+
+    if (Array.isArray(exams)) {
+      if (exams.length === 0) {
+        return "None";
+      }
+
+      return exams.join(", ");
+    }
+
+    if (String(exams).trim() === "") {
+      return "None";
+    }
+
+    return String(exams);
+  };
+
+
   return (
-    <>
+    <div className="settings-page-enter w-full max-w-none space-y-6 pb-12">
+
       {/* =====================================================
-          SETTINGS PAGE ANIMATION STYLES
+          ANIMATIONS
       ===================================================== */}
+
       <style>{`
-        /* -----------------------------------------------------
-           PAGE INTRO
-        ----------------------------------------------------- */
 
         @keyframes settingsPageEnter {
           from {
             opacity: 0;
-            transform: translateY(18px);
+            transform: translateY(14px);
           }
+
           to {
             opacity: 1;
             transform: translateY(0);
@@ -294,11 +487,12 @@ const SettingsPage = ({
         }
 
         @keyframes settingsHeaderEnter {
-          0% {
+          from {
             opacity: 0;
             transform: translateY(-16px) scale(0.98);
           }
-          100% {
+
+          to {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
@@ -306,141 +500,144 @@ const SettingsPage = ({
 
         @keyframes settingsSweep {
           0% {
-            transform: translateX(-120%) rotate(8deg);
+            transform: translateX(-120%);
             opacity: 0;
           }
+
           20% {
-            opacity: 0.35;
+            opacity: 0.7;
           }
-          55% {
-            opacity: 0.08;
+
+          50% {
+            opacity: 0.25;
           }
+
           100% {
-            transform: translateX(180%) rotate(8deg);
+            transform: translateX(120%);
             opacity: 0;
           }
         }
 
-        /* -----------------------------------------------------
-           JOJO
-        ----------------------------------------------------- */
-
-        @keyframes jojoThinkFloat {
+        @keyframes jojoThinkingFloat {
           0%,
           100% {
-            transform: translateY(0) rotate(0deg);
+            transform: translateY(0) rotate(-1deg);
           }
-          35% {
-            transform: translateY(-7px) rotate(-1.5deg);
-          }
-          65% {
-            transform: translateY(-3px) rotate(1deg);
+
+          50% {
+            transform: translateY(-9px) rotate(1deg);
           }
         }
 
         @keyframes jojoGlowPulse {
           0%,
           100% {
+            opacity: 0.35;
             transform: scale(0.92);
-            opacity: 0.45;
           }
+
           50% {
-            transform: scale(1.12);
-            opacity: 0.75;
+            opacity: 0.65;
+            transform: scale(1.08);
           }
         }
 
         @keyframes thoughtBubble {
-          0% {
+          0%,
+          100% {
             opacity: 0;
-            transform: translateY(7px) scale(0.92);
+            transform: translateY(5px) scale(0.94);
           }
-          15%,
-          80% {
+
+          12%,
+          82% {
             opacity: 1;
             transform: translateY(0) scale(1);
           }
-          100% {
+
+          92% {
             opacity: 0;
-            transform: translateY(-4px) scale(0.98);
+            transform: translateY(-3px) scale(0.98);
           }
         }
 
         @keyframes thoughtDots {
           0%,
           100% {
-            opacity: 0.25;
-            transform: scale(0.85);
+            opacity: 0.35;
+            transform: translateY(0);
           }
+
           50% {
-            opacity: 0.8;
+            opacity: 1;
+            transform: translateY(-2px);
+          }
+        }
+
+        @keyframes settingsOrbitClockwise {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes settingsOrbitCounter {
+          from {
+            transform: rotate(360deg);
+          }
+
+          to {
+            transform: rotate(0deg);
+          }
+        }
+
+        @keyframes settingsOrbitBubble {
+          0%,
+          100% {
             transform: scale(1);
           }
+
+          50% {
+            transform: scale(1.35);
+          }
         }
 
-        /* -----------------------------------------------------
-           SECTION ENTRANCE
-        ----------------------------------------------------- */
-
-        @keyframes settingsSectionProfile {
-          from {
-            opacity: 0;
-            transform: translateX(-28px) rotate(-0.5deg);
+        @keyframes settingsOrbitSparkle {
+          0%,
+          100% {
+            opacity: 0.45;
+            transform: rotate(0deg) scale(0.8);
           }
-          to {
+
+          50% {
             opacity: 1;
-            transform: translateX(0) rotate(0);
+            transform: rotate(18deg) scale(1.15);
           }
         }
 
-        @keyframes settingsSectionAppearance {
-          from {
-            opacity: 0;
-            transform: translateY(28px) scale(0.97);
+        @keyframes settingsOrbitPulse {
+          0%,
+          100% {
+            opacity: 0.45;
           }
-          to {
+
+          50% {
             opacity: 1;
-            transform: translateY(0) scale(1);
           }
         }
 
-        @keyframes settingsSectionSecurity {
+        @keyframes settingsSectionReveal {
           from {
             opacity: 0;
-            transform: translateX(28px) rotate(0.5deg);
+            transform: translateY(18px);
           }
-          to {
-            opacity: 1;
-            transform: translateX(0) rotate(0);
-          }
-        }
 
-        @keyframes settingsSectionDanger {
-          from {
-            opacity: 0;
-            transform: translateY(32px);
-          }
           to {
             opacity: 1;
             transform: translateY(0);
-          }
-        }
-
-        /* -----------------------------------------------------
-           ICONS
-        ----------------------------------------------------- */
-
-        @keyframes settingsIconReveal {
-          0% {
-            opacity: 0;
-            transform: scale(0.65) rotate(-20deg);
-          }
-          70% {
-            transform: scale(1.08) rotate(4deg);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) rotate(0);
           }
         }
 
@@ -449,1135 +646,1480 @@ const SettingsPage = ({
           100% {
             transform: translateY(0);
           }
+
           50% {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
           }
         }
-
-        /* -----------------------------------------------------
-           PROFILE AVATAR
-        ----------------------------------------------------- */
 
         @keyframes avatarEnter {
-          0% {
-            opacity: 0;
-            transform: scale(0.65) rotate(-8deg);
-          }
-          75% {
-            transform: scale(1.05) rotate(2deg);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) rotate(0);
-          }
-        }
-
-        @keyframes avatarRing {
-          0% {
-            transform: scale(0.88);
-            opacity: 0;
-          }
-          40% {
-            opacity: 0.35;
-          }
-          100% {
-            transform: scale(1.28);
-            opacity: 0;
-          }
-        }
-
-        /* -----------------------------------------------------
-           THEME SWITCH
-        ----------------------------------------------------- */
-
-        @keyframes themeIconEntrance {
           from {
             opacity: 0;
-            transform: rotate(-90deg) scale(0.5);
+            transform: scale(0.8);
           }
+
           to {
             opacity: 1;
-            transform: rotate(0) scale(1);
-          }
-        }
-
-        @keyframes themeGlow {
-          0%,
-          100% {
-            box-shadow: 0 0 0 rgba(128, 100, 199, 0);
-          }
-          50% {
-            box-shadow: 0 0 22px rgba(128, 100, 199, 0.22);
-          }
-        }
-
-        /* -----------------------------------------------------
-           SECURITY ROW
-        ----------------------------------------------------- */
-
-        @keyframes securityLine {
-          from {
-            transform: scaleX(0);
-            transform-origin: left;
-          }
-          to {
-            transform: scaleX(1);
-            transform-origin: left;
-          }
-        }
-
-        /* -----------------------------------------------------
-           SUCCESS
-        ----------------------------------------------------- */
-
-        @keyframes successPop {
-          0% {
-            opacity: 0;
-            transform: translateY(-8px) scale(0.97);
-          }
-          70% {
-            transform: translateY(2px) scale(1.01);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        /* -----------------------------------------------------
-           DANGER ZONE
-        ----------------------------------------------------- */
-
-        @keyframes dangerGlow {
-          0%,
-          100% {
-            box-shadow: 0 0 0 rgba(239, 68, 68, 0);
-          }
-          50% {
-            box-shadow: 0 0 28px rgba(239, 68, 68, 0.06);
-          }
-        }
-
-        @keyframes dangerIconPulse {
-          0%,
-          100% {
             transform: scale(1);
           }
-          50% {
-            transform: scale(1.06);
-          }
         }
-
-        /* -----------------------------------------------------
-           BUTTONS
-        ----------------------------------------------------- */
 
         @keyframes buttonShimmer {
           0% {
             transform: translateX(-130%);
           }
+
           100% {
             transform: translateX(130%);
           }
         }
 
-        @keyframes logoutIcon {
+        @keyframes successPop {
           0% {
-            transform: translateX(0);
+            opacity: 0;
+            transform: scale(0.96);
           }
-          50% {
-            transform: translateX(4px);
-          }
+
           100% {
-            transform: translateX(0);
+            opacity: 1;
+            transform: scale(1);
           }
         }
 
-        /* -----------------------------------------------------
-           ANIMATION CLASSES
-        ----------------------------------------------------- */
+
+        /* ===================================================
+           PAGE
+        =================================================== */
 
         .settings-page-enter {
-          animation: settingsPageEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1)
-            both;
+          animation: settingsPageEnter 0.65s ease-out both;
         }
 
+
+        /* ===================================================
+           HEADER
+        =================================================== */
+
         .settings-header-enter {
-          position: relative;
-          animation: settingsHeaderEnter 0.75s
-            cubic-bezier(0.22, 1, 0.36, 1) both;
-          animation-delay: 0.04s;
+          animation:
+            settingsHeaderEnter
+            0.75s
+            cubic-bezier(.2,.8,.2,1)
+            both;
         }
 
         .settings-header-enter::after {
           content: "";
-          pointer-events: none;
           position: absolute;
-          top: -40%;
-          left: 0;
-          width: 35%;
-          height: 180%;
+          inset: 0;
+          width: 38%;
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(255, 255, 255, 0.14),
+            rgba(255,255,255,0.28),
             transparent
           );
-          filter: blur(12px);
-          animation: settingsSweep 2.4s ease-in-out 0.8s both;
+          transform: translateX(-130%);
+          animation:
+            settingsSweep
+            4.5s
+            ease-in-out
+            infinite;
+          pointer-events: none;
         }
 
+
+        /* ===================================================
+           JOJO
+        =================================================== */
+
         .jojo-thinking {
-          animation: jojoThinkFloat 4.8s ease-in-out infinite;
-          transform-origin: center bottom;
+          animation:
+            jojoThinkingFloat
+            3.6s
+            ease-in-out
+            infinite;
         }
 
         .jojo-glow {
-          animation: jojoGlowPulse 3.8s ease-in-out infinite;
+          animation:
+            jojoGlowPulse
+            3.4s
+            ease-in-out
+            infinite;
         }
 
+
+        /* ===================================================
+           SPEECH BUBBLE
+        =================================================== */
+
         .thought-bubble {
-          animation: thoughtBubble 5.5s ease-in-out 0.8s infinite;
-          transform-origin: left center;
+          animation:
+            thoughtBubble
+            5s
+            ease-in-out
+            infinite;
         }
 
         .thought-dot {
-          animation: thoughtDots 1.4s ease-in-out infinite;
+          animation:
+            thoughtDots
+            1.4s
+            ease-in-out
+            infinite;
         }
 
-        .thought-dot:nth-child(2) {
-          animation-delay: 0.18s;
+
+        /* ===================================================
+           ORBITS
+        =================================================== */
+
+        .settings-orbit-clockwise {
+          animation:
+            settingsOrbitClockwise
+            12s
+            linear
+            infinite;
         }
 
-        .thought-dot:nth-child(3) {
-          animation-delay: 0.36s;
+        .settings-orbit-counter {
+          animation:
+            settingsOrbitCounter
+            8s
+            linear
+            infinite;
         }
 
-        .settings-profile-section {
-          animation: settingsSectionProfile 0.75s
-            cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+        .settings-orbit-bubble {
+          animation:
+            settingsOrbitBubble
+            2.3s
+            ease-in-out
+            infinite;
         }
 
-        .settings-appearance-section {
-          animation: settingsSectionAppearance 0.75s
-            cubic-bezier(0.22, 1, 0.36, 1) 0.30s both;
+        .settings-orbit-sparkle {
+          animation:
+            settingsOrbitSparkle
+            2.8s
+            ease-in-out
+            infinite;
         }
 
-        .settings-security-section {
-          animation: settingsSectionSecurity 0.75s
-            cubic-bezier(0.22, 1, 0.36, 1) 0.42s both;
+        .settings-orbit-pulse {
+          animation:
+            settingsOrbitPulse
+            2s
+            ease-in-out
+            infinite;
         }
 
-        .settings-danger-section {
-          animation: settingsSectionDanger 0.75s
-            cubic-bezier(0.22, 1, 0.36, 1) 0.54s both;
-          animation-fill-mode: both;
-          animation-iteration-count: 1;
+
+        /* ===================================================
+           SECTIONS
+        =================================================== */
+
+        .settings-section {
+          animation:
+            settingsSectionReveal
+            0.65s
+            ease-out
+            both;
         }
 
-        .settings-section-icon {
-          animation: settingsIconReveal 0.7s
-            cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+        .settings-section:nth-child(1) {
+          animation-delay: 0.08s;
         }
 
-        .settings-profile-section:hover .settings-section-icon,
-        .settings-appearance-section:hover .settings-section-icon,
-        .settings-security-section:hover .settings-section-icon {
-          animation: settingsIconFloat 1.3s ease-in-out infinite;
+        .settings-section:nth-child(2) {
+          animation-delay: 0.16s;
+        }
+
+        .settings-section:nth-child(3) {
+          animation-delay: 0.24s;
+        }
+
+        .settings-section:nth-child(4) {
+          animation-delay: 0.32s;
+        }
+
+        .settings-section:nth-child(5) {
+          animation-delay: 0.40s;
+        }
+
+        .settings-icon-float {
+          animation:
+            settingsIconFloat
+            3s
+            ease-in-out
+            infinite;
         }
 
         .settings-avatar {
-          position: relative;
-          animation: avatarEnter 0.75s
-            cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
-        }
-
-        .settings-avatar::after {
-          content: "";
-          position: absolute;
-          inset: -5px;
-          border: 2px solid rgba(128, 100, 199, 0.25);
-          border-radius: 1rem;
-          pointer-events: none;
-          animation: avatarRing 2.8s ease-out 1.2s infinite;
-        }
-
-        .theme-toggle {
-          animation: themeGlow 3s ease-in-out 1.2s infinite;
-        }
-
-        .theme-toggle span {
-          transition:
-            transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-            box-shadow 0.3s ease;
-        }
-
-        .theme-toggle:hover span {
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
-        }
-
-        .theme-toggle:active span {
-          transform: scale(0.92);
-        }
-
-        .theme-icon-animated {
-          animation: themeIconEntrance 0.45s
-            cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-
-        .security-action {
-          position: relative;
-          overflow: hidden;
-          transition:
-            padding-left 0.3s ease,
-            opacity 0.3s ease,
-            background 0.3s ease;
-        }
-
-        .security-action::before {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          height: 1px;
-          background: currentColor;
-          opacity: 0.08;
-          transform: scaleX(0);
-          transform-origin: left;
-          transition: transform 0.35s ease;
-        }
-
-        .security-action:hover {
-          padding-left: 8px;
-        }
-
-        .security-action:hover::before {
-          transform: scaleX(1);
-        }
-
-        .security-action:hover .security-arrow {
-          transform: translateX(5px);
-          opacity: 0.8;
-        }
-
-        .security-arrow {
-          transition:
-            transform 0.3s ease,
-            opacity 0.3s ease;
-        }
-
-        .success-message {
-          animation: successPop 0.5s
-            cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-
-        .danger-section-animated {
           animation:
-            settingsSectionDanger 0.75s
-              cubic-bezier(0.22, 1, 0.36, 1) 0.54s both,
-            dangerGlow 4s ease-in-out 1.5s infinite;
+            avatarEnter
+            0.7s
+            cubic-bezier(.2,.8,.2,1)
+            both;
         }
 
-        .danger-icon {
-          animation: dangerIconPulse 2.8s ease-in-out 1.5s infinite;
-        }
 
-        .danger-action {
-          transition:
-            transform 0.3s ease,
-            box-shadow 0.3s ease,
-            background 0.3s ease;
-        }
+        /* ===================================================
+           BUTTON SHIMMER
+        =================================================== */
 
-        .danger-action:hover {
-          transform: translateX(4px);
-        }
-
-        .danger-action:hover svg {
-          transform: scale(1.12) rotate(-6deg);
-        }
-
-        .danger-action svg {
-          transition: transform 0.3s ease;
-        }
-
-        .create-action-button {
+        .settings-shimmer {
           position: relative;
           overflow: hidden;
         }
 
-        .logout-button:hover svg {
-          animation: logoutIcon 0.5s ease;
+        .settings-shimmer::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          width: 35%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255,255,255,0.25),
+            transparent
+          );
+          transform: translateX(-130%);
+          animation:
+            buttonShimmer
+            3.5s
+            ease-in-out
+            infinite;
+          pointer-events: none;
         }
 
-        /* -----------------------------------------------------
+
+        /* ===================================================
+           SUCCESS
+        =================================================== */
+
+        .settings-success {
+          animation:
+            successPop
+            0.35s
+            ease-out
+            both;
+        }
+
+
+        /* ===================================================
+           ACTIONS
+        =================================================== */
+
+        .settings-action {
+          transition:
+            transform 0.25s ease,
+            box-shadow 0.25s ease,
+            opacity 0.25s ease;
+        }
+
+        .settings-action:hover {
+          transform: translateY(-2px);
+        }
+
+        .settings-action:active {
+          transform: translateY(0);
+        }
+
+        .settings-action:hover svg {
+          transform: translateX(3px);
+        }
+
+        .settings-action svg {
+          transition:
+            transform 0.25s ease;
+        }
+
+
+        /* ===================================================
+           MOBILE
+        =================================================== */
+
+        @media (max-width: 640px) {
+
+          .settings-jojo-area {
+            width: 270px !important;
+            height: 145px !important;
+          }
+
+          .settings-jojo-wrapper {
+            right: 10px !important;
+            bottom: 0 !important;
+          }
+
+          .settings-orbit-center {
+            right: 0 !important;
+          }
+
+          .settings-speech {
+            right: 115px !important;
+          }
+
+        }
+
+
+        /* ===================================================
            REDUCED MOTION
-        ----------------------------------------------------- */
+        =================================================== */
 
         @media (prefers-reduced-motion: reduce) {
+
           .settings-page-enter,
           .settings-header-enter,
           .jojo-thinking,
           .jojo-glow,
           .thought-bubble,
           .thought-dot,
-          .settings-profile-section,
-          .settings-appearance-section,
-          .settings-security-section,
-          .settings-danger-section,
-          .settings-section-icon,
+          .settings-orbit-clockwise,
+          .settings-orbit-counter,
+          .settings-orbit-bubble,
+          .settings-orbit-sparkle,
+          .settings-orbit-pulse,
+          .settings-section,
+          .settings-icon-float,
           .settings-avatar,
-          .theme-toggle,
-          .theme-icon-animated,
-          .success-message,
-          .danger-section-animated,
-          .danger-icon {
+          .settings-success {
             animation: none !important;
           }
 
-          .settings-header-enter::after {
-            display: none;
-          }
-
-          .security-action,
-          .theme-toggle span,
-          .danger-action {
+          .settings-action,
+          .settings-action svg {
             transition: none !important;
           }
+
         }
+
       `}</style>
 
-      {/* =====================================================
-          PAGE
-      ===================================================== */}
-      <div className="settings-page-enter max-w-4xl space-y-6 pb-12">
-        {/* =====================================================
-            1. HEADER / JOJO
-        ===================================================== */}
-        <div
-          className={`settings-header-enter mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 ${
-            isDarkMode
-              ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-              : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
-          }`}
-        >
-          <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
-            {/* LEFT CONTENT */}
-            <div className="min-w-0">
-              <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
-                Settings
-              </h1>
 
-              <p
-                className={`mt-2 text-xs font-medium sm:text-sm ${
-                  isDarkMode ? "text-white/50" : "text-[#706A78]"
-                }`}
-              >
-                Manage your account and application preferences.
-              </p>
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
+      <div
+        className={`settings-header-enter relative mb-8 overflow-hidden rounded-3xl border p-5 backdrop-blur-2xl sm:p-8 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
+        }`}
+      >
+
+        <div className="flex min-h-[190px] flex-col items-start justify-between gap-6 sm:min-h-[205px] sm:flex-row sm:items-center">
+
+          {/* =================================================
+              TITLE
+          ================================================= */}
+
+          <div className="relative z-10 min-w-0">
+
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
+              Settings
+            </h1>
+
+            <p
+              className={`mt-2 text-xs font-medium sm:text-sm ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-[#706A78]"
+              }`}
+            >
+              Manage your account and application preferences.
+            </p>
+
+          </div>
+
+
+          {/* =================================================
+              JOJO AREA
+          ================================================= */}
+
+          <div className="settings-jojo-area relative h-[175px] w-[380px] shrink-0">
+
+
+            {/* =================================================
+                JOJO GLOW
+            ================================================= */}
+
+            <div
+              className={`jojo-glow pointer-events-none absolute right-[20px] top-1/2 h-[175px] w-[175px] -translate-y-1/2 rounded-full blur-3xl ${
+                isDarkMode
+                  ? "bg-[#8064C7]/20"
+                  : "bg-[#8064C7]/14"
+              }`}
+            />
+
+
+            {/* =================================================
+                OUTER STATIC ORBIT
+                CENTER = SAME AS JOJO
+            ================================================= */}
+
+            <div
+              className="settings-orbit-center pointer-events-none absolute right-[10px] top-1/2 h-[175px] w-[175px] -translate-y-1/2 rounded-full border border-[#8064C7]/15"
+            />
+
+
+            {/* =================================================
+                OUTER ROTATING ORBIT
+            ================================================= */}
+
+            <div
+              className="settings-orbit-center settings-orbit-clockwise pointer-events-none absolute right-[10px] top-1/2 h-[175px] w-[175px] -translate-y-1/2"
+            >
+
+              {/* TOP */}
+
+              <span className="settings-orbit-pulse absolute left-1/2 top-[-5px] h-3 w-3 -translate-x-1/2 rounded-full bg-[#45A9A9]" />
+
+
+              {/* RIGHT */}
+
+              <span className="settings-orbit-bubble absolute right-[-5px] top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#8064C7]" />
+
+
+              {/* BOTTOM */}
+
+              <span className="settings-orbit-pulse absolute bottom-[-5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#45A9A9]" />
+
+
+              {/* LEFT */}
+
+              <span className="absolute left-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[#A58CDD]" />
+
             </div>
 
-            {/* JOJO */}
-            <div className="relative flex h-[150px] w-[330px] shrink-0 items-end">
-              {/* Glow */}
-              <div className="jojo-glow pointer-events-none absolute bottom-0 left-8 h-28 w-28 rounded-full bg-[#8064C7]/10 blur-3xl" />
 
-              {/* Jojo */}
+            {/* =================================================
+                INNER STATIC ORBIT
+            ================================================= */}
+
+            <div
+              className="settings-orbit-center pointer-events-none absolute right-[35px] top-1/2 h-[130px] w-[130px] -translate-y-1/2 rounded-full border border-dashed border-[#8064C7]/20"
+            />
+
+
+            {/* =================================================
+                INNER ROTATING ORBIT
+            ================================================= */}
+
+            <div
+              className="settings-orbit-center settings-orbit-counter pointer-events-none absolute right-[35px] top-1/2 h-[130px] w-[130px] -translate-y-1/2"
+            >
+
+              <Sparkles
+                size={15}
+                className="settings-orbit-sparkle absolute left-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]"
+              />
+
+              <span className="settings-orbit-pulse absolute right-[-4px] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#45A9A9]" />
+
+              <span className="settings-orbit-bubble absolute bottom-[-4px] left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-[#8064C7]" />
+
+            </div>
+
+
+            {/* =================================================
+                JOJO — CENTERED INSIDE ORBIT
+            ================================================= */}
+
+            <div className="settings-jojo-wrapper jojo-thinking absolute bottom-[10px] right-[20px] z-20">
+
               <img
                 src={jojoThinking}
                 alt="Jojo thinking"
-                className="jojo-thinking absolute bottom-0 left-0 z-10 h-[135px] w-[135px] object-contain drop-shadow-[0_12px_22px_rgba(0,0,0,0.13)] sm:h-[145px] sm:w-[145px]"
+                className="h-[155px] w-[155px] object-contain drop-shadow-[0_15px_25px_rgba(0,0,0,0.18)]"
               />
 
-              {/* Thought bubble */}
-              <div className="thought-bubble absolute left-[145px] top-[18px] z-20">
-                <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
-                  <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
-                    Need a hand? 🤔
-                  </p>
-
-                  {/* Tiny thinking dots */}
-                  <div className="mt-1 flex items-center gap-1">
-                    <span className="thought-dot h-1 w-1 rounded-full bg-[#8064C7]" />
-                    <span className="thought-dot h-1 w-1 rounded-full bg-[#8064C7]" />
-                    <span className="thought-dot h-1 w-1 rounded-full bg-[#8064C7]" />
-                  </div>
-
-                  {/* Bubble tail */}
-                  <div className="absolute left-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-b border-l border-[#8064C7]/15 bg-white" />
-                </div>
-              </div>
             </div>
+
+
+            {/* =================================================
+                SPEECH BUBBLE
+                LEFT OF JOJO
+            ================================================= */}
+
+            <div className="settings-speech thought-bubble absolute right-[175px] top-[18px] z-30">
+
+              <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
+
+                <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
+                  Need a hand? 🤔
+                </p>
+
+                <div className="mt-1 flex gap-1">
+
+                  <span className="thought-dot h-1 w-1 rounded-full bg-[#8064C7]" />
+
+                  <span
+                    className="thought-dot h-1 w-1 rounded-full bg-[#8064C7]"
+                    style={{ animationDelay: "0.15s" }}
+                  />
+
+                  <span
+                    className="thought-dot h-1 w-1 rounded-full bg-[#8064C7]"
+                    style={{ animationDelay: "0.3s" }}
+                  />
+
+                </div>
+
+
+                {/* BUBBLE TAIL */}
+
+                <div className="absolute right-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-r border-t border-[#8064C7]/15 bg-white" />
+
+              </div>
+
+            </div>
+
           </div>
+
         </div>
 
-        {/* =====================================================
-            MAIN SETTINGS CONTENT
-        ===================================================== */}
-        <div className="space-y-6">
-          {/* NOTICE */}
-          {notice && (
-            <div className="success-message flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                <CheckCircle2 size={18} />
-                {notice}
-              </div>
+      </div>
 
-              <button
-                type="button"
-                onClick={onDismissNotice}
-                className="cursor-pointer text-emerald-400 transition hover:opacity-70"
-                aria-label="Dismiss notice"
+
+      {/* =====================================================
+          NOTICE
+      ===================================================== */}
+
+      {notice && (
+        <div className="settings-success flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
+
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+
+            <CheckCircle2 size={18} />
+
+            {notice}
+
+          </div>
+
+          <button
+            type="button"
+            onClick={onDismissNotice}
+            className="cursor-pointer text-emerald-400 transition hover:opacity-70"
+            aria-label="Dismiss notice"
+          >
+            <X size={16} />
+          </button>
+
+        </div>
+      )}
+
+
+      {/* =====================================================
+          PROFILE
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-6 flex items-center gap-3">
+
+          <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+            <User size={20} />
+          </div>
+
+          <div>
+
+            <h2 className="font-black tracking-tight">
+              Profile
+            </h2>
+
+            <p
+              className={`text-xs ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Manage your personal information
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+
+          <div className="settings-avatar relative">
+
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#8064C7] text-2xl font-black text-[#F3F0F8] shadow-md">
+
+              {user?.name?.charAt(0)?.toUpperCase() ||
+                "U"}
+
+            </div>
+
+            <button
+              type="button"
+              className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-xl border-2 border-inherit bg-[#8064C7] text-white shadow-sm transition hover:scale-105"
+              aria-label="Change profile picture"
+            >
+              <Camera size={14} />
+            </button>
+
+          </div>
+
+
+          <div className="min-w-0 flex-1">
+
+            <h3 className="text-lg font-black tracking-tight">
+              {user?.name || "Student User"}
+            </h3>
+
+            <p
+              className={`mt-0.5 break-all text-xs font-semibold ${
+                isDarkMode
+                  ? "text-white/60"
+                  : "text-gray-500"
+              }`}
+            >
+              {user?.email || "No email available"}
+            </p>
+
+            <p
+              className={`mt-1 text-[11px] ${
+                isDarkMode
+                  ? "text-white/40"
+                  : "text-gray-400"
+              }`}
+            >
+              Your account information
+            </p>
+
+          </div>
+
+
+          <button
+            type="button"
+            onClick={() =>
+              onNavigate?.("student-profile")
+            }
+            className="settings-shimmer w-full cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4] sm:w-auto"
+          >
+            Edit Profile
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          STUDENT PROFILE
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+          <div className="flex items-center gap-3">
+
+            <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+              <GraduationCap size={20} />
+            </div>
+
+            <div>
+
+              <h2 className="font-black tracking-tight">
+                Student Profile
+              </h2>
+
+              <p
+                className={`text-xs ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
               >
-                <X size={16} />
-              </button>
+                Keep your academic information up to date to personalize your learning experience.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            onClick={() =>
+              onNavigate?.("student-profile")
+            }
+            className="settings-shimmer cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
+          >
+            Edit Student Profile
+          </button>
+
+        </div>
+
+
+        {profileLoading ? (
+
+          <div className="flex items-center justify-center rounded-2xl border border-dashed border-[#8064C7]/20 p-10">
+
+            <Loader2
+              size={24}
+              className="animate-spin text-[#8064C7]"
+            />
+
+          </div>
+
+        ) : (
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+            <div
+              className={`rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 ${
+                isDarkMode
+                  ? "border-white/8 bg-white/[0.035]"
+                  : "border-gray-200/80 bg-white shadow-sm"
+              }`}
+            >
+
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#8064C7]">
+                Education Level
+              </p>
+
+              <p className="mt-2 text-sm font-black">
+                {getEducationLabel()}
+              </p>
+
+            </div>
+
+
+            <div
+              className={`rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 ${
+                isDarkMode
+                  ? "border-white/8 bg-white/[0.035]"
+                  : "border-gray-200/80 bg-white shadow-sm"
+              }`}
+            >
+
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#8064C7]">
+                Grade / Year
+              </p>
+
+              <p className="mt-2 text-sm font-black">
+                {studentProfile?.grade_or_year ||
+                  "Not provided"}
+              </p>
+
+            </div>
+
+
+            <div
+              className={`rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 ${
+                isDarkMode
+                  ? "border-white/8 bg-white/[0.035]"
+                  : "border-gray-200/80 bg-white shadow-sm"
+              }`}
+            >
+
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#8064C7]">
+                Field / Stream
+              </p>
+
+              <p className="mt-2 text-sm font-black">
+                {studentProfile?.field_stream ||
+                  "Not provided"}
+              </p>
+
+            </div>
+
+
+            <div
+              className={`rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 ${
+                isDarkMode
+                  ? "border-white/8 bg-white/[0.035]"
+                  : "border-gray-200/80 bg-white shadow-sm"
+              }`}
+            >
+
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#8064C7]">
+                Curriculum
+              </p>
+
+              <p className="mt-2 text-sm font-black">
+                {studentProfile?.curriculum_type ||
+                  "Not provided"}
+              </p>
+
+            </div>
+
+
+            <div
+              className={`rounded-2xl border p-4 md:col-span-2 transition-all duration-300 hover:-translate-y-1 ${
+                isDarkMode
+                  ? "border-white/8 bg-white/[0.035]"
+                  : "border-gray-200/80 bg-white shadow-sm"
+              }`}
+            >
+
+              <p className="text-[11px] font-black uppercase tracking-wider text-[#8064C7]">
+                Competitive Exams
+              </p>
+
+              <p className="mt-2 text-sm font-black">
+                {getCompetitiveExams()}
+              </p>
+
+            </div>
+
+          </div>
+
+        )}
+
+      </section>
+
+
+      {/* =====================================================
+          APPEARANCE
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-6 flex items-center gap-3">
+
+          <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+            <Palette size={20} />
+          </div>
+
+          <div>
+
+            <h2 className="font-black tracking-tight">
+              Appearance
+            </h2>
+
+            <p
+              className={`text-xs ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Choose how Jot looks
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div
+          className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${
+            isDarkMode
+              ? "border-white/5 bg-white/5"
+              : "border-gray-200/80 bg-white"
+          }`}
+        >
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+
+              {isDarkMode ? (
+                <Moon size={19} />
+              ) : (
+                <Sun size={19} />
+              )}
+
+            </div>
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Dark Mode
+              </p>
+
+              <p
+                className={`text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Switch between light and dark mode
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            aria-label="Toggle dark mode"
+            className={`relative flex h-9 w-[68px] shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 ${
+              isDarkMode
+                ? "bg-[#8064C7]"
+                : "bg-gray-200"
+            }`}
+          >
+
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#8064C7] shadow-md transition-all duration-300 ${
+                isDarkMode
+                  ? "translate-x-[32px]"
+                  : "translate-x-0"
+              }`}
+            >
+
+              {isDarkMode ? (
+                <Moon size={15} />
+              ) : (
+                <Sun size={15} />
+              )}
+
+            </span>
+
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          GOOGLE CALENDAR
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-5 flex items-center gap-3">
+
+          <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+            <Calendar size={20} />
+          </div>
+
+          <div>
+
+            <h2 className="font-black tracking-tight">
+              Google Calendar
+            </h2>
+
+            <p
+              className={`text-xs ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Connect your calendar to keep your study schedule organized.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        {googleCalendarSuccess && (
+          <div className="settings-success mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
+
+            <CheckCircle2 size={16} />
+
+            {googleCalendarSuccess}
+
+          </div>
+        )}
+
+
+        {googleCalendarError && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">
+
+            <X size={16} />
+
+            {googleCalendarError}
+
+          </div>
+        )}
+
+
+        <div
+          className={`flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+            isDarkMode
+              ? "border-white/5 bg-white/5"
+              : "border-gray-200/80 bg-white"
+          }`}
+        >
+
+          <div className="flex items-center gap-3">
+
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                googleCalendarConnected
+                  ? "bg-emerald-500/10 text-emerald-500"
+                  : "bg-[#8064C7]/10 text-[#8064C7]"
+              }`}
+            >
+              <Calendar size={18} />
+            </div>
+
+            <div>
+
+              <p className="text-xs font-bold">
+                {googleCalendarConnected
+                  ? "Google Calendar Connected"
+                  : "Connect Google Calendar"}
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                {googleCalendarConnected
+                  ? "Your study schedule can sync with your calendar."
+                  : "Connect your calendar for easier study planning."}
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {googleCalendarConnected ? (
+
+            <button
+              type="button"
+              onClick={handleDisconnectGoogleCalendar}
+              disabled={googleCalendarLoading}
+              className="settings-action flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+
+              {googleCalendarLoading ? (
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
+              ) : (
+                <X size={15} />
+              )}
+
+              Disconnect
+
+            </button>
+
+          ) : (
+
+            <button
+              type="button"
+              onClick={handleConnectGoogleCalendar}
+              disabled={googleCalendarLoading}
+              className="settings-shimmer settings-action flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+
+              {googleCalendarLoading ? (
+                <Loader2
+                  size={15}
+                  className="animate-spin"
+                />
+              ) : (
+                <Calendar size={15} />
+              )}
+
+              Connect Calendar
+
+            </button>
+
+          )}
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          SECURITY & PRIVACY
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-5 flex items-center gap-3">
+
+          <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+            <Shield size={20} />
+          </div>
+
+          <div>
+
+            <h2 className="font-black tracking-tight">
+              Security & Privacy
+            </h2>
+
+            <p
+              className={`text-xs ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Manage your account security
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div className="divide-y divide-inherit">
+
+          {/* CHANGE PASSWORD */}
+
+          <button
+            type="button"
+            onClick={handleChangePasswordClick}
+            disabled={isSendingResetEmail}
+            className="settings-action flex w-full cursor-pointer items-center justify-between py-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
+          >
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Change Password
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                {isSendingResetEmail
+                  ? "Sending verification code..."
+                  : "Update your account password"}
+              </p>
+
+            </div>
+
+
+            {isSendingResetEmail ? (
+              <Loader2
+                size={18}
+                className="animate-spin text-[#8064C7]"
+              />
+            ) : (
+              <ChevronRight
+                size={18}
+                className="opacity-40"
+              />
+            )}
+
+          </button>
+
+
+          {changePasswordError && (
+            <p className="py-2 text-xs font-bold text-rose-400">
+              {changePasswordError}
+            </p>
+          )}
+
+
+          {/* ACTIVE SESSIONS */}
+
+          <button
+            type="button"
+            className="settings-action flex w-full cursor-pointer items-center justify-between py-4 text-left"
+          >
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Active Sessions
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Manage devices where you're signed in
+              </p>
+
+            </div>
+
+            <ChevronRight
+              size={18}
+              className="opacity-40"
+            />
+
+          </button>
+
+
+          {/* PRIVACY POLICY */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setIsPrivacyModalOpen(true)
+            }
+            className="settings-action flex w-full cursor-pointer items-center justify-between py-4 text-left"
+          >
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Privacy Policy
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Learn how your information is handled
+              </p>
+
+            </div>
+
+            <ChevronRight
+              size={18}
+              className="opacity-40"
+            />
+
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          DANGER ZONE
+      ===================================================== */}
+
+      <section
+        className={`settings-section space-y-4 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-red-500/30 bg-red-500/10"
+            : "border-red-200/80 bg-red-50/30 shadow-[0_4px_25px_rgba(239,68,68,0.02)]"
+        }`}
+      >
+
+        <div className="flex items-center gap-3">
+
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+              isDarkMode
+                ? "bg-red-500/20 text-red-400"
+                : "bg-red-100/80 text-red-500"
+            }`}
+          >
+            <Trash2 size={20} />
+          </div>
+
+          <div>
+
+            <h2
+              className={`font-black tracking-tight ${
+                isDarkMode
+                  ? "text-red-400"
+                  : "text-red-600"
+              }`}
+            >
+              Danger Zone
+            </h2>
+
+            <p
+              className={`text-xs font-semibold ${
+                isDarkMode
+                  ? "text-red-300/70"
+                  : "text-red-600/60"
+              }`}
+            >
+              These actions cannot be easily undone
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div className="space-y-3 pt-2">
+
+          {studySetsDeletedMessage && (
+            <div className="settings-success flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
+
+              <CheckCircle2 size={16} />
+
+              {studySetsDeletedMessage}
+
             </div>
           )}
 
-          {/* =================================================
-              2. PROFILE
-          ================================================= */}
-          <section
-            className={`settings-profile-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
+
+          {/* DELETE STUDY SETS */}
+
+          <button
+            type="button"
+            onClick={() =>
+              openConfirm("all-study-sets")
+            }
+            className={`settings-action flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
               isDarkMode
-                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+                ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
+                : "border-red-200/60 bg-white/80 shadow-xs hover:bg-red-50/80"
             }`}
           >
-            <div className="mb-6 flex items-center gap-3">
-              <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                <User size={20} />
-              </div>
 
-              <div>
-                <h2 className="font-black tracking-tight">Profile</h2>
+            <div>
 
-                <p
-                  className={`text-xs ${
-                    isDarkMode ? "text-white/50" : "text-gray-500"
-                  }`}
-                >
-                  Manage your personal information
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-              {/* Avatar */}
-              <div className="settings-avatar">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#8064C7] text-2xl font-black text-[#F3F0F8] shadow-md transition-transform duration-300 hover:scale-[1.04]">
-                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
-                </div>
-              </div>
-
-              {/* User information */}
-              <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-black tracking-tight">
-                  {user?.name || "Student User"}
-                </h3>
-
-                <p
-                  className={`mt-0.5 break-all text-xs font-semibold ${
-                    isDarkMode ? "text-white/60" : "text-gray-500"
-                  }`}
-                >
-                  {user?.email || "No email available"}
-                </p>
-
-                <p
-                  className={`mt-1 text-[11px] ${
-                    isDarkMode ? "text-white/40" : "text-gray-400"
-                  }`}
-                >
-                  Your account information
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              STUDENT PROFILE
-          ================================================= */}
-          <section
-            className={`settings-student-profile-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
-              isDarkMode
-                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-            }`}
-          >
-            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                  <GraduationCap size={20} />
-                </div>
-
-                <div>
-                  <h2 className="font-black tracking-tight">Student Profile</h2>
-
-                  <p
-                    className={`text-xs ${
-                      isDarkMode ? "text-white/50" : "text-gray-500"
-                    }`}
-                  >
-                    Keep your academic information up to date to personalize your learning experience.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onNavigate && onNavigate("student-profile")}
-                className="w-full cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] hover:shadow-lg sm:w-auto"
+              <p
+                className={`text-xs font-bold ${
+                  isDarkMode
+                    ? "text-red-400"
+                    : "text-red-600"
+                }`}
               >
-                Edit Student Profile
-              </button>
+                Delete all study sets
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-red-300/70"
+                    : "text-gray-500"
+                }`}
+              >
+                Permanently remove all your study sets
+              </p>
+
             </div>
 
-            {loadingProfile ? (
-              <div className="flex items-center gap-2 py-4 text-xs font-semibold opacity-60">
-                <Loader2 size={16} className="animate-spin" />
-                Loading academic information...
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                <div
-                  className={`rounded-2xl border p-4 transition-all ${
-                    isDarkMode
-                      ? "border-white/5 bg-white/5"
-                      : "border-gray-200/80 bg-white/70 shadow-sm"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
-                    Education Level
-                  </span>
-                  <p className="mt-1 text-xs font-bold">
-                    {EDUCATION_LEVELS.find(
-                      (l) => l.value === studentProfile?.education_level
-                    )?.label ||
-                      studentProfile?.education_level ||
-                      "Not specified"}
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-2xl border p-4 transition-all ${
-                    isDarkMode
-                      ? "border-white/5 bg-white/5"
-                      : "border-gray-200/80 bg-white/70 shadow-sm"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
-                    Grade / Year
-                  </span>
-                  <p className="mt-1 text-xs font-bold">
-                    {studentProfile?.grade_or_year || "Not specified"}
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-2xl border p-4 transition-all ${
-                    isDarkMode
-                      ? "border-white/5 bg-white/5"
-                      : "border-gray-200/80 bg-white/70 shadow-sm"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
-                    Field / Stream
-                  </span>
-                  <p className="mt-1 text-xs font-bold">
-                    {studentProfile?.field_stream || "Not specified"}
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-2xl border p-4 transition-all ${
-                    isDarkMode
-                      ? "border-white/5 bg-white/5"
-                      : "border-gray-200/80 bg-white/70 shadow-sm"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
-                    Curriculum
-                  </span>
-                  <p className="mt-1 text-xs font-bold">
-                    {studentProfile?.curriculum_type || "Not specified"}
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-2xl border p-4 transition-all sm:col-span-2 ${
-                    isDarkMode
-                      ? "border-white/5 bg-white/5"
-                      : "border-gray-200/80 bg-white/70 shadow-sm"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
-                    Competitive Exams
-                  </span>
-                  <p className="mt-1 text-xs font-bold">
-                    {Array.isArray(studentProfile?.competitive_exams) &&
-                    studentProfile.competitive_exams.length > 0
-                      ? studentProfile.competitive_exams.join(", ")
-                      : "None"}
-                  </p>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* =================================================
-              3. APPEARANCE
-          ================================================= */}
-          <section
-            className={`settings-appearance-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
-              isDarkMode
-                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
-            }`}
-          >
-            <div className="mb-6 flex items-center gap-3">
-              <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                <Palette size={20} />
-              </div>
-
-              <div>
-                <h2 className="font-black tracking-tight">Appearance</h2>
-
-                <p
-                  className={`text-xs ${
-                    isDarkMode ? "text-white/50" : "text-gray-500"
-                  }`}
-                >
-                  Choose how Jot looks
-                </p>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center justify-between rounded-2xl border p-4 transition-all duration-300 hover:scale-[1.005] ${
+            <Trash2
+              size={17}
+              className={
                 isDarkMode
-                  ? "border-white/5 bg-white/5"
-                  : "border-gray-200/80 bg-white"
-              }`}
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                  {isDarkMode ? (
-                    <Moon size={19} className="theme-icon-animated" />
-                  ) : (
-                    <Sun size={19} className="theme-icon-animated" />
-                  )}
-                </div>
+                  ? "text-red-400"
+                  : "text-red-500"
+              }
+            />
 
-                <div className="min-w-0">
-                  <p className="text-xs font-bold">Theme</p>
+          </button>
 
-                  <p
-                    className={`text-[11px] ${
-                      isDarkMode ? "text-white/50" : "text-gray-500"
-                    }`}
-                  >
-                    Switch between light and dark mode
-                  </p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={toggleDarkMode}
-                aria-label="Toggle dark mode"
-                className={`theme-toggle relative ml-4 flex h-9 w-[68px] shrink-0 cursor-pointer items-center rounded-full p-1 transition-all duration-300 ${
-                  isDarkMode ? "bg-[#8064C7]" : "bg-gray-200"
-                }`}
-              >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#8064C7] shadow-md ${
-                    isDarkMode ? "translate-x-[32px]" : "translate-x-0"
-                  }`}
-                >
-                  {isDarkMode ? <Moon size={15} /> : <Sun size={15} />}
-                </span>
-              </button>
-            </div>
-          </section>
+          {/* DELETE ACCOUNT */}
 
-          {/* =================================================
-              4. GOOGLE CALENDAR
-          ================================================= */}
-          <section
-            className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          <button
+            type="button"
+            onClick={() =>
+              openConfirm("account")
+            }
+            className={`settings-action flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
               isDarkMode
-                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+                ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
+                : "border-red-200/60 bg-white/80 shadow-xs hover:bg-red-50/80"
             }`}
           >
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                <Calendar size={20} />
-              </div>
 
-              <div>
-                <h2 className="font-black tracking-tight">Google Calendar</h2>
+            <div>
 
-                <p
-                  className={`text-xs ${
-                    isDarkMode ? "text-white/50" : "text-gray-500"
-                  }`}
-                >
-                  Manage your Google Calendar integration
-                </p>
-              </div>
+              <p
+                className={`text-xs font-bold ${
+                  isDarkMode
+                    ? "text-red-400"
+                    : "text-red-600"
+                }`}
+              >
+                Delete account
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-red-300/70"
+                    : "text-gray-500"
+                }`}
+              >
+                Permanently delete your account and data
+              </p>
+
             </div>
 
-            <p
-              className={`mb-4 text-xs leading-relaxed ${
-                isDarkMode ? "text-white/60" : "text-gray-500"
-              }`}
-            >
-              Connect your Google Calendar to sync your Jot planner tasks and exams
-              and receive Google Calendar reminders.
-            </p>
-
-            {/* Success message */}
-            {gcalSuccess && (
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
-                <CheckCircle2 size={16} />
-                {gcalSuccess}
-              </div>
-            )}
-
-            {/* Error message */}
-            {gcalError && (
-              <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">
-                {gcalError}
-              </div>
-            )}
-
-            <div
-              className={`flex items-center justify-between rounded-2xl border p-4 ${
+            <Trash2
+              size={17}
+              className={
                 isDarkMode
-                  ? "border-white/5 bg-white/5"
-                  : "border-gray-200/80 bg-white"
-              }`}
-            >
-              {gcalLoading ? (
-                <div className="flex items-center gap-2 text-xs font-semibold">
-                  <Loader2 size={16} className="animate-spin text-[#8064C7]" />
-                  Checking connection...
-                </div>
-              ) : gcalConnected ? (
-                <>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
-                      <CheckCircle2 size={19} />
-                    </div>
+                  ? "text-red-400"
+                  : "text-red-500"
+              }
+            />
 
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold">
-                        Google Calendar connected
-                      </p>
+          </button>
 
-                      {gcalEmail && (
-                        <p
-                          className={`truncate text-[11px] ${
-                            isDarkMode ? "text-white/50" : "text-gray-500"
-                          }`}
-                        >
-                          {gcalEmail}
-                        </p>
-                      )}
-                    </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={handleDisconnectGcal}
-                    disabled={gcalActionLoading}
-                    className={`ml-4 shrink-0 cursor-pointer rounded-xl px-4 py-2 text-xs font-bold transition disabled:opacity-50 ${
-                      isDarkMode
-                        ? "bg-white/10 text-white/80 hover:bg-white/20"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {gcalActionLoading ? "Disconnecting..." : "Disconnect"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                      <Calendar size={19} />
-                    </div>
+          {/* LOG OUT */}
 
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold">Not connected</p>
-
-                      <p
-                        className={`text-[11px] ${
-                          isDarkMode ? "text-white/50" : "text-gray-500"
-                        }`}
-                      >
-                        Sync tasks and exams to your calendar
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleConnectGcal}
-                    disabled={gcalActionLoading}
-                    className="ml-4 shrink-0 cursor-pointer rounded-xl bg-[#8064C7] px-4 py-2 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4] disabled:opacity-50"
-                  >
-                    {gcalActionLoading
-                      ? "Connecting..."
-                      : "Connect Google Calendar"}
-                  </button>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* =================================================
-              5. SECURITY & PRIVACY
-          ================================================= */}
-          <section
-            className={`settings-security-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
+          <button
+            type="button"
+            onClick={() =>
+              supabase.auth.signOut()
+            }
+            className={`settings-action flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition ${
               isDarkMode
-                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
-                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+                ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                : "border-red-200 bg-red-50/70 text-red-600 shadow-xs hover:bg-red-100/70"
             }`}
           >
-            <div className="mb-5 flex items-center gap-3">
-              <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
-                <Shield size={20} />
-              </div>
 
-              <div>
-                <h2 className="font-black tracking-tight">
-                  Security & Privacy
-                </h2>
+            <LogOut size={17} />
 
-                <p
-                  className={`text-xs ${
-                    isDarkMode ? "text-white/50" : "text-gray-500"
-                  }`}
-                >
-                  Manage your account security
-                </p>
-              </div>
-            </div>
+            Log Out
 
-            <div className="divide-y divide-inherit">
-              {/* CHANGE PASSWORD */}
-              <button
-                type="button"
-                onClick={handleChangePasswordClick}
-                disabled={isSendingResetEmail}
-                className="security-action flex w-full cursor-pointer items-center justify-between py-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <div>
-                  <p className="text-xs font-bold">Change Password</p>
+          </button>
 
-                  <p
-                    className={`mt-0.5 text-[11px] ${
-                      isDarkMode ? "text-white/50" : "text-gray-500"
-                    }`}
-                  >
-                    {isSendingResetEmail
-                      ? "Sending verification code..."
-                      : "Update your account password"}
-                  </p>
-                </div>
-
-                {isSendingResetEmail ? (
-                  <Loader2
-                    size={18}
-                    className="animate-spin text-[#8064C7]"
-                  />
-                ) : (
-                  <ChevronRight
-                    size={18}
-                    className="security-arrow opacity-40"
-                  />
-                )}
-              </button>
-
-              {/* Password error */}
-              {changePasswordError && (
-                <p className="py-2 text-xs font-bold text-rose-400">
-                  {changePasswordError}
-                </p>
-              )}
-
-              {/* PRIVACY POLICY */}
-              <button
-                type="button"
-                onClick={() => setIsPrivacyModalOpen(true)}
-                className="security-action flex w-full cursor-pointer items-center justify-between py-4 text-left"
-              >
-                <div>
-                  <p className="text-xs font-bold">Privacy Policy</p>
-
-                  <p
-                    className={`mt-0.5 text-[11px] ${
-                      isDarkMode ? "text-white/50" : "text-gray-500"
-                    }`}
-                  >
-                    Learn how your information is handled
-                  </p>
-                </div>
-
-                <ChevronRight
-                  size={18}
-                  className="security-arrow opacity-40"
-                />
-              </button>
-            </div>
-          </section>
-
-          {/* =================================================
-              6. DANGER ZONE
-          ================================================= */}
-          <section
-            className={`danger-section-animated space-y-4 rounded-3xl border p-6 backdrop-blur-2xl ${
-              isDarkMode
-                ? "border-red-500/30 bg-red-500/10"
-                : "border-red-200/80 bg-red-50/30 shadow-[0_4px_25px_rgba(239,68,68,0.02)]"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`danger-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
-                  isDarkMode
-                    ? "bg-red-500/20 text-red-400"
-                    : "bg-red-100/80 text-red-500"
-                }`}
-              >
-                <Trash2 size={20} />
-              </div>
-
-              <div>
-                <h2
-                  className={`font-black tracking-tight ${
-                    isDarkMode ? "text-red-400" : "text-red-600"
-                  }`}
-                >
-                  Danger Zone
-                </h2>
-
-                <p
-                  className={`text-xs font-semibold ${
-                    isDarkMode ? "text-red-300/70" : "text-red-600/60"
-                  }`}
-                >
-                  These actions cannot be easily undone
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              {/* SUCCESS MESSAGE */}
-              {studySetsDeletedMessage && (
-                <div className="success-message flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-400">
-                  <CheckCircle2 size={16} />
-                  {studySetsDeletedMessage}
-                </div>
-              )}
-
-              {/* DELETE ALL STUDY SETS */}
-              <button
-                type="button"
-                onClick={() => openConfirm("all-study-sets")}
-                className={`danger-action flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left ${
-                  isDarkMode
-                    ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
-                    : "border-red-200/60 bg-white/80 shadow-xs hover:bg-red-50/80"
-                }`}
-              >
-                <div>
-                  <p
-                    className={`text-xs font-bold ${
-                      isDarkMode ? "text-red-400" : "text-red-600"
-                    }`}
-                  >
-                    Delete all study sets
-                  </p>
-
-                  <p
-                    className={`mt-0.5 text-[11px] ${
-                      isDarkMode ? "text-red-300/70" : "text-gray-500"
-                    }`}
-                  >
-                    Permanently remove all your study sets
-                  </p>
-                </div>
-
-                <Trash2
-                  size={17}
-                  className={
-                    isDarkMode ? "text-red-400" : "text-red-500"
-                  }
-                />
-              </button>
-
-              {/* DELETE ACCOUNT */}
-              <button
-                type="button"
-                onClick={() => openConfirm("account")}
-                className={`danger-action flex w-full cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 text-left ${
-                  isDarkMode
-                    ? "border-red-500/20 bg-red-500/5 hover:bg-red-500/20"
-                    : "border-red-200/60 bg-white/80 shadow-xs hover:bg-red-50/80"
-                }`}
-              >
-                <div>
-                  <p
-                    className={`text-xs font-bold ${
-                      isDarkMode ? "text-red-400" : "text-red-600"
-                    }`}
-                  >
-                    Delete account
-                  </p>
-
-                  <p
-                    className={`mt-0.5 text-[11px] ${
-                      isDarkMode ? "text-red-300/70" : "text-gray-500"
-                    }`}
-                  >
-                    Permanently delete your account and data
-                  </p>
-                </div>
-
-                <Trash2
-                  size={17}
-                  className={
-                    isDarkMode ? "text-red-400" : "text-red-500"
-                  }
-                />
-              </button>
-
-              {/* LOG OUT */}
-              <button
-                type="button"
-                onClick={() => supabase.auth.signOut()}
-                className={`logout-button flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-xs font-bold transition-all duration-300 hover:-translate-y-0.5 ${
-                  isDarkMode
-                    ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                    : "border-red-200 bg-red-50/70 text-red-600 shadow-xs hover:bg-red-100/70"
-                }`}
-              >
-                <LogOut size={17} />
-                Log Out
-              </button>
-            </div>
-          </section>
         </div>
-      </div>
+
+      </section>
+
 
       {/* =====================================================
-          7. DELETE CONFIRMATION MODAL
+          DELETE MODAL
       ===================================================== */}
+
       <DeleteConfirmModal
         isOpen={!!confirmAction}
         title={confirmModalConfig.title}
@@ -1591,14 +2133,19 @@ const SettingsPage = ({
         onCancel={cancelConfirm}
       />
 
+
       {/* =====================================================
-          8. PRIVACY POLICY MODAL
+          PRIVACY MODAL
       ===================================================== */}
+
       <PrivacyPolicyModal
         isOpen={isPrivacyModalOpen}
-        onClose={() => setIsPrivacyModalOpen(false)}
+        onClose={() =>
+          setIsPrivacyModalOpen(false)
+        }
       />
-    </>
+
+    </div>
   );
 };
 
