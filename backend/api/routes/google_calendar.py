@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_ip, rate_limit_by_user
 from backend.services import google_calendar_service
 
 router = APIRouter(prefix="/google-calendar", tags=["Google Calendar"])
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/google-calendar", tags=["Google Calendar"])
     ),
 )
 def connect_google_calendar(
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(300, 60, scope="calendar_reads")),
 ) -> dict:
     auth_url = google_calendar_service.generate_auth_url(current_user.user_id)
     return {"auth_url": auth_url}
@@ -36,6 +37,7 @@ def connect_google_calendar(
 @router.get(
     "/callback",
     status_code=status.HTTP_302_FOUND,
+    dependencies=[Depends(rate_limit_by_ip(10, 300, scope="google_callback"))],
     summary="Google OAuth 2.0 callback",
     description=(
         "Receives the authorization code from Google, exchanges it for "
@@ -79,7 +81,7 @@ def google_calendar_callback(
     ),
 )
 def get_connection_status(
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(300, 60, scope="calendar_reads")),
 ) -> dict:
     return google_calendar_service.get_connection_status(current_user.user_id)
 
@@ -94,7 +96,7 @@ def get_connection_status(
     ),
 )
 def disconnect_google_calendar(
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(60, 600, scope="calendar_writes")),
 ) -> dict:
     google_calendar_service.disconnect(current_user.user_id)
     return {"message": "Google Calendar disconnected successfully"}

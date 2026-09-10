@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.task import (
     CompleteTaskRequest,
     CreateTaskRequest,
@@ -28,7 +29,7 @@ def list_tasks(
     due_date: date | None = Query(None, description="Optional due date filter (YYYY-MM-DD)"),
     start_date: date | None = Query(None, description="Optional start date for date range"),
     end_date: date | None = Query(None, description="Optional end date for date range"),
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(300, 60, scope="calendar_reads"))
 ) -> TaskListResponse:
     try:
         due_date_str = due_date.isoformat() if due_date else None
@@ -58,7 +59,7 @@ def list_tasks(
 )
 def create_task(
     payload: CreateTaskRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(60, 600, scope="calendar_writes"))
 ) -> TaskResponse:
     try:
         study_set_id_str = str(payload.study_set_id) if payload.study_set_id else None
@@ -104,7 +105,7 @@ def create_task(
 def update_task(
     task_id: UUID,
     payload: UpdateTaskRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(60, 600, scope="calendar_writes"))
 ) -> TaskResponse:
     try:
         updates = payload.model_dump(exclude_unset=True)
@@ -161,7 +162,7 @@ def update_task(
 def toggle_task_completion(
     task_id: UUID,
     payload: CompleteTaskRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(60, 600, scope="calendar_writes"))
 ) -> TaskResponse:
     try:
         updated = task_repository.toggle_task_completion(
@@ -195,7 +196,7 @@ def toggle_task_completion(
 )
 def delete_task(
     task_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(60, 600, scope="calendar_writes"))
 ) -> DeleteTaskResponse:
     try:
         deleted = task_repository.delete_task(str(task_id), user_id=current_user.user_id)

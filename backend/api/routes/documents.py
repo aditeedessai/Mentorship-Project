@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
@@ -25,7 +26,7 @@ router = APIRouter(tags=["Documents"])
 def upload_documents(
     study_set_id: UUID,
     files: list[UploadFile] = File(...),
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(5, 600, scope="document_upload")),
 ) -> DocumentListResponse:
   if not files:
     raise HTTPException(
@@ -97,7 +98,7 @@ def upload_documents(
 )
 def list_study_set_documents(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated")),
 ) -> DocumentListResponse:
   study_set = study_set_repository.get_study_set(
       str(study_set_id), user_id=current_user.user_id
@@ -128,7 +129,7 @@ def list_study_set_documents(
 )
 def get_document(
     document_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated")),
 ) -> DocumentResponse:
   try:
     doc = study_set_repository.get_document_by_id(str(document_id))

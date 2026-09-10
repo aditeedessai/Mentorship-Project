@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.revision import PlannerRevisionDueItem, PlannerRevisionsDueResponse
 from backend.database import study_set_repository
 from backend.services import revision_service
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/planner", tags=["Planner"])
     ),
 )
 def get_revisions_due(
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(300, 60, scope="calendar_reads")),
 ) -> PlannerRevisionsDueResponse:
     due = revision_service.get_due_revisions_for_user(current_user.user_id)
 

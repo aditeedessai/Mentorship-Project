@@ -12,6 +12,7 @@ from backend.api.routes import (
     account,
     activity,
     attempts,
+    auth,
     documents,
     exams,
     google_calendar,
@@ -114,6 +115,7 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api")
 
 # Include all module routers under /api
+api_router.include_router(auth.router)
 api_router.include_router(health.router)
 api_router.include_router(study_sets.router)
 api_router.include_router(documents.router)

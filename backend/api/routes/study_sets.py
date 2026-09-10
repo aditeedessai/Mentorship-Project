@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.study_set import (
     CreateStudySetRequest,
     DeleteAllStudySetsResponse,
@@ -37,7 +38,7 @@ router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
 )
 def generate_study_set_summary(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(10, 600, scope="ai_features"))
 ) -> SummaryResponse:
     try:
         # Verify ownership
@@ -85,7 +86,7 @@ def generate_study_set_summary(
 )
 def get_study_set_summary(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StoredSummaryResponse:
     try:
         # Verify ownership
@@ -121,7 +122,7 @@ def get_study_set_summary(
 )
 def generate_study_set_flashcards(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(10, 600, scope="ai_features"))
 ) -> FlashcardsResponse:
     try:
         # Verify ownership
@@ -167,7 +168,7 @@ def generate_study_set_flashcards(
 )
 def get_study_set_flashcards(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> FlashcardsResponse:
     try:
         # Verify ownership
@@ -204,7 +205,7 @@ def get_study_set_flashcards(
 def generate_study_set_mnemonic(
     study_set_id: UUID,
     payload: MnemonicRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(10, 600, scope="ai_features"))
 ) -> MnemonicResponse:
     try:
         # Verify ownership
@@ -243,7 +244,7 @@ def generate_study_set_mnemonic(
 )
 def create_study_set(
     payload: CreateStudySetRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudySetResponse:
     try:
         data = study_service.create_study_set(payload.name, user_id=current_user.user_id)
@@ -263,7 +264,7 @@ def create_study_set(
     description="Retrieves a list of study sets owned by the authenticated user."
 )
 def list_study_sets(
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudySetListResponse:
     try:
         sets_data = study_service.list_study_sets(user_id=current_user.user_id)
@@ -285,7 +286,7 @@ def list_study_sets(
     description="Retrieves, for every study set owned by the authenticated user, how many of the 4 question-type sections (mcq, application, long, short) have at least one recorded evaluation."
 )
 def get_study_sets_progress(
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudySetProgressListResponse:
     try:
         progress_data = get_study_set_progress(user_id=current_user.user_id)
@@ -307,7 +308,7 @@ def get_study_sets_progress(
     description="Permanently deletes every study set owned by the authenticated user."
 )
 def delete_all_study_sets(
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> DeleteAllStudySetsResponse:
     try:
         deleted_count = study_service.delete_all_study_sets(current_user.user_id)
@@ -331,7 +332,7 @@ def delete_all_study_sets(
 )
 def get_study_set(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudySetResponse:
     try:
         data = study_service.get_study_set(str(study_set_id), user_id=current_user.user_id)
@@ -359,7 +360,7 @@ def get_study_set(
 )
 def delete_study_set(
     study_set_id: UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> DeleteStudySetResponse:
     try:
         deleted = study_service.delete_study_set(str(study_set_id), user_id=current_user.user_id)

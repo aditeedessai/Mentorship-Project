@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.revision import RevisionStatusItem, RevisionStatusListResponse
 from backend.database import study_set_repository
 from backend.services import revision_service
@@ -21,7 +22,7 @@ QUESTION_TYPES = ["mcq", "application", "long", "short"]
 )
 def get_revision_status(
     study_set_id: uuid.UUID,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> RevisionStatusListResponse:
     study_set_id_str = str(study_set_id)
 

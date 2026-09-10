@@ -2,6 +2,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.progress import ProgressHistoryResponse
 from backend.services.progress_service import get_study_set_attempt_history
 
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/progress", tags=["Progress"])
 )
 def get_progress_history(
     study_set_id: uuid.UUID = Query(..., description="UUID of the selected study set"),
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> ProgressHistoryResponse:
     result = get_study_set_attempt_history(
         user_id=current_user.user_id,

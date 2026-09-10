@@ -4,6 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
+from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.answer import (
     EvaluationListResponse,
     EvaluationResponse,
@@ -41,7 +42,7 @@ router = APIRouter(prefix="/attempts", tags=["Attempts"])
 )
 def start_attempt(
     payload: StartAttemptRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> AttemptResponse:
     """
     Starts (or resumes) an attempt for one (study_set, question_type)
@@ -133,7 +134,7 @@ def get_active_attempt_for_study_set(
         ...,
         description="Which question type to look up the active attempt for - required, since more than one type can be independently in-progress at once."
     ),
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> AttemptResponse:
     study_set_id_str = str(study_set_id)
     study_set = study_set_repository.get_study_set(study_set_id_str, user_id=current_user.user_id)
@@ -166,7 +167,7 @@ def get_active_attempt_for_study_set(
 )
 def get_attempt(
     attempt_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> AttemptResponse:
     att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
@@ -189,7 +190,7 @@ def get_attempt(
 def submit_section_answers(
     attempt_id: str,
     payload: SubmitAnswersRequest,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(20, 600, scope="answer_evaluation"))
 ) -> EvaluationListResponse:
     # Verify attempt ownership BEFORE evaluating or saving answers
     att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
@@ -234,7 +235,7 @@ def submit_section_answers(
 )
 def finish_attempt(
     attempt_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> AttemptResponse:
     att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
@@ -296,7 +297,7 @@ def finish_attempt(
 )
 def get_attempt_evaluations(
     attempt_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user)
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> EvaluationListResponse:
     att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not att:
