@@ -7,6 +7,8 @@ from docx import Document
 from paddleocr import PaddleOCR
 from pptx import Presentation
 
+from typing import Any, Literal, overload
+
 # Threading & environment optimizations for CPU acceleration
 os.environ["FLAGS_use_mkldnn"] = "0"
 os.environ["FLAGS_enable_pir_api"] = "0"
@@ -76,11 +78,12 @@ def preprocess_image_to_grayscale(img_bytes: bytes) -> np.ndarray:
     return cv2.cvtColor(padded, cv2.COLOR_GRAY2BGR)
 
 
-def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD) -> tuple[list[str], list[float]]:
+def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD, return_boxes: bool = False):
     lines = []
     confidences = []
+    boxes = []
     if not result:
-        return lines, confidences
+        return (lines, confidences, boxes) if return_boxes else (lines, confidences)
 
     def parse_node(node):
         if node is None:
@@ -99,6 +102,7 @@ def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD) -> t
                     if val and conf >= min_conf and val not in lines:
                         lines.append(val)
                         confidences.append(conf)
+                        boxes.append((0.0, 0.0, 0.0, 0.0))
                 return
 
             for key in ["rec_text", "text", "transcription"]:
@@ -108,6 +112,7 @@ def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD) -> t
                     if val and score >= min_conf and val not in lines:
                         lines.append(val)
                         confidences.append(score)
+                        boxes.append((0.0, 0.0, 0.0, 0.0))
 
             for v in node.values():
                 if isinstance(v, (list, tuple, dict)):
@@ -126,16 +131,39 @@ def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD) -> t
                 if val and score >= min_conf and val not in lines:
                     lines.append(val)
                     confidences.append(score)
+
+                    # Extract bounding box rectangle if available (node[0] is list of 4 points)
+                    if isinstance(node[0], (list, tuple)) and len(node[0]) >= 4:
+                        try:
+                            xs = [float(pt[0]) for pt in node[0] if isinstance(pt, (list, tuple)) and len(pt) >= 2]
+                            ys = [float(pt[1]) for pt in node[0] if isinstance(pt, (list, tuple)) and len(pt) >= 2]
+                            if xs and ys:
+                                boxes.append((min(xs), min(ys), max(xs), max(ys)))
+                            else:
+                                boxes.append((0.0, 0.0, 0.0, 0.0))
+                        except Exception:
+                            boxes.append((0.0, 0.0, 0.0, 0.0))
+                    else:
+                        boxes.append((0.0, 0.0, 0.0, 0.0))
                 return
 
             for sub in node:
                 parse_node(sub)
 
     parse_node(result)
-    return lines, confidences
+    return (lines, confidences, boxes) if return_boxes else (lines, confidences)
 
 
-def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False):
+@overload
+def run_ocr_on_bytes(img_bytes: bytes, return_stats: Literal[False] = False, return_details: Literal[False] = False) -> str: ...
+
+@overload
+def run_ocr_on_bytes(img_bytes: bytes, return_stats: Literal[True], return_details: Literal[False] = False) -> tuple[list[str], list[float]]: ...
+
+@overload
+def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False, return_details: Literal[True] = True) -> dict[str, Any]: ...
+
+def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False, return_details: bool = False):
     processed_img = preprocess_image_to_grayscale(img_bytes)
     ocr = get_ocr_engine()
 
@@ -148,7 +176,11 @@ def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False):
             print(f"[OCR Warning] Primary OCR call error: {err}")
             result = None
 
-    lines, confidences = extract_text_safely(result, min_conf=MIN_CONFIDENCE_THRESHOLD)
+    if return_details:
+        lines, confidences, boxes = extract_text_safely(result, min_conf=MIN_CONFIDENCE_THRESHOLD, return_boxes=True)
+    else:
+        lines, confidences = extract_text_safely(result, min_conf=MIN_CONFIDENCE_THRESHOLD)
+        boxes = []
 
     # Fallback to raw original if needed
     if not lines:
@@ -157,9 +189,23 @@ def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False):
         if raw_bgr is not None:
             try:
                 result = ocr.ocr(raw_bgr, cls=False)
-                lines, confidences = extract_text_safely(result, min_conf=0.40)
+                if return_details:
+                    lines, confidences, boxes = extract_text_safely(result, min_conf=0.40, return_boxes=True)
+                else:
+                    lines, confidences = extract_text_safely(result, min_conf=0.40)
             except Exception:
                 pass
+
+    if return_details:
+        h, w = processed_img.shape[:2] if processed_img is not None else (0, 0)
+        return {
+            "lines": lines,
+            "confidences": confidences,
+            "boxes": boxes,
+            "width": w,
+            "height": h,
+            "text": "\n".join(lines),
+        }
 
     if return_stats:
         return lines, confidences

@@ -11,6 +11,7 @@ from backend.api.schemas.document import (
 )
 from backend.database import study_set_repository
 from backend.document_processing.extractor import SUPPORTED_EXTENSIONS
+from backend.document_processing.image_validator import ImageValidationError
 from backend.services import document_service
 
 router = APIRouter(tags=["Documents"])
@@ -81,6 +82,11 @@ def upload_documents(
         if doc_record:
           uploaded_docs.append(DocumentResponse(**doc_record))
 
+      except (ImageValidationError, ValueError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
       except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

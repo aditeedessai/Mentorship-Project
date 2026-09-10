@@ -3,8 +3,10 @@ import uuid
 
 from backend.document_processing.extractor import (
     extract_text,
+    IMAGE_EXTENSIONS,
     SUPPORTED_EXTENSIONS
 )
+from backend.document_processing.image_validator import validate_and_extract_image_study_material
 from backend.document_processing.cleaner import clean_text
 from backend.document_processing.chunker import chunk_text
 
@@ -20,7 +22,7 @@ def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) ->
     Workflow:
     1. Validate file existence and supported extension
     2. Ensure study_set exists (create if not provided)
-    3. Extract text (Grayscale + PaddleOCR for images/scans, native text for docs)
+    3. Extract text & validate (single-pass OCR/image validation for photos, native text for docs)
     4. Clean text
     5. Create chunks
     6. Register document record in database
@@ -67,12 +69,18 @@ def process_pdf(pdf_path: str, study_set_id: str = None, user_id: str = None) ->
             )
 
     # ---------------------------------------------------------
-    # Extract text (Native or Grayscale + PaddleOCR)
+    # Extract text (Native/OCR for docs, validated OCR for images)
     # ---------------------------------------------------------
 
     print(f"\n[1/4] Extracting text and preprocessing from '{path.name}'...")
 
-    text = extract_text(str(path))
+    ext = path.suffix.lower()
+    if ext in IMAGE_EXTENSIONS:
+        # Single-pass image validation + text extraction
+        text = validate_and_extract_image_study_material(str(path))
+    else:
+        # Existing PDF / DOCX / PPTX flow remains 100% unchanged
+        text = extract_text(str(path))
 
     if not text.strip():
         raise ValueError(
