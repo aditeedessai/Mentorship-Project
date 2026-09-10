@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { PenLine, Trash2, Calculator, Sigma, Percent, X } from 'lucide-react'
+import { PenLine, Trash2, X } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
 export default function RoughWorkPanel({ value, onChange, onClear, isOpen = false, onClose }) {
@@ -59,7 +59,7 @@ export default function RoughWorkPanel({ value, onChange, onClear, isOpen = fals
         </div>
 
         {/* Textarea */}
-        <div className="flex-1 px-5 pb-3 flex flex-col min-h-0">
+        <div className="flex-1 px-5 pb-5 flex flex-col min-h-0">
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -90,44 +90,7 @@ export default function RoughWorkPanel({ value, onChange, onClear, isOpen = fals
             </span>
           </div>
         </div>
-
-        {/* Quick Tools */}
-        <div className="px-5 pb-5 pt-1 flex-shrink-0">
-          <div className={`text-[10px] font-mono font-bold tracking-wider uppercase mb-2 ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
-            Quick Tools
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-                isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white/70" : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
-              }`}
-              aria-label="Calculator"
-            >
-              <Calculator className="w-4 h-4" strokeWidth={1.8} />
-            </button>
-            <button
-              type="button"
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-                isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white/70" : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
-              }`}
-              aria-label="Sigma tool"
-            >
-              <Sigma className="w-4 h-4" strokeWidth={1.8} />
-            </button>
-            <button
-              type="button"
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-                isDarkMode ? "border-white/10 bg-white/5 hover:bg-white/10 text-white/70" : "border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
-              }`}
-              aria-label="Percentage tool"
-            >
-              <Percent className="w-4 h-4" strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
       </aside>
     </>
   )
 }
-

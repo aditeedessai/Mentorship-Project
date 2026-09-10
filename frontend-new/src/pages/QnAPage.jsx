@@ -6,6 +6,8 @@ import QuestionNavigator from '../components/quiz/QuestionNavigator'
 import RoughWorkPanel from '../components/quiz/RoughWorkPanel'
 import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
+import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
+import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
 import { submitAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
@@ -30,9 +32,10 @@ export default function QnAPage({ onNavigate } = {}) {
     return statuses
   })
   const [scratchpad, setScratchpad] = useState({})
-  const [bookmarkedQuestions, setBookmarkedQuestions] = useState({})
   const [remainingSeconds, setRemainingSeconds] = useState(questionCount * 180)
   const [showAbortModal, setShowAbortModal] = useState(false)
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false)
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showNavDrawer, setShowNavDrawer] = useState(false)
   const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
@@ -201,13 +204,6 @@ export default function QnAPage({ onNavigate } = {}) {
     }
   }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup, clearQuizTimer])
 
-  const toggleBookmark = useCallback(() => {
-    setBookmarkedQuestions(prev => ({
-      ...prev,
-      [currentQuestion]: !prev[currentQuestion]
-    }))
-  }, [currentQuestion])
-
   const handleScratchpadChange = useCallback((value) => {
     setScratchpad(prev => ({ ...prev, [currentQuestion]: value }))
   }, [currentQuestion])
@@ -225,6 +221,47 @@ export default function QnAPage({ onNavigate } = {}) {
     onNavigate?.('dashboard')
     navigate('/')
   }, [navigate, onNavigate, antiCheatCleanup, clearQuizTimer])
+
+  // ── Keyboard Shortcuts ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isFullscreenReady || quizTerminated || isViolationActive) return
+
+    const handleKeyDown = (e) => {
+      if (showInstructionsModal || showShortcutsModal || showAbortModal) return
+
+      const target = e.target
+      if (
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      ) {
+        return
+      }
+
+      const key = e.key
+
+      if (key === 'ArrowLeft') {
+        e.preventDefault()
+        handlePrevious()
+      } else if (key === 'ArrowRight') {
+        e.preventDefault()
+        handleSubmitNext()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    isFullscreenReady,
+    quizTerminated,
+    isViolationActive,
+    showInstructionsModal,
+    showShortcutsModal,
+    showAbortModal,
+    handlePrevious,
+    handleSubmitNext,
+  ])
 
   if (questionCount === 0 || quizTerminated) return null
 
@@ -317,11 +354,11 @@ export default function QnAPage({ onNavigate } = {}) {
 
       <QuizHeader
         remainingSeconds={remainingSeconds}
-        isBookmarked={!!bookmarkedQuestions[currentQuestion]}
-        onToggleBookmark={toggleBookmark}
         onAbort={() => setShowAbortModal(true)}
         onToggleNavigator={() => setShowNavDrawer((prev) => !prev)}
         onToggleRoughWork={() => setShowRoughWorkDrawer((prev) => !prev)}
+        onOpenInstructions={() => setShowInstructionsModal(true)}
+        onOpenShortcuts={() => setShowShortcutsModal(true)}
       />
       <div className="flex-1 flex overflow-hidden relative">
         <QuestionNavigator
@@ -451,6 +488,18 @@ export default function QnAPage({ onNavigate } = {}) {
           onConfirm={handleAbortConfirm}
         />
       )}
+
+      <QuizInstructionsModal
+        isOpen={showInstructionsModal}
+        onClose={() => setShowInstructionsModal(false)}
+        quizType="qna"
+      />
+
+      <KeyboardShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
+        quizType="qna"
+      />
     </div>
   )
 }

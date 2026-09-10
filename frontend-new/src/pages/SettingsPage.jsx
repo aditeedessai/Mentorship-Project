@@ -5,7 +5,6 @@ import {
   Shield,
   Trash2,
   ChevronRight,
-  Camera,
   Moon,
   Sun,
   LogOut,
@@ -14,7 +13,9 @@ import {
   X,
   Settings,
   Calendar,
+  GraduationCap,
 } from "lucide-react";
+import { EDUCATION_LEVELS } from "../data/academicOptions";
 
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
@@ -38,6 +39,40 @@ const SettingsPage = ({
   onDeleteAllStudySets,
 }) => {
   const { isDarkMode, toggleDarkMode } = useTheme();
+
+  // =========================================================
+  // STUDENT PROFILE
+  // =========================================================
+  const [studentProfile, setStudentProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStudentProfile = async () => {
+      if (!user?.id) return;
+      setLoadingProfile(true);
+      try {
+        const { data, error } = await supabase
+          .from("student_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!error && data && isMounted) {
+          setStudentProfile(data);
+        }
+      } catch (err) {
+        console.error("Error fetching student profile in Settings:", err);
+      } finally {
+        if (isMounted) setLoadingProfile(false);
+      }
+    };
+
+    fetchStudentProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // =========================================================
   // CHANGE PASSWORD
@@ -767,44 +802,13 @@ const SettingsPage = ({
           transition: transform 0.3s ease;
         }
 
-        .edit-profile-button,
         .create-action-button {
           position: relative;
           overflow: hidden;
         }
 
-        .edit-profile-button::after {
-          content: "";
-          position: absolute;
-          top: -20%;
-          left: -80%;
-          width: 45%;
-          height: 140%;
-          background: rgba(255, 255, 255, 0.14);
-          transform: skewX(-20deg);
-          transition: none;
-        }
-
-        .edit-profile-button:hover::after {
-          animation: buttonShimmer 0.8s ease;
-        }
-
         .logout-button:hover svg {
           animation: logoutIcon 0.5s ease;
-        }
-
-        .camera-button:hover {
-          transform: scale(1.08) rotate(4deg);
-        }
-
-        .camera-button {
-          transition:
-            transform 0.3s ease,
-            box-shadow 0.3s ease;
-        }
-
-        .camera-button:hover {
-          box-shadow: 0 6px 16px rgba(128, 100, 199, 0.22);
         }
 
         /* -----------------------------------------------------
@@ -838,8 +842,7 @@ const SettingsPage = ({
 
           .security-action,
           .theme-toggle span,
-          .danger-action,
-          .camera-button {
+          .danger-action {
             transition: none !important;
           }
         }
@@ -962,18 +965,10 @@ const SettingsPage = ({
 
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
               {/* Avatar */}
-              <div className="settings-avatar relative">
+              <div className="settings-avatar">
                 <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[#8064C7] text-2xl font-black text-[#F3F0F8] shadow-md transition-transform duration-300 hover:scale-[1.04]">
                   {user?.name?.charAt(0)?.toUpperCase() || "U"}
                 </div>
-
-                <button
-                  type="button"
-                  className="camera-button absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-xl border-2 border-inherit bg-[#8064C7] text-white shadow-sm"
-                  aria-label="Change profile picture"
-                >
-                  <Camera size={14} />
-                </button>
               </div>
 
               {/* User information */}
@@ -998,15 +993,137 @@ const SettingsPage = ({
                   Your account information
                 </p>
               </div>
+            </div>
+          </section>
 
-              {/* Edit Profile */}
+          {/* =================================================
+              STUDENT PROFILE
+          ================================================= */}
+          <section
+            className={`settings-student-profile-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 ${
+              isDarkMode
+                ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+                : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+            }`}
+          >
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="settings-section-icon flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+                  <GraduationCap size={20} />
+                </div>
+
+                <div>
+                  <h2 className="font-black tracking-tight">Student Profile</h2>
+
+                  <p
+                    className={`text-xs ${
+                      isDarkMode ? "text-white/50" : "text-gray-500"
+                    }`}
+                  >
+                    Keep your academic information up to date to personalize your learning experience.
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
-                className="edit-profile-button w-full cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] hover:shadow-lg sm:w-auto"
+                onClick={() => onNavigate && onNavigate("student-profile")}
+                className="w-full cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] hover:shadow-lg sm:w-auto"
               >
-                Edit Profile
+                Edit Student Profile
               </button>
             </div>
+
+            {loadingProfile ? (
+              <div className="flex items-center gap-2 py-4 text-xs font-semibold opacity-60">
+                <Loader2 size={16} className="animate-spin" />
+                Loading academic information...
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                  className={`rounded-2xl border p-4 transition-all ${
+                    isDarkMode
+                      ? "border-white/5 bg-white/5"
+                      : "border-gray-200/80 bg-white/70 shadow-sm"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
+                    Education Level
+                  </span>
+                  <p className="mt-1 text-xs font-bold">
+                    {EDUCATION_LEVELS.find(
+                      (l) => l.value === studentProfile?.education_level
+                    )?.label ||
+                      studentProfile?.education_level ||
+                      "Not specified"}
+                  </p>
+                </div>
+
+                <div
+                  className={`rounded-2xl border p-4 transition-all ${
+                    isDarkMode
+                      ? "border-white/5 bg-white/5"
+                      : "border-gray-200/80 bg-white/70 shadow-sm"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
+                    Grade / Year
+                  </span>
+                  <p className="mt-1 text-xs font-bold">
+                    {studentProfile?.grade_or_year || "Not specified"}
+                  </p>
+                </div>
+
+                <div
+                  className={`rounded-2xl border p-4 transition-all ${
+                    isDarkMode
+                      ? "border-white/5 bg-white/5"
+                      : "border-gray-200/80 bg-white/70 shadow-sm"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
+                    Field / Stream
+                  </span>
+                  <p className="mt-1 text-xs font-bold">
+                    {studentProfile?.field_stream || "Not specified"}
+                  </p>
+                </div>
+
+                <div
+                  className={`rounded-2xl border p-4 transition-all ${
+                    isDarkMode
+                      ? "border-white/5 bg-white/5"
+                      : "border-gray-200/80 bg-white/70 shadow-sm"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
+                    Curriculum
+                  </span>
+                  <p className="mt-1 text-xs font-bold">
+                    {studentProfile?.curriculum_type || "Not specified"}
+                  </p>
+                </div>
+
+                <div
+                  className={`rounded-2xl border p-4 transition-all sm:col-span-2 ${
+                    isDarkMode
+                      ? "border-white/5 bg-white/5"
+                      : "border-gray-200/80 bg-white/70 shadow-sm"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8064C7]">
+                    Competitive Exams
+                  </span>
+                  <p className="mt-1 text-xs font-bold">
+                    {Array.isArray(studentProfile?.competitive_exams) &&
+                    studentProfile.competitive_exams.length > 0
+                      ? studentProfile.competitive_exams.join(", ")
+                      : "None"}
+                  </p>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* =================================================

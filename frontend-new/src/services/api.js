@@ -144,6 +144,15 @@ export async function fetchStudySetProgress() {
 }
 
 /**
+ * Fetch chronological attempt progress history for one study set.
+ * GET /api/progress/history?study_set_id={studySetId}
+ */
+export async function fetchProgressHistory(studySetId) {
+  if (!studySetId) return null;
+  return cachedGet(`/api/progress/history?study_set_id=${studySetId}`);
+}
+
+/**
  * Create a new study set.
  * POST /api/study-sets
  */

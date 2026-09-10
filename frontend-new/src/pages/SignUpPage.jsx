@@ -22,9 +22,17 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (dob && dob > today) {
+      setError("Date of Birth cannot be in the future.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -343,6 +351,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
               <input
                 type="date"
+                max={today}
                 value={dob}
                 onChange={(e) =>
                   setDob(e.target.value)

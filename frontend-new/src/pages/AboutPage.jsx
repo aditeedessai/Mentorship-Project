@@ -23,6 +23,7 @@ import {
 import { useTheme } from "../context/ThemeContext";
 
 import jojoWaving from "../assets/jojo-waving.png";
+import shanePic from "../assets/team/shane.png";
 import riyaPic from "../assets/team/riya.png";
 import shanalliePic from "../assets/team/shanallie.png";
 import nylaPic from "../assets/team/nyla.png";
@@ -208,6 +209,17 @@ export default function AboutPage({ onNavigate }) {
 
   const teamMembers = [
     {
+      id: "shane",
+      name: "Shane Furtado",
+      initials: "SF",
+      role: "Mentor",
+      focus: "Project Guidance",
+      image: shanePic,
+      imagePos: "object-center",
+      github: "https://github.com/ShaneRayFurtado",
+      linkedin: "https://www.linkedin.com/in/shane-furtado-1883aa244/",
+    },
+    {
       id: "aditee",
       name: "Aditee",
       initials: "AD",
@@ -215,8 +227,8 @@ export default function AboutPage({ onNavigate }) {
       focus: "Service Integration",
       image: aditeePic,
       imagePos: "object-center",
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
+      github: "https://github.com/aditeedessai",
+      linkedin: "https://www.linkedin.com/in/aditee-dessai",
     },
     {
       id: "sandra",
@@ -226,8 +238,8 @@ export default function AboutPage({ onNavigate }) {
       focus: "Architecture & CI/CD",
       image: sandraPic,
       imagePos: "object-center",
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
+      github: "https://github.com/sandferns20",
+      linkedin: "https://www.linkedin.com/in/sandra-fernandes-607b6431a",
     },
     {
       id: "shanallie",
@@ -237,8 +249,8 @@ export default function AboutPage({ onNavigate }) {
       focus: "Embedding & PgVector",
       image: shanalliePic,
       imagePos: "object-[center_32%]",
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
+      github: "https://github.com/ShanallieBraganza",
+      linkedin: "https://www.linkedin.com/in/shanallie-braganza-bba840326",
     },
     {
       id: "riya",
@@ -248,8 +260,8 @@ export default function AboutPage({ onNavigate }) {
       focus: "Semantic Rubrics",
       image: riyaPic,
       imagePos: "object-[center_20%]",
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
+      github: "https://github.com/RiyaShetgaonkar",
+      linkedin: "https://www.linkedin.com/in/riya-shetgaonkar",
     },
     {
       id: "nyla",
@@ -259,8 +271,8 @@ export default function AboutPage({ onNavigate }) {
       focus: "UI/UX & Experience",
       image: nylaPic,
       imagePos: "object-[center_20%]",
-      github: "https://github.com",
-      linkedin: "https://linkedin.com",
+      github: "https://github.com/nylalobo",
+      linkedin: "https://www.linkedin.com/in/nyla-lobo-631616299",
     },
   ];
 
@@ -736,11 +748,11 @@ export default function AboutPage({ onNavigate }) {
               Meet the Team
             </h2>
             <p className={`mx-auto mt-2 max-w-xl text-sm ${textSecondary}`}>
-              Five minds building one ambitious AI study companion.
+              Six minds building one ambitious AI study companion.
             </p>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {teamMembers.map((member) => (
               <div
                 key={member.id}
@@ -841,7 +853,7 @@ export default function AboutPage({ onNavigate }) {
                   <a
                     href={member.github}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     title="GitHub"
                     className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-200 hover:scale-110 ${
                       isDarkMode
@@ -855,7 +867,7 @@ export default function AboutPage({ onNavigate }) {
                   <a
                     href={member.linkedin}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     title="LinkedIn"
                     className={`flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-200 hover:scale-110 ${
                       isDarkMode

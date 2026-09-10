@@ -28,7 +28,7 @@ import jojoWorking from "../assets/jojo-working.png";
  *                       App.jsx can flip `hasProfile → true`.
  *   user             – { id, name, email } from App state.
  */
-function StudentProfilePage({ onProfileComplete, user }) {
+function StudentProfilePage({ onProfileComplete, onBack, user }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
   // ─── Form state ──────────────────────────────────────
@@ -42,6 +42,44 @@ function StudentProfilePage({ onProfileComplete, user }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
+
+  // ─── Pre-fill existing profile data if available ─────
+  useEffect(() => {
+    let isMounted = true;
+    const loadProfile = async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData?.user?.id || user?.id;
+        if (!userId) return;
+
+        const { data, error: fetchErr } = await supabase
+          .from("student_profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (data && isMounted) {
+          if (data.education_level) setEducationLevel(data.education_level);
+          if (data.grade_or_year) setGradeOrYear(data.grade_or_year);
+          if (data.field_stream) setFieldStream(data.field_stream);
+          if (data.curriculum_type) setCurriculumType(data.curriculum_type);
+          if (data.competitive_exams) {
+            const exams = Array.isArray(data.competitive_exams)
+              ? data.competitive_exams.join(", ")
+              : String(data.competitive_exams);
+            setCompetitiveExams(exams);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading student profile:", err);
+      }
+    };
+
+    loadProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // ─── Derived option lists ────────────────────────────
   const gradeOptions = GRADES_BY_LEVEL[educationLevel] || [];
@@ -219,8 +257,22 @@ function StudentProfilePage({ onProfileComplete, user }) {
         />
       </div>
 
-      {/* ── Theme Toggle (top-right) ── */}
+      {/* ── Theme Toggle & Back Button (top-right) ── */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-3">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
+              isDarkMode
+                ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                : "border-white/80 bg-white/70 text-[#292530] hover:bg-white shadow-sm"
+            }`}
+          >
+            ← Back to Settings
+          </button>
+        )}
+
         <button
           onClick={toggleDarkMode}
           className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all ${
@@ -263,9 +315,11 @@ function StudentProfilePage({ onProfileComplete, user }) {
 
             {/* Heading */}
             <h1 className="max-w-md text-4xl font-black leading-tight tracking-tight">
-              One last thing
+              {onBack ? "Update your" : "One last thing"}
               <br />
-              <span className="text-purple-200">before we begin.</span>
+              <span className="text-purple-200">
+                {onBack ? "academic profile." : "before we begin."}
+              </span>
             </h1>
 
             {/* Description */}
@@ -304,7 +358,7 @@ function StudentProfilePage({ onProfileComplete, user }) {
           {/* Heading */}
           <div className="mb-6">
             <h2 className="text-3xl font-black tracking-tight">
-              Tell us more...
+              {onBack ? "Update Student Profile" : "Tell us more..."}
             </h2>
 
             <p
@@ -312,8 +366,9 @@ function StudentProfilePage({ onProfileComplete, user }) {
                 isDarkMode ? "text-white/55" : "text-[#706A78]"
               }`}
             >
-              Help us better understand you so we can curate your study
-              sessions.
+              {onBack
+                ? "Update your academic details to keep your study sessions personalized."
+                : "Help us better understand you so we can curate your study sessions."}
             </p>
           </div>
 
@@ -563,6 +618,8 @@ function StudentProfilePage({ onProfileComplete, user }) {
                   <Loader2 size={16} className="animate-spin" />
                   Saving your profile...
                 </>
+              ) : onBack ? (
+                "Save Profile →"
               ) : (
                 "Continue →"
               )}
