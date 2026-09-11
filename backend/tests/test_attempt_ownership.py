@@ -65,7 +65,7 @@ def test_attempt_creation_ownership():
     set_a = study_service.create_study_set("User A Attempt Set", user_id=user_a_id)
     study_set_id_a = set_a["study_set_id"]
 
-    req = StartAttemptRequest(study_set_id=uuid.UUID(study_set_id_a))
+    req = StartAttemptRequest(study_set_id=uuid.UUID(study_set_id_a), question_type="mcq")
 
     # User A can create attempt for User A's set
     att_resp_a = attempts.start_attempt(payload=req, current_user=user_a)
@@ -103,7 +103,7 @@ def test_attempt_retrieval_answer_finish_results_ownership():
     study_set_id_a = set_a["study_set_id"]
 
     # Start attempt as User A
-    start_req = StartAttemptRequest(study_set_id=uuid.UUID(study_set_id_a))
+    start_req = StartAttemptRequest(study_set_id=uuid.UUID(study_set_id_a), question_type="mcq")
     att_a = attempts.start_attempt(payload=start_req, current_user=user_a)
     attempt_id_a = str(att_a.attempt_id)
 
@@ -234,7 +234,7 @@ def test_nonexistent_and_deleted_study_set_attempt():
 
     # Save attempt with NULL study_set_id
     orphan_att_id = f"orphan_{uuid.uuid4().hex[:6]}"
-    attempt_repository.save_attempt(attempt_id=orphan_att_id, total_marks=0.0, marks_awarded=0.0, study_set_id=None)
+    attempt_repository.save_attempt(attempt_id=orphan_att_id, question_type="mcq", total_marks=0.0, marks_awarded=0.0, study_set_id=None)
 
     # Fetching orphan attempt with user_id returns 404 safely
     if pytest:

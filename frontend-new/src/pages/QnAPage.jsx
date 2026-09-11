@@ -8,7 +8,7 @@ import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers } from '../services/api'
+import { submitAnswers, evaluatePracticeAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
 
@@ -155,8 +155,11 @@ export default function QnAPage({ onNavigate } = {}) {
     }
   }, [currentQuestion, answers])
 
+  const isPracticeRetake = location.state?.isPracticeRetake || false
+  const historicalAttemptId = location.state?.historicalAttemptId
+
   const handleFinishQuiz = useCallback(async () => {
-    if (quizEndedRef.current || isSubmitting || !attemptId) return
+    if (quizEndedRef.current || isSubmitting || (!attemptId && !historicalAttemptId)) return
     quizEndedRef.current = true
     clearQuizTimer()
 
@@ -175,34 +178,63 @@ export default function QnAPage({ onNavigate } = {}) {
         }
       }
 
-      if (answersPayload.length > 0) {
-        await submitAnswers(attemptId, questionType, answersPayload)
-      }
-
-      antiCheatCleanup()
-
       const studySetId = location.state?.studySetId
-      onNavigate?.('results', {
-        attemptId,
-        studySetId,
-        questionType,
-      })
-      navigate('/results', {
-        state: {
+
+      if (isPracticeRetake) {
+        let tempResults = null
+        if (answersPayload.length > 0) {
+          tempResults = await evaluatePracticeAnswers(
+            studySetId,
+            historicalAttemptId,
+            questionType,
+            answersPayload
+          )
+        }
+
+        antiCheatCleanup()
+
+        onNavigate?.('results', {
+          studySetId,
+          questionType,
+          isPracticeRetake: true,
+          temporaryResults: tempResults,
+        })
+        navigate('/results', {
+          state: {
+            studySetId,
+            questionType,
+            isPracticeRetake: true,
+            temporaryResults: tempResults,
+            questions,
+          },
+        })
+      } else {
+        if (answersPayload.length > 0) {
+          await submitAnswers(attemptId, questionType, answersPayload)
+        }
+
+        antiCheatCleanup()
+
+        onNavigate?.('results', {
           attemptId,
           studySetId,
           questionType,
-        },
-      })
+        })
+        navigate('/results', {
+          state: {
+            attemptId,
+            studySetId,
+            questionType,
+          },
+        })
+      }
     } catch (err) {
       console.error('Failed to submit quiz:', err)
-      // Submission failed — allow the user to retry rather than stranding
-      // them on a dead "Submit" button (the timer stays stopped either way).
       quizEndedRef.current = false
     } finally {
       setIsSubmitting(false)
     }
-  }, [isSubmitting, attemptId, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup, clearQuizTimer])
+  }, [isSubmitting, attemptId, historicalAttemptId, isPracticeRetake, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup, clearQuizTimer])
 
   const handleScratchpadChange = useCallback((value) => {
     setScratchpad(prev => ({ ...prev, [currentQuestion]: value }))

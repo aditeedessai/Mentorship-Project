@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   History,
@@ -10,9 +11,10 @@ import {
   FileQuestion,
   Sparkles,
   Eye,
+  RotateCcw,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
-import { fetchAttemptsForStudySet, fetchStudySet } from "../services/api";
+import { fetchAttemptsForStudySet, fetchStudySet, fetchQuestions } from "../services/api";
 
 const SECTIONS = [
   { id: "mcq", label: "MCQ", types: ["mcq"] },
@@ -23,11 +25,47 @@ const SECTIONS = [
 
 function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
   const { isDarkMode } = useTheme();
+  const navigate = useNavigate();
   const [activeType, setActiveType] = useState("mcq");
   const [attempts, setAttempts] = useState([]);
   const [studySet, setStudySet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retakingId, setRetakingId] = useState(null);
+
+  const handleRetake = async (att) => {
+    if (retakingId) return;
+    try {
+      setRetakingId(att.attempt_id);
+      const rawType = att.question_type || att.type || activeType;
+      const backendType = String(rawType).toLowerCase().trim();
+      const frontendType = backendType === "short" ? "short-answer" : backendType;
+
+      const questions = await fetchQuestions(studySetId, frontendType, att.attempt_id);
+      if (!questions || questions.length === 0) {
+        setError("No saved questions found for this historical attempt.");
+        return;
+      }
+
+      const route = backendType === "mcq" ? "/quiz/mcq" : "/quiz/qna";
+
+      navigate(route, {
+        state: {
+          questionCount: questions.length,
+          questionType: frontendType,
+          questions: questions,
+          studySetId: studySetId,
+          isPracticeRetake: true,
+          historicalAttemptId: att.attempt_id,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to fetch historical attempt questions for practice retake:", err);
+      setError("Unable to load questions for practice retake. Please try again.");
+    } finally {
+      setRetakingId(null);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -389,8 +427,28 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
                     </div>
                   </div>
 
-                  {/* Card Footer Action */}
-                  <div className="pt-1 flex items-center justify-end">
+                  {/* Card Footer Actions */}
+                  <div className="pt-1 flex items-center justify-end gap-2 flex-wrap sm:flex-nowrap">
+                    {isCompleted && (
+                      <button
+                        type="button"
+                        disabled={retakingId === att.attempt_id}
+                        onClick={() => handleRetake(att)}
+                        className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold border transition-all duration-300 cursor-pointer ${
+                          isDarkMode
+                            ? "border-[#8064C7]/30 bg-[#8064C7]/20 text-[#A78BFA] hover:bg-[#8064C7] hover:text-white"
+                            : "border-[#8064C7]/30 bg-[#8064C7]/10 text-[#8064C7] hover:bg-[#8064C7] hover:text-white shadow-xs"
+                        } ${retakingId === att.attempt_id ? "opacity-60 cursor-not-allowed" : ""}`}
+                      >
+                        {retakingId === att.attempt_id ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <RotateCcw size={15} />
+                        )}
+                        <span>Retake</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() =>
@@ -399,17 +457,18 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
                           attemptId: att.attempt_id,
                         })
                       }
-                      className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs sm:text-sm font-bold border transition-all duration-300 cursor-pointer ${
+                      className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold border transition-all duration-300 cursor-pointer ${
                         isDarkMode
-                          ? "border-white/10 bg-white/5 text-white hover:bg-[#8064C7] hover:border-[#8064C7]"
-                          : "border-gray-200 bg-white text-[#231B33] hover:bg-[#8064C7] hover:text-white hover:border-[#8064C7] shadow-xs"
+                          ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+                          : "border-gray-200 bg-white text-[#231B33] hover:bg-gray-50 shadow-xs"
                       }`}
                     >
-                      <Eye size={16} />
+                      <Eye size={15} />
                       <span>View Results</span>
                       <ChevronRight size={14} />
                     </button>
                   </div>
+
                 </div>
               );
             })}

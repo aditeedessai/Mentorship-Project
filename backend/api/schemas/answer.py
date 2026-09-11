@@ -30,6 +30,26 @@ class SubmitAnswersRequest(BaseModel):
     )
 
 
+class EvaluatePracticeRequest(BaseModel):
+    study_set_id: str = Field(
+        ...,
+        description="Study set ID owning the historical attempt"
+    )
+    attempt_id: str = Field(
+        ...,
+        description="Historical attempt ID whose questions are being practice-retaken"
+    )
+    question_type: QuestionType = Field(
+        ...,
+        description="Question type being practice-retaken (mcq, application, long, short)"
+    )
+    answers: list[AnswerItem] = Field(
+        ...,
+        min_items=1,
+        description="List of student answers for the practice retake"
+    )
+
+
 class EvaluationResponse(BaseModel):
     """
     Schema for returning the evaluation results of a student's answer.

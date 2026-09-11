@@ -557,6 +557,29 @@ export async function submitAnswers(
   return result;
 }
 
+/**
+ * Statelessly evaluate answers for a historical attempt retake (practice mode).
+ * POST /api/attempts/evaluate-practice
+ */
+export async function evaluatePracticeAnswers(
+  studySetId,
+  historicalAttemptId,
+  frontendType,
+  answers
+) {
+  const backendType = toBackendType(frontendType);
+
+  return await request("/api/attempts/evaluate-practice", {
+    method: "POST",
+    body: JSON.stringify({
+      study_set_id: studySetId,
+      attempt_id: historicalAttemptId,
+      question_type: backendType,
+      answers,
+    }),
+  });
+}
+
 // ── Finish Attempt ───────────────────────────────────────────────────
 
 /**

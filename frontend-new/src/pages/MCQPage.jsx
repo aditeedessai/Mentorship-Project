@@ -9,7 +9,7 @@ import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers } from '../services/api'
+import { submitAnswers, evaluatePracticeAnswers } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import jojoCelebration from '../assets/jojo-celebration.png'
 
@@ -239,8 +239,11 @@ export default function MCQPage({ onNavigate } = {}) {
 
   // ── Submit Quiz ────────────────────────────────────────────────
 
+  const isPracticeRetake = location.state?.isPracticeRetake || false
+  const historicalAttemptId = location.state?.historicalAttemptId
+
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || !attemptId) {
+    if (isSubmitting || (!attemptId && !historicalAttemptId)) {
       return
     }
 
@@ -271,39 +274,70 @@ export default function MCQPage({ onNavigate } = {}) {
         }
       }
 
-      // 1. Submit section answers
-      if (answersPayload.length > 0) {
-        await submitAnswers(
-          attemptId,
-          'mcq',
-          answersPayload
-        )
-      }
-
-      // 2. Cleanup anti-cheating
-      antiCheatCleanup()
-
-      // 3. Show celebration AFTER successful submission
-      setShowCelebration(true)
-
-      // 4. Wait briefly so the user can see celebration
       const studySetId = location.state?.studySetId
 
-      setTimeout(() => {
-        onNavigate?.('results', {
-          attemptId,
-          studySetId,
-          questionType: 'mcq',
-        })
+      if (isPracticeRetake) {
+        // Practice retake: evaluate stateless in memory without saving
+        let tempResults = null
+        if (answersPayload.length > 0) {
+          tempResults = await evaluatePracticeAnswers(
+            studySetId,
+            historicalAttemptId,
+            'mcq',
+            answersPayload
+          )
+        }
 
-        navigate('/results', {
-          state: {
+        antiCheatCleanup()
+        setShowCelebration(true)
+
+        setTimeout(() => {
+          onNavigate?.('results', {
+            studySetId,
+            questionType: 'mcq',
+            isPracticeRetake: true,
+            temporaryResults: tempResults,
+          })
+
+          navigate('/results', {
+            state: {
+              studySetId,
+              questionType: 'mcq',
+              isPracticeRetake: true,
+              temporaryResults: tempResults,
+              questions,
+            },
+          })
+        }, 2500)
+      } else {
+        // Normal attempt: submit section answers to DB
+        if (answersPayload.length > 0) {
+          await submitAnswers(
+            attemptId,
+            'mcq',
+            answersPayload
+          )
+        }
+
+        antiCheatCleanup()
+        setShowCelebration(true)
+
+        setTimeout(() => {
+          onNavigate?.('results', {
             attemptId,
             studySetId,
             questionType: 'mcq',
-          },
-        })
-      }, 2500)
+          })
+
+          navigate('/results', {
+            state: {
+              attemptId,
+              studySetId,
+              questionType: 'mcq',
+            },
+          })
+        }, 2500)
+      }
     } catch (err) {
       console.error('Failed to submit quiz:', err)
     } finally {
@@ -312,6 +346,8 @@ export default function MCQPage({ onNavigate } = {}) {
   }, [
     isSubmitting,
     attemptId,
+    historicalAttemptId,
+    isPracticeRetake,
     questionCount,
     questions,
     selectedAnswers,

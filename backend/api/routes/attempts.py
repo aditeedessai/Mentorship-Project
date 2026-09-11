@@ -9,6 +9,7 @@ from backend.api.schemas.answer import (
     EvaluationListResponse,
     EvaluationResponse,
     SubmitAnswersRequest,
+    EvaluatePracticeRequest,
 )
 from backend.api.schemas.attempt import (
     AttemptResponse,
@@ -23,7 +24,9 @@ from backend.database.attempt_repository import (
 from backend.database.evaluation_repository import (
     get_evaluations_with_question_details,
 )
-from backend.database import study_set_repository
+from backend.database import study_set_repository, quiz_repository
+from backend.answer_evaluation.evaluator import evaluate_mcq, evaluate_answers_batch
+from backend.config.word_limits import validate_answer_word_limit
 from backend.services.evaluation_service import (
     evaluate_and_save_attempt_answers,
     get_attempt_section_completion_status,
@@ -380,6 +383,215 @@ def get_attempt_evaluations(
 
     return EvaluationListResponse(
         attempt_id=attempt_id,
+        total_marks=total_marks,
+        earned_marks=earned_marks,
+        percentage=percentage,
+        results=eval_responses
+    )
+
+
+@router.post(
+    "/evaluate-practice",
+    response_model=EvaluationListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Statelessly evaluate practice retake answers",
+    description="Evaluates student answers for a historical attempt retake in memory without persisting any database records."
+)
+def evaluate_practice_answers(
+    payload: EvaluatePracticeRequest,
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(20, 600, scope="answer_evaluation"))
+) -> EvaluationListResponse:
+    # 1. Verify study set exists and belongs to current_user.user_id
+    study_set = study_set_repository.get_study_set(payload.study_set_id, user_id=current_user.user_id)
+    if not study_set:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Study set with ID '{payload.study_set_id}' not found"
+        )
+
+    # 2. Verify historical attempt exists and belongs to current_user.user_id
+    attempt = get_attempt_from_db(payload.attempt_id, user_id=current_user.user_id)
+    if (
+        not attempt
+        or attempt.get("study_set_id") != payload.study_set_id
+        or attempt.get("question_type") != payload.question_type.value
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Historical attempt with ID '{payload.attempt_id}' not found for this study set and question type"
+        )
+
+    # 3. Retrieve historical questions for this specific attempt
+    historical_questions = quiz_repository.get_questions_by_study_set(
+        payload.study_set_id, attempt_id=payload.attempt_id
+    )
+    hist_q_map = {
+        q["question_id"]: q for q in historical_questions
+        if q.get("question_type") == payload.question_type.value
+    }
+    if not hist_q_map:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No historical questions found for this attempt"
+        )
+
+    # 4. Fetch full question details (with reference_answer/correct_option) and pre-validate
+    full_q_map = {}
+    for item in payload.answers:
+        q_id = item.question_id
+        student_ans = item.student_answer
+        if q_id not in hist_q_map:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Question with ID '{q_id}' does not belong to historical attempt '{payload.attempt_id}'"
+            )
+        question = quiz_repository.get_question_by_id(q_id)
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Question with ID '{q_id}' not found"
+            )
+        full_q_map[q_id] = question
+        q_type = question.get("question_type", "short")
+        is_valid, _, max_limit = validate_answer_word_limit(q_type, student_ans)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Answer exceeds the maximum allowed word limit of {max_limit} words."
+            )
+
+    # 5. In-memory pure evaluation (NO DB WRITES)
+    eval_results = [None] * len(payload.answers)
+    item_meta = []
+    pending_batch_indices = []
+    batch_items = []
+
+    for idx, item in enumerate(payload.answers):
+        q_id = item.question_id
+        student_ans = item.student_answer
+        question = full_q_map[q_id]
+        raw_type = str(question.get("question_type", "short")).lower().strip()
+        q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
+
+        raw_max = question.get("marks")
+        if raw_max is not None:
+            try:
+                max_marks = float(raw_max)
+            except (ValueError, TypeError):
+                max_marks = 2.0 if q_type == "mcq" else 10.0
+        else:
+            max_marks = 2.0 if q_type == "mcq" else 10.0
+
+        item_meta.append((q_id, student_ans, max_marks, question))
+
+        if student_ans.strip() == "":
+            eval_results[idx] = {
+                "final_score": 0.0,
+                "marks_awarded": 0.0,
+                "semantic_score": 0.0,
+                "concept_score": 0.0,
+                "is_correct": False,
+                "matched_concepts": [],
+                "missed_concepts": ["Question skipped by student"],
+            }
+        elif q_type == "mcq":
+            eval_results[idx] = evaluate_mcq(
+                student_choice=student_ans,
+                correct_choice=question.get("correct_option", ""),
+                max_marks=max_marks
+            )
+        else:
+            pending_batch_indices.append(idx)
+            batch_items.append({
+                "student": student_ans,
+                "reference": question.get("reference_answer", ""),
+            })
+
+    if batch_items:
+        batch_results = evaluate_answers_batch(batch_items)
+        for pos, idx in enumerate(pending_batch_indices):
+            _, _, item_max_marks, _ = item_meta[idx]
+            res = dict(batch_results[pos])
+            res["marks_awarded"] = round(res["final_score"] * item_max_marks, 2)
+            eval_results[idx] = res
+
+    # 6. Format evaluation responses
+    eval_responses = []
+    total_marks = 0.0
+    earned_marks = 0.0
+
+    for idx, item in enumerate(payload.answers):
+        q_id, student_ans, max_marks, question = item_meta[idx]
+        res = eval_results[idx]
+        is_corr = res.get("is_correct")
+        if is_corr is None:
+            final_s = res.get("final_score", 0.0)
+            is_corr = (final_s >= 0.55) if final_s is not None else None
+
+        marks_awd = float(res.get("marks_awarded", 0.0))
+        total_marks += max_marks
+        earned_marks += marks_awd
+
+        # Build correct_answer text
+        correct_ans = None
+        q_type = (question.get("question_type") or "").lower().strip()
+        if q_type == "mcq":
+            corr_opt = question.get("correct_option")
+            opts = question.get("options")
+            if isinstance(opts, str):
+                try:
+                    import json
+                    opts = json.loads(opts)
+                except Exception:
+                    opts = {}
+            if corr_opt and isinstance(opts, dict) and str(corr_opt).strip() in opts:
+                key = str(corr_opt).strip()
+                val = str(opts[key]).strip()
+                if val.lower().startswith(f"option {key.lower()}"):
+                    correct_ans = val
+                else:
+                    correct_ans = f"Option {key}: {val}"
+            elif corr_opt:
+                correct_ans = f"Option {str(corr_opt).strip()}"
+        else:
+            correct_ans = question.get("reference_answer")
+
+        feedback_str = None
+        if is_corr:
+            feedback_str = "Great job! Your answer matches the model criteria."
+        else:
+            missed = res.get("missed_concepts")
+            if missed and isinstance(missed, list) and len(missed) > 0:
+                feedback_str = f"Missed key concepts: {', '.join(missed)}"
+            else:
+                feedback_str = "Review this topic in your study material to reinforce the concept."
+
+        eval_responses.append(
+            EvaluationResponse(
+                question_id=q_id,
+                student_answer=student_ans if student_ans.strip() != "" else None,
+                marks_awarded=marks_awd,
+                final_score=float(res.get("final_score", 0.0)),
+                is_correct=is_corr,
+                semantic_score=float(res.get("semantic_score")) if res.get("semantic_score") is not None else None,
+                concept_score=float(res.get("concept_score")) if res.get("concept_score") is not None else None,
+                matched_concepts=res.get("matched_concepts"),
+                missed_concepts=res.get("missed_concepts"),
+                keyword_stuffing_detected=res.get("keyword_stuffing_detected", False),
+                logic_inversion_detected=res.get("logic_inversion_detected", False),
+                question_text=question.get("question"),
+                question_type=question.get("question_type"),
+                correct_answer=correct_ans,
+                max_marks=max_marks,
+                feedback=feedback_str,
+                topic=question.get("topic"),
+            )
+        )
+
+    percentage = round((earned_marks / total_marks * 100.0), 2) if total_marks > 0 else 0.0
+
+    return EvaluationListResponse(
+        attempt_id=payload.attempt_id,
         total_marks=total_marks,
         earned_marks=earned_marks,
         percentage=percentage,

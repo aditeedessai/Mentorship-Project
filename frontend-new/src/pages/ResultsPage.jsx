@@ -82,8 +82,11 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const [revisionStatuses, setRevisionStatuses] = useState([]);
   const [error, setError] = useState(null);
 
+  const isPracticeRetake = location.state?.isPracticeRetake || false;
+  const temporaryResults = location.state?.temporaryResults;
+
   useEffect(() => {
-    if (!passedAttemptId) {
+    if (!passedAttemptId && !isPracticeRetake) {
       if (studySetId) {
         if (typeof onNavigate === 'function') {
           onNavigate('study-set-attempts', { studySetId });
@@ -98,14 +101,33 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         }
       }
     }
-  }, [passedAttemptId, studySetId, onNavigate, navigate]);
+  }, [passedAttemptId, isPracticeRetake, studySetId, onNavigate, navigate]);
 
   useEffect(() => {
-    if (!passedAttemptId) return;
-
     let isMounted = true;
 
     async function loadAttemptData() {
+      if (isPracticeRetake && temporaryResults) {
+        setPerformanceData({
+          earned_marks: temporaryResults.earned_marks,
+          total_marks: temporaryResults.total_marks,
+          overall_percentage: temporaryResults.percentage,
+          question_type: location.state?.questionType || 'mcq',
+        });
+        setEvaluations(temporaryResults.results || []);
+        if (studySetId) {
+          fetchRevisionStatus(studySetId).then((revStatus) => {
+            if (isMounted && revStatus?.statuses) {
+              setRevisionStatuses(revStatus.statuses);
+            }
+          }).catch(() => {});
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (!passedAttemptId) return;
+
       try {
         setLoading(true);
         setError(null);
@@ -157,7 +179,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     return () => {
       isMounted = false;
     };
-  }, [passedAttemptId, studySetId]);
+  }, [passedAttemptId, isPracticeRetake, temporaryResults, studySetId]);
 
   const rawQuestionType = useMemo(() => {
     if (performanceData?.question_type) return performanceData.question_type;
@@ -495,6 +517,13 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                 <Sparkles size={14} />
                 {questionTypeName} RESULTS
               </span>
+
+              {isPracticeRetake && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/30 px-3.5 py-1 font-mono text-xs font-black uppercase tracking-wider text-amber-100 shadow-xs">
+                  <RotateCcw size={13} />
+                  Practice Retake
+                </span>
+              )}
 
               {overallRemark && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/30 px-3.5 py-1 text-xs font-bold text-white">
