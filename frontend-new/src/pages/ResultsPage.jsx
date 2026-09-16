@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, matchPath } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import {
   fetchResults,
@@ -69,7 +69,13 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const location = useLocation();
   const navigate = useNavigate();
 
-  const passedAttemptId = paramAttemptId || location.state?.attemptId || propAttemptId;
+  const match = matchPath("/results/:attemptId", location.pathname);
+  const urlAttemptId = match?.params?.attemptId || paramAttemptId || null;
+
+  const passedAttemptId =
+    urlAttemptId ||
+    location.state?.attemptId ||
+    propAttemptId;
   const passedQuestions = useMemo(
     () => location.state?.questions || [],
     [location.state?.questions]
@@ -140,6 +146,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         ]);
 
         if (!isMounted) return;
+
+        if (!perfData && !resData) {
+          throw new Error(`Attempt with ID '${passedAttemptId}' not found`);
+        }
 
         setPerformanceData(perfData || resData);
 

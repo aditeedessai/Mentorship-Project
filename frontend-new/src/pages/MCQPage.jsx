@@ -329,7 +329,7 @@ export default function MCQPage({ onNavigate } = {}) {
             questionType: 'mcq',
           })
 
-          navigate('/results', {
+          navigate(`/results/${attemptId}`, {
             state: {
               attemptId,
               studySetId,
