@@ -451,12 +451,18 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
 
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         onNavigate?.("results", {
                           studySetId,
                           attemptId: att.attempt_id,
-                        })
-                      }
+                        });
+                        navigate(`/results/${att.attempt_id}`, {
+                          state: {
+                            studySetId,
+                            attemptId: att.attempt_id,
+                          },
+                        });
+                      }}
                       className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold border transition-all duration-300 cursor-pointer ${
                         isDarkMode
                           ? "border-white/10 bg-white/5 text-white hover:bg-white/10"

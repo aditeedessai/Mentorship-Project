@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
@@ -104,7 +104,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           <span>Jot</span>
           <span className="text-[#8064C7]">.</span>
           <span
-            className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${isDarkMode
+            className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest ${isDarkMode
               ? "bg-[#8064C7]/20 text-[#A78BFA]"
               : "bg-[#8064C7]/10 text-[#8064C7]"
               }`}
@@ -135,6 +135,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   // Pre-existing bug, unrelated to the revision-scheduler work - the
   // mandatory profile-loading spinner below (hasProfile === null ||
   // profileLoading) references isDarkMode, but nothing in this
@@ -163,7 +164,28 @@ function AppContent() {
   const [user, setUser] = useState(null);
 
   // ================= PAGE STATE =================
-  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentPage, setCurrentPage] = useState(() => {
+    if (
+      window.location.pathname === "/results" ||
+      window.location.pathname.startsWith("/results/")
+    ) {
+      return "results";
+    }
+
+    const savedPage = sessionStorage.getItem("jot_current_page");
+
+    return savedPage || "dashboard";
+  });
+
+  // Synchronize currentPage with URL path for ResultsPage
+  useEffect(() => {
+    if (
+      location.pathname === "/results" ||
+      location.pathname.startsWith("/results/")
+    ) {
+      setCurrentPage("results");
+    }
+  }, [location.pathname]);
 
   // ================= STUDY SET STATE =================
   const [studySets, setStudySets] = useState([]);
@@ -171,7 +193,9 @@ function AppContent() {
   const [studySetsError, setStudySetsError] = useState("");
 
   // ================= SELECTED STUDY SET & ATTEMPT =================
-  const [selectedStudySetId, setSelectedStudySetId] = useState(null);
+  const [selectedStudySetId, setSelectedStudySetId] = useState(() => {
+    return sessionStorage.getItem("jot_selected_study_set_id") || null;
+  });
   const [selectedAttemptId, setSelectedAttemptId] = useState(null);
 
   // Which question type ConfigureSession should land on already
@@ -196,11 +220,18 @@ function AppContent() {
 
   // ================= CENTRAL NAVIGATION HANDLER =================
   const handleNavigate = (page, state) => {
+    sessionStorage.setItem("jot_current_page", page);
+
     if (page === "upload") {
       setSelectedStudySetId(null);
       setSelectedAttemptId(null);
+      sessionStorage.removeItem("jot_selected_study_set_id");
     } else if (state?.studySetId) {
       setSelectedStudySetId(state.studySetId);
+      sessionStorage.setItem("jot_selected_study_set_id", state.studySetId);
+    } else if (page === "dashboard" || page === "study-sets") {
+      setSelectedStudySetId(null);
+      sessionStorage.removeItem("jot_selected_study_set_id");
     }
 
     if (state?.attemptId) {
@@ -210,6 +241,15 @@ function AppContent() {
     }
 
     setPreselectType(state?.preselectType || null);
+
+    // Reset URL to '/' when leaving a URL-based ResultsPage
+    if (
+      page !== "results" &&
+      (location.pathname === "/results" ||
+        location.pathname.startsWith("/results/"))
+    ) {
+      navigate("/");
+    }
 
     setCurrentPage(page);
     window.scrollTo(0, 0);
@@ -231,6 +271,7 @@ function AppContent() {
             session.user.email.split("@")[0],
           email: session.user.email,
         });
+        setAuthPage("app");
       }
     });
 
@@ -245,11 +286,14 @@ function AppContent() {
             session.user.email.split("@")[0],
           email: session.user.email,
         });
+        setAuthPage("app");
       } else {
         setUser(null);
         setHasProfile(null);
         setStudySets([]);
         setSelectedStudySetId(null);
+        sessionStorage.removeItem("jot_current_page");
+        sessionStorage.removeItem("jot_selected_study_set_id");
         setAuthPage("landing");
       }
     });
@@ -670,7 +714,9 @@ function AppContent() {
 
         {/* ================= RESULTS / PROGRESS ================= */}
         {(currentPage === "results" ||
-          currentPage === "progress") && (
+          currentPage === "progress" ||
+          location.pathname === "/results" ||
+          location.pathname.startsWith("/results/")) && (
             <ResultsPage
               onNavigate={handleNavigate}
               studySetId={selectedStudySetId}

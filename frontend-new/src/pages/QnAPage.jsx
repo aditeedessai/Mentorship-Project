@@ -220,7 +220,7 @@ export default function QnAPage({ onNavigate } = {}) {
           studySetId,
           questionType,
         })
-        navigate('/results', {
+        navigate(`/results/${attemptId}`, {
           state: {
             attemptId,
             studySetId,
