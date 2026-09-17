@@ -120,10 +120,27 @@ def delete_study_set(study_set_id: str, user_id: str = None) -> bool:
 
     If `user_id` is provided, enforces ownership (only deletes if study_set_id
     and user_id both match). Returns True if a record was deleted, False otherwise.
+
+    When user_id is provided, also deletes associated tasks and exams for that
+    user/study-set before removing the study set itself, so they don't become
+    orphaned 'General Study' entries in the Planner (their FK is ON DELETE SET
+    NULL, not CASCADE). Revision schedules are handled automatically by their
+    own ON DELETE CASCADE FK. All deletes happen in a single transaction.
     """
     connection = get_connection()
     try:
         if user_id:
+            # Delete associated tasks and exams BEFORE the study set,
+            # so the ON DELETE SET NULL FK never fires (the rows are
+            # already gone). Single commit at the end for atomicity.
+            connection.execute(
+                "DELETE FROM tasks WHERE study_set_id = ? AND user_id = ?",
+                (study_set_id, user_id)
+            )
+            connection.execute(
+                "DELETE FROM exams WHERE study_set_id = ? AND user_id = ?",
+                (study_set_id, user_id)
+            )
             cursor = connection.execute(
                 """
                 DELETE FROM study_sets
@@ -158,11 +175,32 @@ def delete_all_study_sets(user_id: str) -> int:
 
     Documents/document_chunks/questions/question_sources under each
     study set cascade-delete automatically via their own FK definitions,
-    exactly as they do for a single delete_study_set() call. Returns the
-    number of study sets deleted.
+    exactly as they do for a single delete_study_set() call.
+
+    Also deletes associated tasks and exams before removing the study
+    sets, same as delete_study_set() does per-set - prevents orphaned
+    'General Study' Planner entries. Returns the number of study sets
+    deleted.
     """
     connection = get_connection()
     try:
+        # Delete associated tasks and exams BEFORE the study sets.
+        connection.execute(
+            """
+            DELETE FROM tasks
+            WHERE user_id = ?
+              AND study_set_id IN (SELECT study_set_id FROM study_sets WHERE user_id = ?)
+            """,
+            (user_id, user_id)
+        )
+        connection.execute(
+            """
+            DELETE FROM exams
+            WHERE user_id = ?
+              AND study_set_id IN (SELECT study_set_id FROM study_sets WHERE user_id = ?)
+            """,
+            (user_id, user_id)
+        )
         cursor = connection.execute(
             "DELETE FROM study_sets WHERE user_id = ?",
             (user_id,)

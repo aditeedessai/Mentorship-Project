@@ -178,6 +178,7 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
               <input
                 type="date"
                 value={date}
+                min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })()}
                 onChange={(e) => setDate(e.target.value)}
                 className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
                   isDarkMode

@@ -79,7 +79,7 @@ def test_task_creation_with_all_fields_and_study_set():
         req = CreateTaskRequest(
             name="Solve Ch 4 Exercises",
             priority="high",
-            due_date=date(2026, 9, 15),
+            due_date=date(2026, 10, 15),
             due_time=time(14, 30),
             study_set_id=uuid.UUID(set_id_a),
             task_type="assignment",
@@ -90,7 +90,7 @@ def test_task_creation_with_all_fields_and_study_set():
         assert res.name == "Solve Ch 4 Exercises"
         assert str(res.user_id) == user_a_id
         assert res.priority == "high"
-        assert res.due_date == date(2026, 9, 15)
+        assert res.due_date == date(2026, 10, 15)
         assert res.due_time == time(14, 30)
         assert res.task_type == "assignment"
         assert str(res.study_set_id) == set_id_a

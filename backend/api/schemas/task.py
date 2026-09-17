@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 from typing import Literal
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CreateTaskRequest(BaseModel):
@@ -32,6 +32,13 @@ class CreateTaskRequest(BaseModel):
         "study",
         description="Type of task: study, review, quiz, assignment, or other"
     )
+
+    @field_validator("due_date")
+    @classmethod
+    def due_date_must_not_be_in_past(cls, v: date | None) -> date | None:
+        if v is not None and v < date.today():
+            raise ValueError("due_date cannot be in the past")
+        return v
 
 
 class UpdateTaskRequest(BaseModel):

@@ -139,7 +139,7 @@ export default function AddExamModal({ isOpen, onClose, onAddExam, studySets = [
               <input
                 type="date"
                 value={examDate}
-                min={new Date().toISOString().split("T")[0]}
+                min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })()}
                 onChange={(e) => setExamDate(e.target.value)}
                 className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
                   isDarkMode
