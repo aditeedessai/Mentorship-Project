@@ -3,6 +3,11 @@ import { X, Calendar, Clock, BookOpen, AlertCircle, Plus } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { TASK_TYPES, PRIORITIES } from "../../data/plannerData";
 
+function getTodayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, studySets = [] }) {
   const { isDarkMode } = useTheme();
 
@@ -11,9 +16,17 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
       ? studySets.map((s) => (typeof s === "object" ? s.name : s))
       : ["General Study"];
 
+  const getInitialDate = () => {
+    const today = getTodayLocalDate();
+    if (defaultDate && defaultDate >= today) {
+      return defaultDate;
+    }
+    return today;
+  };
+
   const [title, setTitle] = useState("");
   const [studySet, setStudySet] = useState(availableStudySets[0] || "General Study");
-  const [date, setDate] = useState(defaultDate || new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getInitialDate);
   const [time, setTime] = useState("10:00");
   const [type, setType] = useState("Study");
   const [priority, setPriority] = useState("Medium");
@@ -21,10 +34,16 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (defaultDate) {
-      setDate(defaultDate);
+    if (isOpen) {
+      const today = getTodayLocalDate();
+      if (defaultDate && defaultDate >= today) {
+        setDate(defaultDate);
+      } else {
+        setDate(today);
+      }
+      setError("");
     }
-  }, [defaultDate]);
+  }, [isOpen, defaultDate]);
 
   useEffect(() => {
     if (availableStudySets.length > 0 && !availableStudySets.includes(studySet)) {
@@ -48,6 +67,12 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
       return;
     }
 
+    const today = getTodayLocalDate();
+    if (date < today) {
+      setError("Task date cannot be in the past.");
+      return;
+    }
+
     onAddTask({
       title: trimmedTitle,
       studySet,
@@ -67,11 +92,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div
-        className={`w-full max-w-lg rounded-3xl border p-6 sm:p-8 backdrop-blur-2xl shadow-2xl transition-all duration-300 ${
-          isDarkMode
+        className={`w-full max-w-lg rounded-3xl border p-6 sm:p-8 backdrop-blur-2xl shadow-2xl transition-all duration-300 ${isDarkMode
             ? "border-white/10 bg-[#17131F] text-[#F3F0F8]"
             : "border-white/80 bg-white text-[#292530]"
-        }`}
+          }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-inherit pb-4 mb-6">
@@ -85,11 +109,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
           <button
             type="button"
             onClick={onClose}
-            className={`flex h-8 w-8 items-center justify-center rounded-xl border transition ${
-              isDarkMode
+            className={`flex h-8 w-8 items-center justify-center rounded-xl border transition ${isDarkMode
                 ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+              }`}
             aria-label="Close modal"
           >
             <X size={16} />
@@ -116,11 +139,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Revise Physics Chapter 3"
-              className={`w-full rounded-2xl border px-4 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
-                isDarkMode
+              className={`w-full rounded-2xl border px-4 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${isDarkMode
                   ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
                   : "border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:border-[#8064C7]"
-              }`}
+                }`}
             />
           </div>
 
@@ -133,11 +155,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
               <select
                 value={studySet}
                 onChange={(e) => setStudySet(e.target.value)}
-                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
-                  isDarkMode
+                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${isDarkMode
                     ? "border-white/10 bg-[#14101D] text-white focus:border-[#8064C7]"
                     : "border-gray-200 bg-white text-gray-900 focus:border-[#8064C7]"
-                }`}
+                  }`}
               >
                 {availableStudySets.map((setName) => (
                   <option key={setName} value={setName}>
@@ -154,11 +175,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
-                  isDarkMode
+                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${isDarkMode
                     ? "border-white/10 bg-[#14101D] text-white focus:border-[#8064C7]"
                     : "border-gray-200 bg-white text-gray-900 focus:border-[#8064C7]"
-                }`}
+                  }`}
               >
                 {Object.keys(TASK_TYPES).map((typeKey) => (
                   <option key={typeKey} value={typeKey}>
@@ -178,13 +198,12 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
               <input
                 type="date"
                 value={date}
-                min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })()}
+                min={getTodayLocalDate()}
                 onChange={(e) => setDate(e.target.value)}
-                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
-                  isDarkMode
+                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${isDarkMode
                     ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7]"
                     : "border-gray-200 bg-white text-gray-900 focus:border-[#8064C7]"
-                }`}
+                  }`}
               />
             </div>
 
@@ -196,11 +215,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
-                  isDarkMode
+                className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${isDarkMode
                     ? "border-white/10 bg-white/5 text-white focus:border-[#8064C7]"
                     : "border-gray-200 bg-white text-gray-900 focus:border-[#8064C7]"
-                }`}
+                  }`}
               />
             </div>
           </div>
@@ -218,13 +236,12 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
                     key={pKey}
                     type="button"
                     onClick={() => setPriority(pKey)}
-                    className={`rounded-2xl py-2.5 text-xs font-bold border transition ${
-                      isSelected
+                    className={`rounded-2xl py-2.5 text-xs font-bold border transition ${isSelected
                         ? "bg-[#8064C7] text-white border-[#8064C7] shadow-xs"
                         : isDarkMode
-                        ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                        : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
-                    }`}
+                          ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
+                      }`}
                   >
                     {pKey}
                   </button>
@@ -238,11 +255,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
             <button
               type="button"
               onClick={onClose}
-              className={`rounded-xl border px-5 py-2.5 text-xs font-bold transition ${
-                isDarkMode
+              className={`rounded-xl border px-5 py-2.5 text-xs font-bold transition ${isDarkMode
                   ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
                   : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-              }`}
+                }`}
             >
               Cancel
             </button>

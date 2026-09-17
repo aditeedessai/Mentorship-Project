@@ -17,12 +17,12 @@ try:
 except ImportError:
     pytest = None
 
+from datetime import date
 from backend.database.database import get_connection, init_db
+from backend.database import exam_repository, task_repository
 from backend.services import study_service
 from backend.api.routes import study_sets
 from backend.api.schemas.study_set import DeleteStudySetResponse
-
-
 from backend.api.deps import AuthenticatedUser
 
 
@@ -144,6 +144,52 @@ def test_post_deletion_get_and_list():
     assert not any(s["study_set_id"] == study_set_id for s in listed_after)
 
 
+def test_delete_study_set_deletes_associated_tasks_and_exams():
+    """Bug 2 verification: deleting a study set removes its tasks and exams."""
+    conn = get_connection()
+    user_id = get_existing_user_id(conn)
+    conn.close()
+
+    # Create study set
+    created_set = study_service.create_study_set("Set with tasks and exams", user_id=user_id)
+    set_id = created_set["study_set_id"]
+
+    # Create task linked to study set
+    created_task = task_repository.create_task(
+        name="Linked Task",
+        user_id=user_id,
+        due_date=date.today().isoformat(),
+        study_set_id=set_id,
+    )
+    task_id = created_task["id"]
+
+    # Create exam linked to study set
+    created_exam = exam_repository.create_exam(
+        subject="Linked Exam",
+        exam_type="Exam",
+        exam_date=date.today().isoformat(),
+        user_id=user_id,
+        study_set_id=set_id,
+    )
+    exam_id = created_exam["id"]
+
+    # Verify task and exam exist and are linked
+    assert task_repository.get_task_by_id(task_id, user_id)["study_set_id"] == set_id
+    exams_before = exam_repository.get_exams(user_id)
+    assert any(e["id"] == exam_id for e in exams_before)
+
+    # Delete study set
+    deleted = study_service.delete_study_set(set_id, user_id=user_id)
+    assert deleted is True
+
+    # Verify task was deleted (not orphaned or set to NULL)
+    assert task_repository.get_task_by_id(task_id, user_id) is None
+
+    # Verify exam was deleted
+    exams_after = exam_repository.get_exams(user_id)
+    assert not any(e["id"] == exam_id for e in exams_after)
+
+
 if __name__ == "__main__":
     init_db()
     print("Running test_user_can_delete_own_study_set()...")
@@ -154,4 +200,6 @@ if __name__ == "__main__":
     test_delete_nonexistent_study_set()
     print("Running test_post_deletion_get_and_list()...")
     test_post_deletion_get_and_list()
+    print("Running test_delete_study_set_deletes_associated_tasks_and_exams()...")
+    test_delete_study_set_deletes_associated_tasks_and_exams()
     print("\nALL DELETE STUDY SET TESTS PASSED SUCCESSFULLY!")

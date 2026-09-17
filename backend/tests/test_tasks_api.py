@@ -103,6 +103,34 @@ def test_task_creation_with_all_fields_and_study_set():
         study_set_repository.delete_study_set(set_id_a, user_id=user_a_id)
 
 
+def test_task_creation_past_date_rejected():
+    """Test that creating a task with a due_date in the past is rejected."""
+    from datetime import timedelta
+
+    past_date = date.today() - timedelta(days=1)
+
+    # 1. Pydantic validation error when due_date is in the past
+    with pytest.raises(ValueError, match="due_date cannot be in the past"):
+        CreateTaskRequest(
+            name="Past Task",
+            due_date=past_date,
+        )
+
+    # 2. Today's date is accepted
+    req_today = CreateTaskRequest(
+        name="Today Task",
+        due_date=date.today(),
+    )
+    assert req_today.due_date == date.today()
+
+    # 3. Future date is accepted
+    req_future = CreateTaskRequest(
+        name="Future Task",
+        due_date=date.today() + timedelta(days=7),
+    )
+    assert req_future.due_date == date.today() + timedelta(days=7)
+
+
 def test_task_study_set_ownership_enforcement():
     """Test that User B cannot associate User A's study set to User B's task."""
     conn = get_connection()
@@ -321,6 +349,8 @@ if __name__ == "__main__":
     init_db()
     print("Running test_task_creation_with_all_fields_and_study_set()...")
     test_task_creation_with_all_fields_and_study_set()
+    print("Running test_task_creation_past_date_rejected()...")
+    test_task_creation_past_date_rejected()
     print("Running test_task_study_set_ownership_enforcement()...")
     test_task_study_set_ownership_enforcement()
     print("Running test_task_listing_and_date_filtering()...")

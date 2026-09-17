@@ -4,6 +4,11 @@ import { useTheme } from "../../context/ThemeContext";
 
 const EXAM_TYPES = ["Exam", "Test", "Midterm", "Finals", "Quiz"];
 
+function getTodayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function AddExamModal({ isOpen, onClose, onAddExam, studySets = [] }) {
   const { isDarkMode } = useTheme();
 
@@ -27,6 +32,12 @@ export default function AddExamModal({ isOpen, onClose, onAddExam, studySets = [
 
     if (!examDate) {
       setError("Please select an exam date.");
+      return;
+    }
+
+    const today = getTodayLocalDate();
+    if (examDate < today) {
+      setError("Exam date cannot be in the past.");
       return;
     }
 
@@ -139,7 +150,7 @@ export default function AddExamModal({ isOpen, onClose, onAddExam, studySets = [
               <input
                 type="date"
                 value={examDate}
-                min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })()}
+                min={getTodayLocalDate()}
                 onChange={(e) => setExamDate(e.target.value)}
                 className={`w-full rounded-2xl border px-3.5 py-3 text-xs sm:text-sm font-semibold focus:outline-none transition ${
                   isDarkMode

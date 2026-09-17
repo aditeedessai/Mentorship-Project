@@ -19,6 +19,11 @@ const SECTION_TITLE_MAP = {
 const toFrontendQuestionTypeId = (backendType) =>
   backendType === "short" ? "short-answer" : backendType;
 
+function getTodayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function TodaysTasksCard({ onNavigate }) {
   const { isDarkMode } = useTheme();
   const [tasks, setTasks] = useState([]);
@@ -44,7 +49,7 @@ function TodaysTasksCard({ onNavigate }) {
       // revision_service.get_due_revisions_for_user()'s docstring), so
       // "Today's Tasks" filters down to today-or-overdue itself; a
       // future-dated pair belongs on the Planner calendar, not here.
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getTodayLocalDate();
       setRevisionsDue((revisionsData || []).filter((r) => r.next_due_date <= todayStr));
     } catch {
       setLoadError("Couldn't load today's tasks. Please try again.");
