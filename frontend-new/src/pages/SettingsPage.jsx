@@ -356,16 +356,17 @@ const SettingsPage = ({
       setGoogleCalendarSuccess("");
       setGoogleCalendarLoading(true);
 
-      const url =
-        await getGoogleCalendarConnectUrl();
+      const data = await getGoogleCalendarConnectUrl();
 
-      if (!url) {
+      const authUrl = data?.auth_url;
+
+      if (!authUrl || typeof authUrl !== "string") {
         throw new Error(
           "Could not generate Google Calendar connection URL."
         );
       }
 
-      window.location.href = url;
+      window.location.href = authUrl;
     } catch (error) {
       console.error(
         "Google Calendar connection failed:",
@@ -373,7 +374,7 @@ const SettingsPage = ({
       );
 
       setGoogleCalendarError(
-        error.message ||
+        error?.message ||
           "Could not connect Google Calendar."
       );
 
@@ -1073,22 +1074,11 @@ const SettingsPage = ({
               className="settings-orbit-center settings-orbit-clockwise pointer-events-none absolute right-[10px] top-1/2 h-[175px] w-[175px] -translate-y-1/2"
             >
 
-              {/* TOP */}
-
               <span className="settings-orbit-pulse absolute left-1/2 top-[-5px] h-3 w-3 -translate-x-1/2 rounded-full bg-[#45A9A9]" />
-
-
-              {/* RIGHT */}
 
               <span className="settings-orbit-bubble absolute right-[-5px] top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#8064C7]" />
 
-
-              {/* BOTTOM */}
-
               <span className="settings-orbit-pulse absolute bottom-[-5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#45A9A9]" />
-
-
-              {/* LEFT */}
 
               <span className="absolute left-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[#A58CDD]" />
 
