@@ -5,6 +5,7 @@ import requests
 from dotenv import load_dotenv
 
 from backend.database.attempt_repository import delete_attempts_for_user
+from backend.database.audit_log_repository import create_audit_log
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]  # backend/services/account_service.py -> backend/
 load_dotenv(BACKEND_DIR / ".env")
@@ -71,3 +72,5 @@ def delete_own_account(user_id: str) -> None:
         raise RuntimeError(
             f"Failed to delete Supabase auth user (status {response.status_code}): {response.text}"
         )
+
+    create_audit_log(user_id, "ACCOUNT_DELETED")

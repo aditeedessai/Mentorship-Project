@@ -858,3 +858,9 @@ export async function disconnectGoogleCalendar() {
     method: "DELETE",
   });
 }
+export const createAuditLog = async (action) => {
+  return request("/api/audit/log", {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
+};

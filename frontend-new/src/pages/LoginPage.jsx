@@ -3,6 +3,7 @@ import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
+import { createAuditLog } from "../services/api";
 import jojoWaving from "../assets/jojo-waving.png";
 
 function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
@@ -40,6 +41,16 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
         );
         setLoading(false);
         return;
+      }
+
+      // Create an application-level audit record after successful login.
+      try {
+        await createAuditLog("LOGIN");
+      } catch (auditError) {
+        console.error(
+          "Failed to create login audit log:",
+          auditError
+        );
       }
 
       if (onLogin && data?.user) {
@@ -644,7 +655,6 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                 </div>
 
                 {/* ================= SPEECH BUBBLE ================= */}
-                {/* Only this position was changed */}
                 <div className="login-speech absolute left-[255px] top-[82px] z-30 w-[175px]">
 
                   <div className="relative rounded-2xl border border-white/30 bg-white px-4 py-3 text-left shadow-[0_12px_30px_rgba(0,0,0,0.16)]">
@@ -657,7 +667,6 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                       Ready to study with me?
                     </p>
 
-                    {/* Bubble tail */}
                     <div className="absolute left-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-b border-l border-white/30 bg-white" />
                   </div>
                 </div>
@@ -817,7 +826,9 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() =>
+                      setShowPassword(!showPassword)
+                    }
                     className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-200 hover:scale-110 ${
                       isDarkMode
                         ? "text-white/40 hover:text-white"
@@ -871,7 +882,9 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                   className="login-main-button w-full rounded-xl bg-[#8064C7] py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="relative z-10">
-                    {loading ? "Logging in..." : "Login →"}
+                    {loading
+                      ? "Logging in..."
+                      : "Login →"}
                   </span>
 
                   <span className="shine login-button-shine" />

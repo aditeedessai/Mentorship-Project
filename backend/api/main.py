@@ -10,6 +10,7 @@ from backend.answer_evaluation.sbert_model import preload_models
 from backend.database.database import close_pool, init_db, init_pool
 from backend.api.routes import (
     account,
+    audit,
     activity,
     attempts,
     auth,
@@ -85,7 +86,7 @@ async def lifespan(app: FastAPI):
     preload_task.cancel()
 
     # Release every pooled connection back to Postgres on shutdown rather
-    # than leaving them open until the OS reaps the process.
+    # than leaving them open until the OS reaps them.
     print("main.py: closing database connection pool...")
     close_pool()
     print("main.py: connection pool closed.")
@@ -128,6 +129,7 @@ api_router.include_router(tasks.router)
 api_router.include_router(exams.router)
 api_router.include_router(activity.router)
 api_router.include_router(account.router)
+api_router.include_router(audit.router)
 api_router.include_router(google_calendar.router)
 api_router.include_router(progress.router)
 

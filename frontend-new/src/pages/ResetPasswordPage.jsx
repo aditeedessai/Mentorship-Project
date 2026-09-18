@@ -3,6 +3,7 @@ import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
+import { createAuditLog } from "../services/api";
 
 function ResetPasswordPage({ onComplete }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -28,10 +29,15 @@ function ResetPasswordPage({ onComplete }) {
 
     try {
       // 1. Get the authenticated user from the active recovery session
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
       if (userError || !user?.email) {
-        setError("Password reset session is invalid or has expired. Please request a new link.");
+        setError(
+          "Password reset session is invalid or has expired. Please request a new link."
+        );
         setLoading(false);
         return;
       }
@@ -39,7 +45,10 @@ function ResetPasswordPage({ onComplete }) {
       const normalizedEmail = user.email.trim().toLowerCase();
 
       // 2. Pre-hash the new password with the user's normalized email salt
-      const clientHashedPassword = await hashPasswordClient(password, normalizedEmail);
+      const clientHashedPassword = await hashPasswordClient(
+        password,
+        normalizedEmail
+      );
 
       // 3. Update the password on Supabase
       const { data, error: updateError } = await supabase.auth.updateUser({
@@ -50,6 +59,16 @@ function ResetPasswordPage({ onComplete }) {
         setError(updateError.message || "Failed to update password.");
         setLoading(false);
         return;
+      }
+
+      // 4. Create an audit record after the password is successfully changed
+      try {
+        await createAuditLog("PASSWORD_CHANGED");
+      } catch (auditError) {
+        console.error(
+          "Failed to create password-change audit log:",
+          auditError
+        );
       }
 
       if (onComplete) {
@@ -65,7 +84,9 @@ function ResetPasswordPage({ onComplete }) {
   return (
     <div
       className={`relative flex min-h-screen items-center justify-center p-4 sm:p-6 transition-colors duration-500 font-sans ${
-        isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+        isDarkMode
+          ? "bg-[#0E0B15] text-[#F5F2FA]"
+          : "bg-[#F6F3FC] text-[#292530]"
       }`}
     >
       {/* Background Glows */}
@@ -104,7 +125,6 @@ function ResetPasswordPage({ onComplete }) {
             : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
         }`}
       >
-
         {/* ================= LEFT SECTION ================= */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-12 text-white lg:flex">
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
@@ -127,7 +147,8 @@ function ResetPasswordPage({ onComplete }) {
             </h1>
 
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100/90">
-              Choose a strong, memorable password to secure your JOT account and continue studying.
+              Choose a strong, memorable password to secure your JOT account
+              and continue studying.
             </p>
           </div>
 
@@ -146,16 +167,27 @@ function ResetPasswordPage({ onComplete }) {
           </div>
 
           <div className="mb-7">
-            <h2 className="text-3xl font-black tracking-tight">Create a new password</h2>
-            <p className={`mt-2 text-sm ${isDarkMode ? "text-white/55" : "text-[#706A78]"}`}>
-              Your identity is verified. Enter a new password for your account.
+            <h2 className="text-3xl font-black tracking-tight">
+              Create a new password
+            </h2>
+            <p
+              className={`mt-2 text-sm ${
+                isDarkMode ? "text-white/55" : "text-[#706A78]"
+              }`}
+            >
+              Your identity is verified. Enter a new password for your
+              account.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* New Password */}
             <div>
-              <label className={`mb-2 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
+              <label
+                className={`mb-2 block text-xs font-bold uppercase tracking-wider ${
+                  isDarkMode ? "text-white/70" : "text-[#292530]"
+                }`}
+              >
                 New Password
               </label>
               <div className="relative">
@@ -175,17 +207,27 @@ function ResetPasswordPage({ onComplete }) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
-                    isDarkMode ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-[#292530]"
+                    isDarkMode
+                      ? "text-white/40 hover:text-white"
+                      : "text-gray-400 hover:text-[#292530]"
                   }`}
                 >
-                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                  {showPassword ? (
+                    <EyeOff size={19} />
+                  ) : (
+                    <Eye size={19} />
+                  )}
                 </button>
               </div>
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className={`mb-2 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
+              <label
+                className={`mb-2 block text-xs font-bold uppercase tracking-wider ${
+                  isDarkMode ? "text-white/70" : "text-[#292530]"
+                }`}
+              >
                 Confirm New Password
               </label>
               <div className="relative">
@@ -203,12 +245,20 @@ function ResetPasswordPage({ onComplete }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() =>
+                    setShowConfirmPassword(!showConfirmPassword)
+                  }
                   className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
-                    isDarkMode ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-[#292530]"
+                    isDarkMode
+                      ? "text-white/40 hover:text-white"
+                      : "text-gray-400 hover:text-[#292530]"
                   }`}
                 >
-                  {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                  {showConfirmPassword ? (
+                    <EyeOff size={19} />
+                  ) : (
+                    <Eye size={19} />
+                  )}
                 </button>
               </div>
             </div>
@@ -233,4 +283,4 @@ function ResetPasswordPage({ onComplete }) {
   );
 }
 
-export default ResetPasswordPage;
+export default ResetPasswordPage;
