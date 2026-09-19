@@ -17,6 +17,11 @@ from backend.services import document_service
 router = APIRouter(tags=["Documents"])
 
 
+INVALID_FILE_MESSAGE = (
+    "The uploaded file is invalid. Please upload a valid file and try again."
+)
+
+
 @router.post(
     "/study-sets/{study_set_id}/documents",
     response_model=DocumentListResponse,
@@ -55,8 +60,6 @@ def upload_documents(
         file_ext = Path(file.filename or "").suffix.lower()
 
         if file_ext not in SUPPORTED_EXTENSIONS:
-            allowed_formats = ", ".join(sorted(SUPPORTED_EXTENSIONS))
-
             # Delete the newly created study set because the upload
             # operation has already failed validation.
             study_set_repository.delete_study_set(
@@ -66,10 +69,7 @@ def upload_documents(
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"Unsupported file format '{file_ext}'. Allowed formats:"
-                    f" {allowed_formats}"
-                ),
+                detail=INVALID_FILE_MESSAGE,
             )
 
     uploaded_docs = []
@@ -99,7 +99,7 @@ def upload_documents(
                 if doc_record:
                     uploaded_docs.append(DocumentResponse(**doc_record))
 
-            except (ImageValidationError, ValueError) as e:
+            except (ImageValidationError, ValueError):
                 # The file was detected as invalid during processing.
                 # Remove the newly created Study Set so that an invalid
                 # upload does not leave an empty/orphaned Study Set.
@@ -110,20 +110,20 @@ def upload_documents(
 
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(e),
+                    detail=INVALID_FILE_MESSAGE,
                 )
 
-            except Exception as e:
-                # Any processing failure should also clean up the newly
-                # created Study Set so partial uploads are not retained.
+            except Exception:
+                # Any unexpected processing failure also cleans up the
+                # newly created Study Set.
                 study_set_repository.delete_study_set(
                     str(study_set_id),
                     user_id=current_user.user_id,
                 )
 
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Error processing file '{orig_name}': {str(e)}",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=INVALID_FILE_MESSAGE,
                 )
 
     return DocumentListResponse(documents=uploaded_docs)

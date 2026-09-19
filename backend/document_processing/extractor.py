@@ -29,11 +29,11 @@ def validate_pdf_file(file_path: str) -> None:
         with open(file_path, "rb") as f:
             header = f.read(5)
     except OSError:
-        raise ValueError("The uploaded PDF file could not be read.")
+        raise ValueError("The uploaded file could not be read.")
 
     if header != b"%PDF-":
         raise ValueError(
-            "The uploaded file is not a valid PDF. Please upload a genuine PDF file."
+            "The uploaded file is invalid. Please upload a valid file and try again."
         )
 
 

@@ -114,7 +114,7 @@ const uploadAnimationStyles = `
   .upload-orbit-glow { animation: uploadOrbitGlow 4s ease-in-out infinite; }
 
   @keyframes uploadIconFloat {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
+    0%, 100% { transform: translateY(0) rotate(0); }
     50% { transform: translateY(-8px) rotate(-4deg); }
   }
 
@@ -193,86 +193,251 @@ const uploadAnimationStyles = `
 
   .upload-zone-animation { position: relative; overflow: hidden; }
   .upload-zone-animation::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; padding: 1px;
-    background: linear-gradient(110deg, transparent, rgba(128, 100, 199, 0.05), rgba(128, 100, 199, 0.35), rgba(128, 100, 199, 0.05), transparent);
-    background-size: 250% 100%; animation: borderGlow 4s ease-in-out infinite;
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      110deg,
+      transparent,
+      rgba(128, 100, 199, 0.05),
+      rgba(128, 100, 199, 0.35),
+      rgba(128, 100, 199, 0.05),
+      transparent
+    );
+    background-size: 250% 100%;
+    animation: borderGlow 4s ease-in-out infinite;
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
   }
-  .upload-zone-animation > * { position: relative; z-index: 1; }
 
-  .animated-shine { position: relative; overflow: hidden; }
+  .upload-zone-animation > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .animated-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
   .animated-shine::after {
-    content: ""; position: absolute; top: 0; left: 0; width: 35%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
-    transform: translateX(-140%); pointer-events: none;
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent
+    );
+    transform: translateX(-140%);
+    pointer-events: none;
   }
-  .animated-shine:hover::after { animation: buttonShine 0.75s ease-out; }
-  .browse-icon-animation { transition: transform 0.3s ease; }
-  .animated-shine:hover .browse-icon-animation { animation: buttonIconBounce 0.6s ease-in-out; }
-  .camera-icon-animation { transition: transform 0.3s ease; }
-  .animated-shine:hover .camera-icon-animation { transform: rotate(-8deg) scale(1.1); }
 
-  .selected-file-animation { animation: fileEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .selected-file-icon-animation { animation: fileIconPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
-  .selected-file-animation:hover .selected-file-icon-animation { transform: scale(1.08) rotate(3deg); }
+  .animated-shine:hover::after {
+    animation: buttonShine 0.75s ease-out;
+  }
 
-  .format-card-animation { animation: formatEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .format-card-animation:hover { transform: translateY(-5px) scale(1.015); }
-  .format-card-animation:hover .format-icon-animation { animation: formatIconFloat 0.7s ease-in-out; }
-  .format-icon-animation { transition: transform 0.3s ease; }
+  .browse-icon-animation {
+    transition: transform 0.3s ease;
+  }
 
-  .info-card-animation { position: relative; overflow: hidden; }
+  .animated-shine:hover .browse-icon-animation {
+    animation: buttonIconBounce 0.6s ease-in-out;
+  }
+
+  .camera-icon-animation {
+    transition: transform 0.3s ease;
+  }
+
+  .animated-shine:hover .camera-icon-animation {
+    transform: rotate(-8deg) scale(1.1);
+  }
+
+  .selected-file-animation {
+    animation: fileEnter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .selected-file-icon-animation {
+    animation: fileIconPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .selected-file-animation:hover .selected-file-icon-animation {
+    transform: scale(1.08) rotate(3deg);
+  }
+
+  .format-card-animation {
+    animation: formatEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .format-card-animation:hover {
+    transform: translateY(-5px) scale(1.015);
+  }
+
+  .format-card-animation:hover .format-icon-animation {
+    animation: formatIconFloat 0.7s ease-in-out;
+  }
+
+  .format-icon-animation {
+    transition: transform 0.3s ease;
+  }
+
+  .info-card-animation {
+    position: relative;
+    overflow: hidden;
+  }
+
   .info-card-animation::after {
-    content: ""; position: absolute; top: 0; left: 0; width: 35%; height: 100%; pointer-events: none;
-    background: linear-gradient(90deg, transparent, rgba(128, 100, 199, 0.08), transparent);
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 35%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(128, 100, 199, 0.08),
+      transparent
+    );
     transform: translateX(-120%);
   }
-  .info-card-animation:hover::after { animation: infoShimmer 0.9s ease-out; }
 
-  .sparkle-animation { animation: sparkleSpin 2.5s ease-in-out infinite; }
-  .loading-jojo-animation { animation: loadingJojo 3.5s ease-in-out infinite; }
-  .loading-glow-animation { animation: loadingGlow 3s ease-in-out infinite; }
+  .info-card-animation:hover::after {
+    animation: infoShimmer 0.9s ease-out;
+  }
 
-  .create-button-animation { position: relative; overflow: hidden; }
+  .sparkle-animation {
+    animation: sparkleSpin 2.5s ease-in-out infinite;
+  }
+
+  .loading-jojo-animation {
+    animation: loadingJojo 3.5s ease-in-out infinite;
+  }
+
+  .loading-glow-animation {
+    animation: loadingGlow 3s ease-in-out infinite;
+  }
+
+  .create-button-animation {
+    position: relative;
+    overflow: hidden;
+  }
+
   .create-button-animation::after {
-    content: ""; position: absolute; top: 0; left: 0; width: 30%; height: 100%; pointer-events: none;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 30%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent
+    );
     transform: translateX(-140%);
   }
-  .create-button-animation:hover::after { animation: buttonShine 0.8s ease-out; }
-  .create-button-animation svg { transition: transform 0.3s ease; }
-  .create-button-animation:hover svg { transform: translateY(-3px); }
 
-  .cancel-button-animation:hover { transform: translateY(-2px); }
-  .remove-button-animation:hover svg { transform: rotate(8deg) scale(1.15); }
-  .remove-button-animation svg { transition: transform 0.25s ease; }
+  .create-button-animation:hover::after {
+    animation: buttonShine 0.8s ease-out;
+  }
+
+  .create-button-animation svg {
+    transition: transform 0.3s ease;
+  }
+
+  .create-button-animation:hover svg {
+    transform: translateY(-3px);
+  }
+
+  .cancel-button-animation:hover {
+    transform: translateY(-2px);
+  }
+
+  .remove-button-animation:hover svg {
+    transform: rotate(8deg) scale(1.15);
+  }
+
+  .remove-button-animation svg {
+    transition: transform 0.25s ease;
+  }
 
   @media (max-width: 768px) {
-    .upload-orbit-outer { width: 150px !important; height: 150px !important; margin-left: -75px !important; margin-top: -75px !important; }
-    .upload-orbit-inner { width: 115px !important; height: 115px !important; margin-left: -57.5px !important; margin-top: -57.5px !important; }
+    .upload-orbit-outer {
+      width: 150px !important;
+      height: 150px !important;
+      margin-left: -75px !important;
+      margin-top: -75px !important;
+    }
+
+    .upload-orbit-inner {
+      width: 115px !important;
+      height: 115px !important;
+      margin-left: -57.5px !important;
+      margin-top: -57.5px !important;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .upload-page-animation, .upload-header-animation, .upload-main-card-animation,
-    .upload-name-card-animation, .upload-formats-animation, .jojo-upload-float,
-    .jojo-upload-glow, .speech-bubble-animation, .upload-icon-animation, .format-card-animation,
-    .selected-file-animation, .selected-file-icon-animation, .sparkle-animation,
-    .loading-jojo-animation, .loading-glow-animation, .upload-orbit-clockwise,
-    .upload-orbit-counter, .upload-orbit-bubble, .upload-orbit-sparkle, .upload-orbit-glow {
+    .upload-page-animation,
+    .upload-header-animation,
+    .upload-main-card-animation,
+    .upload-name-card-animation,
+    .upload-formats-animation,
+    .jojo-upload-float,
+    .jojo-upload-glow,
+    .speech-bubble-animation,
+    .upload-icon-animation,
+    .format-card-animation,
+    .selected-file-animation,
+    .selected-file-icon-animation,
+    .sparkle-animation,
+    .loading-jojo-animation,
+    .loading-glow-animation,
+    .upload-orbit-clockwise,
+    .upload-orbit-counter,
+    .upload-orbit-bubble,
+    .upload-orbit-sparkle,
+    .upload-orbit-glow {
       animation: none !important;
     }
-    .format-card-animation:hover, .cancel-button-animation:hover { transform: none !important; }
+
+    .format-card-animation:hover,
+    .cancel-button-animation:hover {
+      transform: none !important;
+    }
   }
 `;
 
 const getFileIcon = (fileName) => {
   const ext = "." + fileName.toLowerCase().split(".").pop();
 
-  if (ext === ".pdf") return <FileText size={22} className="text-[#8064C7]" />;
-  if (ext === ".docx") return <FileCheck size={22} className="text-[#8064C7]" />;
-  if (ext === ".pptx") return <Presentation size={22} className="text-[#8064C7]" />;
-  if ([".png", ".jpg", ".jpeg", ".webp"].includes(ext)) return <ImageIcon size={22} className="text-[#8064C7]" />;
+  if (ext === ".pdf") {
+    return <FileText size={22} className="text-[#8064C7]" />;
+  }
+
+  if (ext === ".docx") {
+    return <FileCheck size={22} className="text-[#8064C7]" />;
+  }
+
+  if (ext === ".pptx") {
+    return <Presentation size={22} className="text-[#8064C7]" />;
+  }
+
+  if ([".png", ".jpg", ".jpeg", ".webp"].includes(ext)) {
+    return <ImageIcon size={22} className="text-[#8064C7]" />;
+  }
 
   return <FileText size={22} className="text-[#8064C7]" />;
 };
@@ -452,21 +617,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       );
 
       if (newSet) {
-        const errorMessage = error.message || "";
-        const normalizedError = errorMessage.toLowerCase();
-
-        if (
-          normalizedError.includes("not a valid pdf") ||
-          normalizedError.includes("genuine pdf")
-        ) {
-          setUploadError(
-            "The uploaded file is not a valid PDF. Please upload a genuine PDF file and try again."
-          );
-        } else {
-          setUploadError(
-            "The document could not be uploaded. Please check the file and try again."
-          );
-        }
+        setUploadError(
+          error.message ||
+            "The uploaded file is invalid. Please upload a valid file and try again."
+        );
       } else {
         setUploadError(
           "The study set could not be created. Please try again."
@@ -496,6 +650,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 isDarkMode ? "bg-[#8064C7]/20" : "bg-[#8064C7]/15"
               }`}
             />
+
             <img
               src={jojoReading}
               alt="Jojo is reading your study material"
@@ -542,6 +697,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 size={18}
                 className="mt-0.5 shrink-0 text-[#8064C7] sparkle-animation"
               />
+
               <p
                 className={`text-xs font-semibold leading-relaxed ${
                   isDarkMode ? "text-white/50" : "text-gray-500"
@@ -581,6 +737,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
               Create Study Set
             </h1>
+
             <p
               className={`mt-2 text-xs font-medium sm:text-sm ${
                 isDarkMode ? "text-white/50" : "text-[#706A78]"
@@ -592,25 +749,56 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
           <div className="relative flex h-[170px] w-[330px] shrink-0 items-center justify-center">
             <div className="upload-orbit-glow pointer-events-none absolute left-1/2 top-1/2 h-[205px] w-[205px] -ml-[102.5px] -mt-[102.5px] rounded-full bg-[#8064C7]/5 blur-xl" />
+
             <div className="pointer-events-none absolute left-1/2 top-1/2 h-[190px] w-[190px] -ml-[95px] -mt-[95px] rounded-full border border-[#8064C7]/15" />
 
             <div className="upload-orbit-clockwise upload-orbit-outer pointer-events-none absolute left-1/2 top-1/2 h-[190px] w-[190px] -ml-[95px] -mt-[95px]">
               <span className="upload-orbit-bubble absolute left-1/2 top-[-5px] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#8064C7]/60" />
-              <span className="upload-orbit-sparkle absolute right-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]" style={{ fontSize: "16px" }}>✦</span>
-              <span className="upload-orbit-bubble absolute bottom-[-5px] left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-[#8064C7]/45" style={{ animationDelay: "0.8s" }} />
-              <span className="upload-orbit-sparkle absolute left-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]" style={{ fontSize: "11px", animationDelay: "1.1s" }}>✦</span>
+
+              <span
+                className="upload-orbit-sparkle absolute right-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]"
+                style={{ fontSize: "16px" }}
+              >
+                ✦
+              </span>
+
+              <span
+                className="upload-orbit-bubble absolute bottom-[-5px] left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-[#8064C7]/45"
+                style={{ animationDelay: "0.8s" }}
+              />
+
+              <span
+                className="upload-orbit-sparkle absolute left-[-7px] top-1/2 -translate-y-1/2 text-[#8064C7]"
+                style={{ fontSize: "11px", animationDelay: "1.1s" }}
+              >
+                ✦
+              </span>
             </div>
 
             <div className="pointer-events-none absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px] rounded-full border border-dashed border-[#8064C7]/15" />
 
             <div className="upload-orbit-counter upload-orbit-inner pointer-events-none absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px]">
-              <span className="upload-orbit-sparkle absolute left-[13px] top-[12px] text-[#8064C7]" style={{ fontSize: "10px" }}>✦</span>
-              <span className="upload-orbit-bubble absolute right-[15px] top-[16px] h-1.5 w-1.5 rounded-full bg-[#8064C7]/40" style={{ animationDelay: "0.5s" }} />
-              <span className="upload-orbit-bubble absolute bottom-[10px] right-[12px] h-2 w-2 rounded-full bg-[#8064C7]/50" style={{ animationDelay: "1.4s" }} />
+              <span
+                className="upload-orbit-sparkle absolute left-[13px] top-[12px] text-[#8064C7]"
+                style={{ fontSize: "10px" }}
+              >
+                ✦
+              </span>
+
+              <span
+                className="upload-orbit-bubble absolute right-[15px] top-[16px] h-1.5 w-1.5 rounded-full bg-[#8064C7]/40"
+                style={{ animationDelay: "0.5s" }}
+              />
+
+              <span
+                className="upload-orbit-bubble absolute bottom-[10px] right-[12px] h-2 w-2 rounded-full bg-[#8064C7]/50"
+                style={{ animationDelay: "1.4s" }}
+              />
             </div>
 
             <div className="relative z-10 flex h-[145px] w-[145px] items-end justify-center">
               <div className="pointer-events-none absolute bottom-0 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full bg-[#8064C7]/10 blur-3xl jojo-upload-glow" />
+
               <img
                 src={jojoReading}
                 alt="Jojo reading"
@@ -623,9 +811,11 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
                   Ready when you are! 📖
                 </p>
+
                 <p className="mt-1 text-[10px] font-semibold leading-4 text-[#75678E]">
                   Send me your notes.
                 </p>
+
                 <div className="absolute left-[-7px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-45 border-b border-l border-[#8064C7]/15 bg-white" />
               </div>
             </div>
@@ -678,16 +868,25 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] upload-icon-animation">
                   <Upload size={30} />
                 </div>
+
                 <h2 className="text-xl font-black tracking-tight">
                   Drag & Drop Study Material
                 </h2>
-                <p className={`mt-2 text-xs ${isDarkMode ? "text-white/50" : "text-gray-500"}`}>
+
+                <p
+                  className={`mt-2 text-xs ${
+                    isDarkMode ? "text-white/50" : "text-gray-500"
+                  }`}
+                >
                   PDF, DOCX, PPTX, PNG, JPG, JPEG, WEBP (up to 20 MB)
                 </p>
+
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                   <label className="animated-shine flex cursor-pointer items-center gap-2 rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-lg transition-all hover:bg-[#6e52b5]">
                     <Upload size={16} className="browse-icon-animation" />
+
                     Browse Files
+
                     <input
                       type="file"
                       multiple
@@ -704,8 +903,10 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   <span className="text-xs font-bold uppercase tracking-wider text-[#8064C7]">
                     Selected Files ({selectedFiles.length})
                   </span>
+
                   <label className="cursor-pointer text-xs font-bold text-[#8064C7] hover:underline">
                     + Add More
+
                     <input
                       type="file"
                       multiple
@@ -715,6 +916,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     />
                   </label>
                 </div>
+
                 <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
                   {selectedFiles.map((file, idx) => (
                     <div
@@ -729,15 +931,18 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                         <div className="selected-file-icon-animation shrink-0">
                           {getFileIcon(file.name)}
                         </div>
+
                         <div className="truncate text-left">
                           <p className="truncate text-xs font-bold">
                             {file.name}
                           </p>
+
                           <p className="text-[10px] text-gray-400">
                             {(file.size / (1024 * 1024)).toFixed(2)} MB
                           </p>
                         </div>
                       </div>
+
                       <button
                         onClick={() => removeFile(idx)}
                         className="remove-button-animation p-1 text-gray-400 hover:text-red-400"
@@ -764,9 +969,13 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             <h3 className="text-sm font-bold uppercase tracking-wider text-[#8064C7]">
               Study Set Details
             </h3>
+
             <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs font-medium">Study Set Title</label>
+                <label className="text-xs font-medium">
+                  Study Set Title
+                </label>
+
                 <input
                   type="text"
                   placeholder="e.g., Operating Systems Chapter 3"
@@ -779,6 +988,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   }`}
                 />
               </div>
+
               <button
                 onClick={handleCreateAndUpload}
                 disabled={selectedFiles.length === 0}
