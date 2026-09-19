@@ -452,14 +452,24 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       );
 
       if (newSet) {
-        setUploadError(
-          `Study set "${studySetName.trim()}" was created, but document upload failed: ${
-            error.message || "Upload error"
-          }.`
-        );
+        const errorMessage = error.message || "";
+        const normalizedError = errorMessage.toLowerCase();
+
+        if (
+          normalizedError.includes("not a valid pdf") ||
+          normalizedError.includes("genuine pdf")
+        ) {
+          setUploadError(
+            "The uploaded file is not a valid PDF. Please upload a genuine PDF file and try again."
+          );
+        } else {
+          setUploadError(
+            "The document could not be uploaded. Please check the file and try again."
+          );
+        }
       } else {
         setUploadError(
-          error.message || "Failed to create study set."
+          "The study set could not be created. Please try again."
         );
       }
     } finally {
