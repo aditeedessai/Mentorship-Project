@@ -34,30 +34,14 @@ async function request(url, options = {}) {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-
-    let errorMessage = "";
-
-    try {
-      const parsedBody = JSON.parse(body);
-
-      // FastAPI errors normally use:
-      // { "detail": "error message" }
-      if (parsedBody?.detail) {
-        errorMessage =
-          typeof parsedBody.detail === "string"
-            ? parsedBody.detail
-            : JSON.stringify(parsedBody.detail);
-      }
-    } catch {
-      // Response was not JSON
-      errorMessage = body;
-    }
-
     const error = new Error(
-      errorMessage ||
-        `Request failed with status ${res.status}. Please try again.`
+      `API ${options.method || "GET"} ${fullUrl} → ${res.status}: ${body}`
     );
+    // Structured fields so callers never have to substring-match the
+    // message (which also contains the URL/UUIDs - e.g. a study-set id
+    // containing "404" or "429" used to be mistaken for that status).
     error.status = res.status;
+    error.body = body;
     throw error;
   }
 
@@ -122,9 +106,6 @@ function clearCache() {
 
 // ── Question-type mapping ────────────────────────────────────────────
 
-function toBackendType(frontendType) {
-  if (frontendType === "short-answer") return "short";
-  return frontendType;
 export function toBackendType(frontendType) {
   if (!frontendType) return "mcq";
   const s = String(frontendType).toLowerCase().trim().replace(/_/g, "-");
@@ -140,9 +121,6 @@ export function toBackendType(frontendType) {
   return "mcq";
 }
 
-function fromBackendType(backendType) {
-  if (backendType === "short") return "short-answer";
-  return backendType;
 export function fromBackendType(backendType) {
   const b = toBackendType(backendType);
   if (b === "short") return "short-answer";

@@ -19,13 +19,47 @@ export function classifyQuestionGenerationError(err) {
   const rawMsg = typeof err === "string" ? err : (err?.message || err?.detail || String(err));
   const rawLower = rawMsg.toLowerCase();
 
-  // CATEGORY 1 — Gemini / API Quota or Rate Limit Error (429 / RESOURCE_EXHAUSTED)
+  // Classify on the HTTP status + response BODY only - never on the full
+  // message. The message also embeds the request URL (which contains
+  // study-set / attempt UUIDs), and a UUID that happens to contain "429",
+  // "401" or "403" used to be misread as a quota / auth error no matter
+  // what actually went wrong.
+  const status =
+    typeof err?.status === "number"
+      ? err.status
+      : Number((rawMsg.match(/\u2192\s*(\d{3})\s*:/) || [])[1]) || null;
+  const body = (
+    typeof err?.body === "string"
+      ? err.body
+      : rawMsg.includes("\u2192")
+      ? rawMsg.slice(rawMsg.indexOf("\u2192"))
+      : rawMsg
+  ).toLowerCase();
+
+  // CATEGORY 0 - OUR OWN backend rate limiter (api/rate_limiter.py):
+  // 429 + "Rate limit exceeded". This is NOT a Gemini quota problem, so it
+  // must not say "the AI generation limit has been reached".
   if (
-    rawLower.includes("429") ||
-    rawLower.includes("resource_exhausted") ||
-    rawLower.includes("quota") ||
-    rawLower.includes("rate limit") ||
-    rawLower.includes("generaterequestsperdayperprojectpermodel")
+    status === 429 &&
+    body.includes("rate limit exceeded") &&
+    !body.includes("resource_exhausted")
+  ) {
+    return {
+      type: "rate_limit",
+      title: "Too Many Requests",
+      message:
+        "You've started several question generations in a short time. Please wait a minute or two, then try again.",
+      secondaryMessage: "Your study set and selected options are still saved.",
+      showRetry: true,
+    };
+  }
+
+  // CATEGORY 1 - Gemini quota exhausted (429 / RESOURCE_EXHAUSTED)
+  if (
+    body.includes("resource_exhausted") ||
+    body.includes("quota") ||
+    body.includes("generaterequestsperday") ||
+    /\b429\b/.test(body)
   ) {
     return {
       type: "quota",
@@ -37,10 +71,30 @@ export function classifyQuestionGenerationError(err) {
     };
   }
 
-  // CATEGORY 4 — Authentication / Session Expired (401 / 403)
+  // CATEGORY 1b - Gemini temporarily overloaded / timed out (503 / 504).
+  // Transient: the backend already retried, so a manual retry is
+  // reasonable but the cause is not the user's quota.
   if (
-    rawLower.includes("401") ||
-    rawLower.includes("403") ||
+    status === 503 ||
+    status === 504 ||
+    body.includes("unavailable") ||
+    body.includes("overloaded") ||
+    body.includes("deadline_exceeded")
+  ) {
+    return {
+      type: "busy",
+      title: "AI Service Is Busy",
+      message:
+        "The AI service is under heavy load right now. Please try again in a moment.",
+      secondaryMessage: "Your study set and selected options are still saved.",
+      showRetry: true,
+    };
+  }
+
+  // CATEGORY 4 - Authentication / Session Expired (401 / 403)
+  if (
+    status === 401 ||
+    status === 403 ||
     rawLower.includes("unauthorized") ||
     rawLower.includes("session expired")
   ) {

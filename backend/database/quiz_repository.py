@@ -97,7 +97,7 @@ def save_questions(study_set_id: str = None, questions: list = None, document_id
                     doc_id,
                     set_id,
                     att_id,
-                    question.get("question_type", "short"),
+                    question.get("question_type") or "short",
                     question.get("topic"),
                     question.get("question", ""),
                     question.get("reference_answer", ""),

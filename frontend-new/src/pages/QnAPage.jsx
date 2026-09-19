@@ -344,12 +344,6 @@ export default function QnAPage({ onNavigate } = {}) {
   const isFirstQuestion = currentQuestion === 1
   const isLastQuestion = currentQuestion === questionCount
 
-  const typeLabel =
-    questionType === 'application'
-      ? 'Application Based'
-      : questionType === 'long'
-      ? 'Long Answer'
-      : 'Short Answer'
   const typeLabel = (() => {
     const s = String(questionType || '').toLowerCase()
     if (s.includes('app')) return 'Application Based'

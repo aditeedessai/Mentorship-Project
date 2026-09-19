@@ -11,6 +11,8 @@ export default function QuestionGenerationErrorCard({ errorObj, onRetry, isLoadi
   const renderIcon = () => {
     switch (type) {
       case "quota":
+      case "rate_limit":
+      case "busy":
         return <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-500" aria-hidden="true" />;
       case "network":
         return <WifiOff className="h-5 w-5 flex-shrink-0 text-rose-500" aria-hidden="true" />;
@@ -22,7 +24,7 @@ export default function QuestionGenerationErrorCard({ errorObj, onRetry, isLoadi
   };
 
   const getCardStyle = () => {
-    if (type === "quota") {
+    if (type === "quota" || type === "rate_limit" || type === "busy") {
       return isDarkMode
         ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
         : "border-amber-200 bg-amber-50 text-amber-900";

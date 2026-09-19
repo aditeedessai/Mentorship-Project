@@ -114,7 +114,11 @@ def generate_questions(
         )
 
     # 4. Format generated questions into QuestionResponse list
-    response_questions = [QuestionResponse(**q) for q in raw_questions]
+    response_questions = []
+    for q in raw_questions:
+        if not q.get("question_type"):
+            q["question_type"] = payload.question_type.value
+        response_questions.append(QuestionResponse(**q))
     return QuestionListResponse(questions=response_questions)
 
 

@@ -1,6 +1,5 @@
-import json
-
-from .gemini_client import client
+from .gemini_client import client, GEMINI_MODEL
+from .gemini_retry import generate_json_with_retry
 from .mnemonic_builder import build_mnemonic_prompt
 from backend.embeddings.retriever import retrieve_chunks
 
@@ -71,23 +70,14 @@ def generate_mnemonic(
 
     print("Calling Gemini for mnemonic...")
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
+    mnemonic_data = generate_json_with_retry(
+        client,
+        GEMINI_MODEL,
+        prompt,
+        label="generate_mnemonic",
     )
 
     print("Gemini responded for mnemonic.")
-
-    response_text = response.text.strip()
-
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-
-    response_text = response_text.strip()
-
-    mnemonic_data = json.loads(response_text)
 
     # Guarantee required fields are present
     if "title" not in mnemonic_data:

@@ -1,8 +1,8 @@
 import uuid
-import json
 import traceback
 
-from .gemini_client import client
+from .gemini_client import client, GEMINI_MODEL
+from .gemini_retry import generate_json_with_retry
 from .prompt_builder import build_quiz_prompt
 from backend.database.quiz_repository import (
     save_questions,
@@ -181,36 +181,22 @@ def generate_quiz(
 
     print("Calling Gemini...")
 
+    # Retries transient failures (503 overloaded, 504, per-minute 429,
+    # empty/unparseable JSON) instead of failing the user's first click.
     try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt
+        quiz_data = generate_json_with_retry(
+            client,
+            GEMINI_MODEL,
+            prompt,
+            label="generate_quiz",
+            required_key="questions",
         )
     except Exception:
-        print("===== Gemini API call failed (generate_quiz) =====")
+        print("===== Gemini call/parse failed (generate_quiz) =====")
         traceback.print_exc()
         raise
 
     print("Gemini responded.")
-
-    response_text = response.text.strip()
-
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-
-    response_text = response_text.strip()
-
-    try:
-        quiz_data = json.loads(response_text)
-    except json.JSONDecodeError:
-        print("===== Failed to parse Gemini response as JSON (generate_quiz) =====")
-        print(f"Raw response length: {len(response_text)}")
-        print("Raw response text:")
-        print(response_text)
-        traceback.print_exc()
-        raise
 
     # Process and link source metadata for each generated question
     for question in quiz_data["questions"]:
@@ -218,8 +204,15 @@ def generate_quiz(
         if study_set_id:
             question["study_set_id"] = study_set_id
 
+        # Guarantee question_type is set and conforms to valid QuestionType
+        raw_type = question.get("question_type")
+        if not raw_type or str(raw_type).lower() not in ("mcq", "application", "long", "short"):
+            question["question_type"] = question_type
+        else:
+            question["question_type"] = str(raw_type).lower()
+
         # Determine marks based on question type
-        question["marks"] = 2.0 if question.get("question_type") == "mcq" else 10.0
+        question["marks"] = 2.0 if question["question_type"] == "mcq" else 10.0
 
         # Deterministically match question text + reference answer to source chunk(s)
         matched_chunks = find_best_matching_chunks(
