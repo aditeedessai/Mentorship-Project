@@ -350,6 +350,12 @@ export default function QnAPage({ onNavigate } = {}) {
       : questionType === 'long'
       ? 'Long Answer'
       : 'Short Answer'
+  const typeLabel = (() => {
+    const s = String(questionType || '').toLowerCase()
+    if (s.includes('app')) return 'Application Based'
+    if (s.includes('long')) return 'Long Answer'
+    return 'Short Answer'
+  })()
 
   return (
     <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none ${

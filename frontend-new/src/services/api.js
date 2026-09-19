@@ -53,10 +53,12 @@ async function request(url, options = {}) {
       errorMessage = body;
     }
 
-    throw new Error(
+    const error = new Error(
       errorMessage ||
         `Request failed with status ${res.status}. Please try again.`
     );
+    error.status = res.status;
+    throw error;
   }
 
   return res.json();
@@ -123,11 +125,28 @@ function clearCache() {
 function toBackendType(frontendType) {
   if (frontendType === "short-answer") return "short";
   return frontendType;
+export function toBackendType(frontendType) {
+  if (!frontendType) return "mcq";
+  const s = String(frontendType).toLowerCase().trim().replace(/_/g, "-");
+  if (s === "short" || s === "short-ans" || s.startsWith("short")) {
+    return "short";
+  }
+  if (s === "long" || s === "long-ans" || s.startsWith("long")) {
+    return "long";
+  }
+  if (s === "application" || s === "applicative" || s.startsWith("app")) {
+    return "application";
+  }
+  return "mcq";
 }
 
 function fromBackendType(backendType) {
   if (backendType === "short") return "short-answer";
   return backendType;
+export function fromBackendType(backendType) {
+  const b = toBackendType(backendType);
+  if (b === "short") return "short-answer";
+  return b;
 }
 
 // ── Study Sets ───────────────────────────────────────────────────────
@@ -206,7 +225,7 @@ export async function fetchStudySetSummary(studySetId) {
       `/api/study-sets/${studySetId}/summary`
     );
   } catch (err) {
-    if (err.message && err.message.includes("404")) {
+    if (err.status === 404) {
       return null;
     }
 
@@ -237,7 +256,7 @@ export async function fetchStudySetFlashcards(studySetId) {
 
     return data.flashcards || [];
   } catch (err) {
-    if (err.message && err.message.includes("404")) {
+    if (err.status === 404) {
       return [];
     }
 
@@ -476,7 +495,7 @@ export async function fetchActiveAttempt(
       `/api/attempts/study-sets/${studySetId}/active-attempt?question_type=${backendType}`
     );
   } catch (err) {
-    if (err.message && err.message.includes("404")) {
+    if (err.status === 404) {
       return null;
     }
 

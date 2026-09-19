@@ -13,6 +13,7 @@ import {
   generateQuestions,
   fetchStudySets,
   fetchRevisionStatus,
+  fromBackendType,
 } from '../services/api'
 
 import { classifyQuestionGenerationError } from '../utils/errorClassification'
@@ -62,6 +63,20 @@ const questionTypes = [
 
 const toFrontendTypeId = (bType) =>
   bType === 'short' ? 'short-answer' : bType
+const toFrontendTypeId = (bType) => {
+  if (!bType) return 'mcq'
+  const s = String(bType).toLowerCase().trim().replace(/_/g, '-')
+  if (s === 'short' || s === 'short-ans' || s.startsWith('short')) {
+    return 'short-answer'
+  }
+  if (s === 'long' || s === 'long-ans' || s.startsWith('long')) {
+    return 'long'
+  }
+  if (s === 'application' || s === 'applicative' || s.startsWith('app')) {
+    return 'application'
+  }
+  return 'mcq'
+}
 
 
 const formatDueDate = (isoDate) => {
@@ -82,6 +97,7 @@ export default function ConfigureSession({
   studySetId: propStudySetId,
   studySetName: propStudySetName,
   preselectType,
+  preselectType: propPreselectType,
 }) {
   const { isDarkMode } = useTheme()
 
@@ -93,6 +109,9 @@ export default function ConfigureSession({
 
   const navigate = useNavigate()
   const location = useLocation()
+
+  const preselectType =
+    propPreselectType || location.state?.preselectType
 
   const studySetId =
     propStudySetId || location.state?.studySetId
@@ -158,11 +177,19 @@ export default function ConfigureSession({
 
         setStatusByType(byType)
 
+        const normalizedPreselect = preselectType
+          ? toFrontendTypeId(preselectType)
+          : null
+
         const preselected =
           preselectType &&
           byType[preselectType]?.available &&
           !byType[preselectType]?.needs_attention
             ? preselectType
+          normalizedPreselect &&
+          byType[normalizedPreselect]?.available &&
+          !byType[normalizedPreselect]?.needs_attention
+            ? normalizedPreselect
             : null
 
         if (preselected) {
@@ -223,14 +250,18 @@ export default function ConfigureSession({
       return
     }
 
+    const resolvedTypeId = toFrontendTypeId(selectedType)
+
     const selected = questionTypes.find(
       (t) => t.id === selectedType
+      (t) => t.id === resolvedTypeId
     )
 
     if (!selected) return
 
     const selectedStatus =
       statusByType[selectedType]
+      statusByType[resolvedTypeId]
 
     if (
       !selectedStatus?.available ||
@@ -259,6 +290,7 @@ export default function ConfigureSession({
         await getOrCreateAttempt(
           studySetId,
           selectedType
+          resolvedTypeId
         )
 
       if (!currentAttempt?.attempt_id) {
@@ -271,6 +303,7 @@ export default function ConfigureSession({
         await fetchQuestions(
           studySetId,
           selectedType,
+          resolvedTypeId,
           currentAttempt.attempt_id
         )
 
@@ -279,8 +312,10 @@ export default function ConfigureSession({
         questions.length === 0
       ) {
         await generateQuestions(
+        const genResult = await generateQuestions(
           studySetId,
           selectedType,
+          resolvedTypeId,
           documentId,
           currentAttempt.attempt_id
         )
@@ -289,8 +324,25 @@ export default function ConfigureSession({
           await fetchQuestions(
             studySetId,
             selectedType,
+            resolvedTypeId,
             currentAttempt.attempt_id
           )
+
+        if (
+          (!questions || questions.length === 0) &&
+          genResult?.questions?.length > 0
+        ) {
+          questions = genResult.questions.map((q, idx) => ({
+            id: idx + 1,
+            question_id: q.question_id,
+            question: q.question,
+            hint: q.topic
+              ? `Think about the key concepts related to ${q.topic.replace(/\_/g, ' ')}.`
+              : 'Consider the fundamental principles involved.',
+            question_type: fromBackendType(q.question_type),
+            marks: q.marks,
+          }))
+        }
       }
 
       if (
@@ -306,6 +358,7 @@ export default function ConfigureSession({
         state: {
           questionCount: questions.length,
           questionType: selectedType,
+          questionType: resolvedTypeId,
           questions: questions,
           attemptId:
             currentAttempt.attempt_id,
