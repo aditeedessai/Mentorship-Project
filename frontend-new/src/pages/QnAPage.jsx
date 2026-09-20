@@ -51,6 +51,11 @@ export default function QnAPage({ onNavigate } = {}) {
   // whichever reaches this first "wins" and the others become no-ops.
   const quizEndedRef = useRef(false)
 
+  // Always holds the latest handleFinishQuiz closure so handleTimeExpired
+  // (defined above it) can auto-submit on timeout instead of discarding
+  // progress - see the effect right after handleFinishQuiz's definition.
+  const handleFinishQuizRef = useRef(null)
+
   const clearQuizTimer = useCallback(() => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current)
@@ -83,22 +88,17 @@ export default function QnAPage({ onNavigate } = {}) {
     }
   }, [questionCount, navigate, onNavigate, location.state?.studySetId])
 
-  // Auto-abort triggered when the countdown reaches zero. Guarded by
-  // quizEndedRef so a manual submit/abort that lands in the same tick wins
-  // instead of both handlers running.
+  // Auto-submit triggered when the countdown reaches zero, instead of
+  // discarding progress - whatever's answered so far (skipped questions
+  // included as empty answers, same as a manual finish) is submitted via
+  // the same path as clicking "Finish Quiz". Guarded by quizEndedRef
+  // (set inside handleFinishQuiz itself) so a manual submit/abort that
+  // lands in the same tick wins instead of both handlers running.
   const handleTimeExpired = useCallback(() => {
     if (quizEndedRef.current) return
-    quizEndedRef.current = true
-
-    clearQuizTimer()
-    antiCheatCleanup()
     setIsTimedOut(true)
-
-    setTimeout(() => {
-      onNavigate?.('dashboard')
-      navigate('/')
-    }, 2500)
-  }, [antiCheatCleanup, clearQuizTimer, navigate, onNavigate])
+    handleFinishQuizRef.current?.()
+  }, [])
 
   useEffect(() => {
     if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive || quizEndedRef.current) return
@@ -236,6 +236,10 @@ export default function QnAPage({ onNavigate } = {}) {
     }
   }, [isSubmitting, attemptId, historicalAttemptId, isPracticeRetake, questionCount, questions, answers, questionType, navigate, onNavigate, location.state, antiCheatCleanup, clearQuizTimer])
 
+  useEffect(() => {
+    handleFinishQuizRef.current = handleFinishQuiz
+  }, [handleFinishQuiz])
+
   const handleScratchpadChange = useCallback((value) => {
     setScratchpad(prev => ({ ...prev, [currentQuestion]: value }))
   }, [currentQuestion])
@@ -319,8 +323,8 @@ export default function QnAPage({ onNavigate } = {}) {
           </h1>
 
           <p className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode ? 'text-white/55' : 'text-gray-500'}`}>
-            The countdown reached 00:00 before you submitted, so this quiz
-            session has been automatically aborted.
+            The countdown reached 00:00. Your answers are being submitted
+            automatically - you'll be taken to your results in a moment.
           </p>
 
           <div className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
@@ -349,6 +353,20 @@ export default function QnAPage({ onNavigate } = {}) {
     if (s.includes('app')) return 'Application Based'
     if (s.includes('long')) return 'Long Answer'
     return 'Short Answer'
+  })()
+
+  // Mirrors backend/config/word_limits.py's QUESTION_TYPE_WORD_LIMITS
+  // (base limit + 10-word tolerance) so the on-screen counter matches what
+  // the server will actually accept on submit.
+  const maxWordLimit = (() => {
+    const s = String(questionType || '').toLowerCase()
+    if (s.includes('app') || s.includes('long')) return 160
+    return 60
+  })()
+
+  const currentWordCount = (() => {
+    const text = (answers[currentQuestion] || '').trim()
+    return text ? text.split(/\s+/).length : 0
   })()
 
   return (
@@ -473,6 +491,21 @@ export default function QnAPage({ onNavigate } = {}) {
                   aria-label={`Answer for question ${currentQuestion}`}
                   data-ac-editable="true"
                 />
+                <div
+                  className={`mt-2 text-right text-[11px] font-bold ${
+                    currentWordCount > maxWordLimit
+                      ? 'text-red-500'
+                      : currentWordCount > maxWordLimit * 0.9
+                      ? 'text-amber-500'
+                      : isDarkMode
+                      ? 'text-white/40'
+                      : 'text-gray-400'
+                  }`}
+                  aria-live="polite"
+                >
+                  {currentWordCount} / {maxWordLimit} words
+                  {currentWordCount > maxWordLimit && ' — over the limit, trim your answer before submitting'}
+                </div>
               </div>
             </div>
           </div>

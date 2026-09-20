@@ -133,6 +133,18 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // If DevTools violation is already active (same continuous session), don't increment
     if (reason === 'devtools' && devToolsViolationActiveRef.current) return
 
+    // A transient violation (tab switch / focus loss / fullscreen exit) is
+    // already open and unresolved - don't count a second, different reason
+    // as a brand-new strike on top of it. This matters most for system
+    // sleep/resume: suspending the machine can fire blur, then
+    // visibilitychange, then fullscreenchange several seconds apart (each
+    // well outside the 300ms de-dupe below), which used to register as 2-3
+    // separate violations for what is really one incident - easily enough
+    // to blow past MAX_WARNINGS and terminate/redirect the quiz just for
+    // waking the laptop up (DF020). Devtools already has its own dedicated
+    // guard above and is unaffected by this one.
+    if (reason !== 'devtools' && violationActiveRef.current) return
+
     // 300ms deduplication across all violation types
     const now = Date.now()
     if (now - lastViolationTimeRef.current < 300) return
@@ -246,13 +258,20 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       }
     }
 
-    // Retry fullscreen on the first user gesture (click, pointer, or key)
+    // Re-attempt fullscreen on every user gesture (click, pointer, or key)
+    // while not currently in fullscreen. Deliberately NEVER removes these
+    // listeners once fullscreen is first established - a later ESC/OS-forced
+    // exit (e.g. the browser's own fullscreen-exit confirmation, or the
+    // system putting the machine to sleep) needs this same handler to catch
+    // the user's next click/keypress and re-request fullscreen. Previously
+    // this uninstalled itself after the first success, which is exactly why
+    // the "Entering Secure Mode - click anywhere to continue" gate stopped
+    // responding to clicks after the first fullscreen exit (DF016/DF018/DF019).
     const handleFirstInteraction = async () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
-        removeInteractionListeners()
         return
       }
 
@@ -261,7 +280,6 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
         await document.documentElement.requestFullscreen()
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
-        removeInteractionListeners()
       } catch {
         // If exhausted attempts, terminate
         if (fullscreenAttemptCountRef.current >= 3) {
