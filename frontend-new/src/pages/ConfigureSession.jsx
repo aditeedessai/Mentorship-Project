@@ -5,7 +5,7 @@ import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
 import QuestionGenerationErrorCard from '../components/QuestionGenerationErrorCard'
-import { ListChecks, FileText, Lightbulb, BookOpen, Sparkles } from 'lucide-react'
+import { ListChecks, FileText, Lightbulb, BookOpen, Sparkles, ArrowLeft } from 'lucide-react'
 
 import {
   fetchQuestions,
@@ -95,6 +95,7 @@ export default function ConfigureSession({
   studySetId: propStudySetId,
   studySetName: propStudySetName,
   preselectType: propPreselectType,
+  onNavigate,
 }) {
   const { isDarkMode } = useTheme()
 
@@ -592,23 +593,45 @@ export default function ConfigureSession({
           SCROLLABLE CONTENT
       ===================================================== */}
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-8">
 
-        <div className="px-4 pb-6 pt-4 sm:px-8 sm:pb-6 sm:pt-8">
+        {/* Top Back Navigation Bar */}
+        <header className="mb-8 lg:mb-12 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              if (studySetId) {
+                onNavigate?.('study-set', { studySetId })
+              } else {
+                onNavigate?.('study-sets')
+              }
+            }}
+            className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-all backdrop-blur-xl ${
+              isDarkMode
+                ? 'border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10'
+                : 'border-white/80 bg-white/70 text-[#8064C7] hover:bg-white shadow-sm'
+            }`}
+          >
+            <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+            <span>Back to Study Set</span>
+          </button>
+        </header>
 
-          {/* MODULE BADGE */}
-          <ModuleBadge
-            text={
-              studySetName
-                ? `Study Set: ${studySetName}`
-                : 'Study Set'
-            }
-          />
+        <div>
+          {/* TITLE + MODULE BADGE */}
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-black leading-none tracking-tight sm:text-3xl">
+              Configure Session
+            </h1>
 
-          {/* TITLE */}
-          <h1 className="mt-4 text-2xl font-black leading-none tracking-tight sm:text-3xl">
-            Configure Session
-          </h1>
+            <ModuleBadge
+              text={
+                studySetName
+                  ? `Study Set: ${studySetName}`
+                  : 'Study Set'
+              }
+            />
+          </div>
 
           {/* DESCRIPTION */}
           <p

@@ -727,6 +727,7 @@ function AppContent() {
         {/* ================= QUIZ CONFIGURATION ================= */}
         {currentPage === "quiz" && (
           <ConfigureSession
+            onNavigate={handleNavigate}
             studySetId={selectedStudySetId}
             studySetName={
               studySets.find(
