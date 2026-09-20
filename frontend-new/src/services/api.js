@@ -469,9 +469,10 @@ export async function fetchActiveAttempt(
   const backendType = toBackendType(frontendType);
 
   try {
-    return await request(
+    const res = await request(
       `/api/attempts/study-sets/${studySetId}/active-attempt?question_type=${backendType}`
     );
+    return res || null;
   } catch (err) {
     if (err.status === 404) {
       return null;

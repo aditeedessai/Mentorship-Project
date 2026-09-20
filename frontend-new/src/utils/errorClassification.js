@@ -125,15 +125,42 @@ export function classifyQuestionGenerationError(err) {
 
   // CATEGORY — Document upload pre-condition validation
   if (
+    rawLower.includes("processing is incomplete") ||
+    rawLower.includes("no text could be extracted")
+  ) {
+    return {
+      type: "processing_incomplete",
+      title: "Document Processing Incomplete",
+      message:
+        "The uploaded study material has not finished processing or could not be retrieved. Please wait a moment and try again.",
+      showRetry: true,
+    };
+  }
+
+  if (
     rawLower.includes("no study material") ||
     rawLower.includes("upload a document") ||
-    rawLower.includes("upload a study material")
+    rawLower.includes("upload a study material") ||
+    rawLower.includes("upload documents first")
   ) {
     return {
       type: "validation",
       title: "Upload Required",
       message: "Please upload a study material document before starting a quiz session.",
       showRetry: false,
+    };
+  }
+
+  // CATEGORY — Attempt creation failure
+  if (
+    rawLower.includes("could not establish an active attempt") ||
+    rawLower.includes("failed to create quiz attempt")
+  ) {
+    return {
+      type: "attempt_creation",
+      title: "Session Initialization Failed",
+      message: "Could not initialize the quiz session. Please refresh and try again.",
+      showRetry: true,
     };
   }
 

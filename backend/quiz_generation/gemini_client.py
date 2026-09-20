@@ -26,7 +26,7 @@ if not api_key:
 GEMINI_MODEL = (
     _file_env.get("GEMINI_MODEL")
     or os.getenv("GEMINI_MODEL")
-    or "gemini-flash-latest"
+    or "gemini-3.5-flash"
 )
 
 # Printed once at startup so you can always see which key/model this

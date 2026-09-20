@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import uuid
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.rate_limiter import rate_limit_by_user
@@ -38,6 +38,7 @@ router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
 )
 def generate_study_set_summary(
     study_set_id: UUID,
+    force: bool = Query(False, description="Force re-generation even if a summary already exists"),
     current_user: AuthenticatedUser = Depends(rate_limit_by_user(10, 600, scope="ai_features"))
 ) -> SummaryResponse:
     try:
@@ -48,6 +49,17 @@ def generate_study_set_summary(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Study set with ID '{study_set_id}' not found"
             )
+
+        # Idempotency guard: return existing summary if already generated and force is not set
+        if not force:
+            existing = summary_repository.get_summary(str(study_set_id), user_id=current_user.user_id)
+            if existing and (existing.get("overview_paragraphs") or existing.get("key_takeaways")):
+                print(f"[summary_idempotency] Returning existing summary for study set {study_set_id}")
+                return SummaryResponse(
+                    title=existing.get("title") or study_set.get("name") or "Summary",
+                    overview_paragraphs=existing.get("overview_paragraphs") or [],
+                    key_topics=existing.get("key_takeaways") or []
+                )
 
         summary_data = generate_summary(study_set_id=str(study_set_id), user_id=current_user.user_id)
 
@@ -122,6 +134,7 @@ def get_study_set_summary(
 )
 def generate_study_set_flashcards(
     study_set_id: UUID,
+    force: bool = Query(False, description="Force re-generation even if flashcards already exist"),
     current_user: AuthenticatedUser = Depends(rate_limit_by_user(10, 600, scope="ai_features"))
 ) -> FlashcardsResponse:
     try:
@@ -132,6 +145,13 @@ def generate_study_set_flashcards(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Study set with ID '{study_set_id}' not found"
             )
+
+        # Idempotency guard: return existing flashcards if already generated and force is not set
+        if not force:
+            existing_cards = flashcard_repository.get_flashcards(str(study_set_id), user_id=current_user.user_id)
+            if existing_cards:
+                print(f"[flashcards_idempotency] Returning {len(existing_cards)} existing flashcards for study set {study_set_id}")
+                return FlashcardsResponse(flashcards=existing_cards)
 
         flashcard_data = generate_flashcards(study_set_id=str(study_set_id))
 

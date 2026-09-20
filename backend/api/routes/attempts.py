@@ -126,10 +126,10 @@ def start_attempt(
 
 @router.get(
     "/study-sets/{study_set_id}/active-attempt",
-    response_model=AttemptResponse,
+    response_model=AttemptResponse | None,
     status_code=status.HTTP_200_OK,
     summary="Get current active in-progress attempt for a study set and question type",
-    description="Retrieves active in-progress quiz attempt metadata and section completion status for one question type under a study set."
+    description="Retrieves active in-progress quiz attempt metadata and section completion status for one question type under a study set, or null if none is active."
 )
 def get_active_attempt_for_study_set(
     study_set_id: uuid.UUID,
@@ -138,7 +138,7 @@ def get_active_attempt_for_study_set(
         description="Which question type to look up the active attempt for - required, since more than one type can be independently in-progress at once."
     ),
     current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
-) -> AttemptResponse:
+) -> AttemptResponse | None:
     study_set_id_str = str(study_set_id)
     study_set = study_set_repository.get_study_set(study_set_id_str, user_id=current_user.user_id)
     if not study_set:
@@ -151,10 +151,7 @@ def get_active_attempt_for_study_set(
         study_set_id_str, question_type=question_type, user_id=current_user.user_id
     )
     if not active_att:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No active in-progress attempt found for study set '{study_set_id}' and question_type '{question_type}'"
-        )
+        return None
 
     completion_info = get_attempt_section_completion_status(active_att["attempt_id"])
     active_att.update(completion_info)

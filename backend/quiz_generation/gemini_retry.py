@@ -74,7 +74,7 @@ def _status_code(exc: Exception):
 
 def _is_daily_or_zero_quota(msg_lower: str) -> bool:
     """
-    A 429 that will NOT clear in a few seconds: the per-day quota is spent
+    A 429 that has no short retry hint: the per-day quota is spent
     (GenerateRequestsPerDayPerProjectPerModel) or the model has a free-tier
     limit of 0 for this project. Retrying just burns time.
     """
@@ -82,6 +82,8 @@ def _is_daily_or_zero_quota(msg_lower: str) -> bool:
         "perday" in msg_lower
         or "per day" in msg_lower
         or "limit: 0" in msg_lower
+        or "limit:0" in msg_lower
+        or "quota_value: 0" in msg_lower
     )
 
 
@@ -102,12 +104,16 @@ def is_retryable(exc: Exception) -> bool:
     status = _status_code(exc)
 
     if status == 429:
+        hint = _retry_delay_hint(exc)
+        # If Gemini provided an explicit retry delay hint:
+        # If within reasonable threshold (<= MAX_DELAY_S), it is transient and retryable!
+        # If too long (e.g. 40s+), fail fast to avoid blocking the synchronous request thread.
+        if hint is not None:
+            return hint <= MAX_DELAY_S
+        # When no retry hint was given, daily or zero quota means we should not retry.
         if _is_daily_or_zero_quota(msg):
             return False
-        hint = _retry_delay_hint(exc)
-        # If Gemini says "come back in 43s", blocking a request thread that
-        # long isn't worth it - surface the error instead.
-        return hint is None or hint <= MAX_DELAY_S
+        return True
 
     if status in _TRANSIENT_STATUS:
         return True
@@ -123,7 +129,7 @@ def is_retryable(exc: Exception) -> bool:
 def _delay_for(attempt: int, exc: Exception) -> float:
     hint = _retry_delay_hint(exc)
     if hint is not None:
-        return min(hint + 0.5, MAX_DELAY_S)
+        return min(max(hint + 0.5, 0.5), MAX_DELAY_S)
     backoff = BASE_DELAY_S * (2 ** (attempt - 1))
     return min(backoff + random.uniform(0, 0.5), MAX_DELAY_S)
 

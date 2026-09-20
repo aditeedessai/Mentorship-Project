@@ -8,6 +8,7 @@ from backend.database.quiz_repository import (
     save_questions,
     get_recent_question_texts_for_study_set
 )
+from backend.database import study_set_repository
 from backend.database.student_profile_repository import get_student_profile
 from backend.embeddings.retriever import retrieve_chunks
 from backend.services.revision_service import get_latest_completed_attempt_weak_topics
@@ -130,9 +131,19 @@ def generate_quiz(
             seen_chunk_ids.add(chk_id)
             chunks.append(chk)
 
-    print("Retrieved chunks:", len(chunks))
+    print(f"[quiz_generation] user_id={user_id} study_set_id={study_set_id} attempt_id={attempt_id} type={question_type} retrieved_chunks={len(chunks)}")
 
     if not chunks:
+        if study_set_id:
+            docs = study_set_repository.get_documents_by_study_set(study_set_id)
+            if not docs:
+                raise ValueError(
+                    "No study material was found for this study set. Please upload documents first."
+                )
+            else:
+                raise ValueError(
+                    "Uploaded study material exists but processing is incomplete or no text could be extracted."
+                )
         raise ValueError(
             "No study material was found for the uploaded study set / documents."
         )

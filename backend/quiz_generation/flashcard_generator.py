@@ -1,6 +1,7 @@
 from .gemini_client import client, GEMINI_MODEL
 from .gemini_retry import generate_json_with_retry
 from .flashcard_builder import build_flashcard_prompt
+from backend.database import study_set_repository
 from backend.embeddings.retriever import retrieve_chunks
 
 
@@ -27,9 +28,19 @@ def generate_flashcards(
         top_k=10
     )
 
-    print("Retrieved chunks for flashcards:", len(chunks))
+    print(f"[flashcard_generation] study_set_id={study_set_id} retrieved_chunks={len(chunks)}")
 
     if not chunks:
+        if study_set_id:
+            docs = study_set_repository.get_documents_by_study_set(study_set_id)
+            if not docs:
+                raise ValueError(
+                    "No study material was found for this study set. Please upload documents first."
+                )
+            else:
+                raise ValueError(
+                    "Uploaded study material exists but processing is incomplete or no text could be extracted."
+                )
         raise ValueError(
             "No study material was found for the uploaded study set / documents."
         )
