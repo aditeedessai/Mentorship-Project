@@ -28,8 +28,8 @@ async function request(url, options = {}) {
   const fullUrl = `${API_BASE_URL}${url}`;
 
   const res = await fetch(fullUrl, {
-    ...options,
-    headers,
+  ...options,
+  headers,
   });
 
   if (!res.ok) {
