@@ -61,8 +61,6 @@ const questionTypes = [
 ]
 
 
-const toFrontendTypeId = (bType) =>
-  bType === 'short' ? 'short-answer' : bType
 const toFrontendTypeId = (bType) => {
   if (!bType) return 'mcq'
   const s = String(bType).toLowerCase().trim().replace(/_/g, '-')
@@ -96,7 +94,6 @@ const formatDueDate = (isoDate) => {
 export default function ConfigureSession({
   studySetId: propStudySetId,
   studySetName: propStudySetName,
-  preselectType,
   preselectType: propPreselectType,
 }) {
   const { isDarkMode } = useTheme()
@@ -182,10 +179,6 @@ export default function ConfigureSession({
           : null
 
         const preselected =
-          preselectType &&
-          byType[preselectType]?.available &&
-          !byType[preselectType]?.needs_attention
-            ? preselectType
           normalizedPreselect &&
           byType[normalizedPreselect]?.available &&
           !byType[normalizedPreselect]?.needs_attention
@@ -253,14 +246,12 @@ export default function ConfigureSession({
     const resolvedTypeId = toFrontendTypeId(selectedType)
 
     const selected = questionTypes.find(
-      (t) => t.id === selectedType
       (t) => t.id === resolvedTypeId
     )
 
     if (!selected) return
 
     const selectedStatus =
-      statusByType[selectedType]
       statusByType[resolvedTypeId]
 
     if (
@@ -289,7 +280,6 @@ export default function ConfigureSession({
       const currentAttempt =
         await getOrCreateAttempt(
           studySetId,
-          selectedType
           resolvedTypeId
         )
 
@@ -302,7 +292,6 @@ export default function ConfigureSession({
       let questions =
         await fetchQuestions(
           studySetId,
-          selectedType,
           resolvedTypeId,
           currentAttempt.attempt_id
         )
@@ -311,10 +300,8 @@ export default function ConfigureSession({
         !questions ||
         questions.length === 0
       ) {
-        await generateQuestions(
         const genResult = await generateQuestions(
           studySetId,
-          selectedType,
           resolvedTypeId,
           documentId,
           currentAttempt.attempt_id
@@ -323,7 +310,6 @@ export default function ConfigureSession({
         questions =
           await fetchQuestions(
             studySetId,
-            selectedType,
             resolvedTypeId,
             currentAttempt.attempt_id
           )
@@ -357,7 +343,6 @@ export default function ConfigureSession({
       navigate(selected.route, {
         state: {
           questionCount: questions.length,
-          questionType: selectedType,
           questionType: resolvedTypeId,
           questions: questions,
           attemptId:

@@ -122,9 +122,6 @@ function clearCache() {
 
 // ── Question-type mapping ────────────────────────────────────────────
 
-function toBackendType(frontendType) {
-  if (frontendType === "short-answer") return "short";
-  return frontendType;
 export function toBackendType(frontendType) {
   if (!frontendType) return "mcq";
   const s = String(frontendType).toLowerCase().trim().replace(/_/g, "-");
@@ -140,9 +137,6 @@ export function toBackendType(frontendType) {
   return "mcq";
 }
 
-function fromBackendType(backendType) {
-  if (backendType === "short") return "short-answer";
-  return backendType;
 export function fromBackendType(backendType) {
   const b = toBackendType(backendType);
   if (b === "short") return "short-answer";
