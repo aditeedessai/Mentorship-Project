@@ -103,7 +103,7 @@ export default function QuestionNavigator({
         {/* Legend */}
         <div className="px-5 pt-7 pb-4 mt-auto">
           <div className={`text-[10px] font-mono font-bold tracking-wider uppercase mb-3 ${isDarkMode ? "text-white/40" : "text-gray-400"}`}>
-            Legend
+            Key:
           </div>
           <div className="space-y-2.5 text-xs font-bold">
             <div className="flex items-center gap-2.5">

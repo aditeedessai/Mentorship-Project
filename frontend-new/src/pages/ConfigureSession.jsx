@@ -35,7 +35,7 @@ const questionTypes = [
     id: 'short-answer',
     title: 'Short Answer',
     description:
-      'Practice articulating concepts. AI Study Engine will evaluate your responses for key terminology and conceptual accuracy.',
+      'Practice articulating concepts. Your responses will be evaluated for key terminology and conceptual accuracy.',
     badge: 'Active Recall Focus',
     icon: FileText,
     route: '/quiz/qna',
@@ -643,7 +643,7 @@ export default function ConfigureSession({
           >
             Select the question format you'd like to tackle
             next. Each type keeps its own independent schedule -
-            AI Study Engine will generate a tailored set based
+            Jot's Study Engine will generate a tailored set based
             on your recent mastery level for that type.
           </p>
 
