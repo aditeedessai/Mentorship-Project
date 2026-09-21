@@ -281,6 +281,8 @@ def finish_attempt(
         user_id=current_user.user_id
     )
 
+    revision_service.record_attempt_result(att | {"attempt_id": attempt_id, "user_id": current_user.user_id})
+
     updated_att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not updated_att:
         raise HTTPException(

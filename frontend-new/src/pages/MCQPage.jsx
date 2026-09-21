@@ -9,7 +9,7 @@ import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers, evaluatePracticeAnswers } from '../services/api'
+import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import jojoCelebration from '../assets/jojo-celebration.png'
 
@@ -144,6 +144,91 @@ export default function MCQPage({ onNavigate } = {}) {
     showCelebration,
   ])
 
+  const isPracticeRetake = location.state?.isPracticeRetake || false
+  const historicalAttemptId = location.state?.historicalAttemptId
+
+  // Restore previously saved answers for this attempt on mount
+  useEffect(() => {
+    let isMounted = true
+
+    async function restoreSavedAnswers() {
+      if (!attemptId || isPracticeRetake || questions.length === 0) {
+        return
+      }
+
+      try {
+        const evalData = await fetchEvaluations(attemptId)
+        const results = evalData?.results || []
+
+        if (!isMounted || results.length === 0) {
+          return
+        }
+
+        const restoredAnswers = {}
+        const restoredStatuses = {}
+
+        for (let i = 1; i <= questionCount; i++) {
+          restoredStatuses[i] = 'unvisited'
+        }
+
+        results.forEach((rec) => {
+          const qIdx = questions.findIndex(
+            (q) => q.question_id === rec.question_id
+          )
+          if (qIdx !== -1) {
+            const questionNum = qIdx + 1
+            const q = questions[qIdx]
+            const studentAns = rec.student_answer
+
+            if (
+              studentAns !== null &&
+              studentAns !== undefined &&
+              String(studentAns).trim() !== ''
+            ) {
+              const cleanAns = String(studentAns).trim().toUpperCase()
+              let optionIndex = -1
+
+              if (q.options && Array.isArray(q.options)) {
+                optionIndex = q.options.findIndex(
+                  (opt) =>
+                    opt.letter?.toUpperCase() === cleanAns ||
+                    opt.text?.toUpperCase() === cleanAns
+                )
+              }
+
+              if (optionIndex === -1) {
+                const charCode = cleanAns.charCodeAt(0) - 65
+                if (charCode >= 0 && charCode <= 10) {
+                  optionIndex = charCode
+                }
+              }
+
+              if (optionIndex !== -1) {
+                restoredAnswers[questionNum] = optionIndex
+                restoredStatuses[questionNum] = 'attempted'
+              }
+            } else if (studentAns === '') {
+              restoredStatuses[questionNum] = 'skipped'
+            }
+          }
+        })
+
+        if (isMounted) {
+          setSelectedAnswers((prev) => ({ ...prev, ...restoredAnswers }))
+          setQuestionStatuses((prev) => ({ ...prev, ...restoredStatuses }))
+        }
+      } catch (err) {
+        console.warn('Could not restore saved evaluations for attempt:', err)
+      }
+    }
+
+    restoreSavedAnswers()
+
+    return () => {
+      isMounted = false
+    }
+  }, [attemptId, isPracticeRetake, questions, questionCount])
+
   // ── Question Navigation ────────────────────────────────────────
 
   const goToQuestion = useCallback(
@@ -189,8 +274,24 @@ export default function MCQPage({ onNavigate } = {}) {
         ...prev,
         [currentQuestion]: 'attempted',
       }))
+
+      // Persist answer immediately to backend if normal active attempt
+      if (attemptId && !isPracticeRetake) {
+        const q = questions[currentQuestion - 1]
+        if (q && q.options && q.options[optionIndex]) {
+          const letter = q.options[optionIndex].letter
+          submitAnswers(attemptId, 'mcq', [
+            {
+              question_id: q.question_id,
+              student_answer: letter,
+            },
+          ]).catch((err) => {
+            console.warn('Failed to save MCQ answer:', err)
+          })
+        }
+      }
     },
-    [currentQuestion]
+    [currentQuestion, attemptId, isPracticeRetake, questions]
   )
 
   const handleConfirmNext = useCallback(() => {

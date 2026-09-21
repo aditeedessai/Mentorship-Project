@@ -8,7 +8,7 @@ import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers, evaluatePracticeAnswers } from '../services/api'
+import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
 
@@ -116,8 +116,96 @@ export default function QnAPage({ onNavigate } = {}) {
     }
   }, [questionCount, remainingSeconds, handleTimeExpired])
 
+  const isPracticeRetake = location.state?.isPracticeRetake || false
+  const historicalAttemptId = location.state?.historicalAttemptId
+
+  // Restore previously saved answers for this attempt on mount
+  useEffect(() => {
+    let isMounted = true
+
+    async function restoreSavedAnswers() {
+      if (!attemptId || isPracticeRetake || questions.length === 0) return
+
+      try {
+        const evalData = await fetchEvaluations(attemptId)
+        const results = evalData?.results || []
+
+        if (!isMounted || results.length === 0) return
+
+        const restoredAnswers = {}
+        const restoredStatuses = {}
+
+        for (let i = 1; i <= questionCount; i++) {
+          restoredStatuses[i] = 'unvisited'
+        }
+
+        results.forEach((rec) => {
+          const qIdx = questions.findIndex(
+            (q) => q.question_id === rec.question_id
+          )
+          if (qIdx !== -1) {
+            const questionNum = qIdx + 1
+            const text = rec.student_answer
+
+            if (text !== null && text !== undefined) {
+              restoredAnswers[questionNum] = text
+              restoredStatuses[questionNum] = String(text).trim() !== '' ? 'attempted' : 'skipped'
+            }
+          }
+        })
+
+        if (isMounted) {
+          setAnswers((prev) => ({ ...prev, ...restoredAnswers }))
+          setQuestionStatuses((prev) => ({ ...prev, ...restoredStatuses }))
+        }
+      } catch (err) {
+        console.warn('Could not restore saved evaluations for attempt:', err)
+      }
+    }
+
+    restoreSavedAnswers()
+
+    return () => {
+      isMounted = false
+    }
+  }, [attemptId, isPracticeRetake, questions, questionCount])
+
+  // Helper to persist an answer to backend while attempt is IN_PROGRESS
+  const saveAnswerToBackend = useCallback((qNum, val) => {
+    if (!attemptId || isPracticeRetake) return
+    const q = questions[qNum - 1]
+    if (!q) return
+
+    const textStr = val !== undefined && val !== null ? String(val).trim() : ''
+    submitAnswers(attemptId, questionType, [
+      {
+        question_id: q.question_id,
+        student_answer: textStr,
+      },
+    ]).catch((err) => {
+      console.warn('Failed to auto-save QnA answer:', err)
+    })
+  }, [attemptId, isPracticeRetake, questions, questionType])
+
+  // Debounced auto-save as user types
+  useEffect(() => {
+    if (!attemptId || isPracticeRetake) return
+    const val = answers[currentQuestion]
+    if (val === undefined) return
+
+    const timer = setTimeout(() => {
+      saveAnswerToBackend(currentQuestion, val)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [answers, currentQuestion, attemptId, isPracticeRetake, saveAnswerToBackend])
+
   const goToQuestion = useCallback((num) => {
     if (num < 1 || num > questionCount || num === currentQuestion) return
+    
+    // Save current question before switching
+    saveAnswerToBackend(currentQuestion, answers[currentQuestion])
+
     setQuestionStatuses(prev => {
       const next = { ...prev }
       if (prev[currentQuestion] !== 'attempted') {
@@ -126,14 +214,19 @@ export default function QnAPage({ onNavigate } = {}) {
       return next
     })
     setCurrentQuestion(num)
-  }, [currentQuestion, questionCount, answers])
+  }, [currentQuestion, questionCount, answers, saveAnswerToBackend])
 
   const handleAnswerChange = useCallback((value) => {
     setAnswers(prev => ({ ...prev, [currentQuestion]: value }))
   }, [currentQuestion])
 
   const handleSubmitNext = useCallback(() => {
-    const hasAnswer = answers[currentQuestion] && answers[currentQuestion].trim()
+    const currentVal = answers[currentQuestion]
+    const hasAnswer = currentVal && currentVal.trim()
+
+    // Save current answer to backend
+    saveAnswerToBackend(currentQuestion, currentVal)
+
     setQuestionStatuses(prev => ({
       ...prev,
       [currentQuestion]: hasAnswer ? 'attempted' : 'skipped'
@@ -141,11 +234,16 @@ export default function QnAPage({ onNavigate } = {}) {
     if (currentQuestion < questionCount) {
       setCurrentQuestion(prev => prev + 1)
     }
-  }, [currentQuestion, questionCount, answers])
+  }, [currentQuestion, questionCount, answers, saveAnswerToBackend])
 
   const handlePrevious = useCallback(() => {
     if (currentQuestion > 1) {
-      const hasAnswer = answers[currentQuestion] && answers[currentQuestion].trim()
+      const currentVal = answers[currentQuestion]
+      const hasAnswer = currentVal && currentVal.trim()
+
+      // Save current answer to backend
+      saveAnswerToBackend(currentQuestion, currentVal)
+
       setQuestionStatuses(prev => ({
         ...prev,
         [currentQuestion]: hasAnswer ? 'attempted' :
@@ -153,10 +251,7 @@ export default function QnAPage({ onNavigate } = {}) {
       }))
       setCurrentQuestion(prev => prev - 1)
     }
-  }, [currentQuestion, answers])
-
-  const isPracticeRetake = location.state?.isPracticeRetake || false
-  const historicalAttemptId = location.state?.historicalAttemptId
+  }, [currentQuestion, answers, saveAnswerToBackend])
 
   const handleFinishQuiz = useCallback(async () => {
     if (quizEndedRef.current || isSubmitting || (!attemptId && !historicalAttemptId)) return

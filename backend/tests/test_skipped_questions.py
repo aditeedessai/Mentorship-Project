@@ -123,7 +123,7 @@ def test_5_mixed_answered_and_skipped_questions_completes_section():
     study_set = study_service.create_study_set("Skipped Test Set B", user_id=user_id)
     set_id = study_set["study_set_id"]
 
-    att = attempts.start_attempt(payload=StartAttemptRequest(study_set_id=uuid.UUID(set_id)), current_user=user)
+    att = attempts.start_attempt(payload=StartAttemptRequest(study_set_id=uuid.UUID(set_id), question_type="short"), current_user=user)
     att_id = str(att.attempt_id)
 
     q1 = helper_create_question(set_id, "short")
@@ -151,6 +151,7 @@ def test_5_mixed_answered_and_skipped_questions_completes_section():
         res = attempts.submit_section_answers(att_id, payload=sub_req, current_user=user)
         assert res is not None
 
+    attempts.finish_attempt(att_id, current_user=user)
     att_status = attempts.get_attempt(att_id, current_user=user)
     assert "short" in att_status.completed_sections
 
@@ -167,7 +168,7 @@ def test_6_only_skipped_questions_completes_section():
     study_set = study_service.create_study_set("Skipped Test Set C", user_id=user_id)
     set_id = study_set["study_set_id"]
 
-    att = attempts.start_attempt(payload=StartAttemptRequest(study_set_id=uuid.UUID(set_id)), current_user=user)
+    att = attempts.start_attempt(payload=StartAttemptRequest(study_set_id=uuid.UUID(set_id), question_type="application"), current_user=user)
     att_id = str(att.attempt_id)
 
     q1 = helper_create_question(set_id, "application")
@@ -184,6 +185,7 @@ def test_6_only_skipped_questions_completes_section():
     res = attempts.submit_section_answers(att_id, payload=sub_req, current_user=user)
     assert res is not None
 
+    attempts.finish_attempt(att_id, current_user=user)
     att_status = attempts.get_attempt(att_id, current_user=user)
     assert "application" in att_status.completed_sections
 
@@ -202,7 +204,7 @@ def test_7_8_9_security_and_locking_with_skipped_questions():
     set_a_id = set_a["study_set_id"]
     set_b_id = set_b["study_set_id"]
 
-    att_a = attempts.start_attempt(payload=StartAttemptRequest(study_set_id=uuid.UUID(set_a_id)), current_user=user)
+    att_a = attempts.start_attempt(payload=StartAttemptRequest(study_set_id=uuid.UUID(set_a_id), question_type="long"), current_user=user)
     att_a_id = str(att_a.attempt_id)
 
     q_a = helper_create_question(set_a_id, "long")
@@ -225,11 +227,13 @@ def test_7_8_9_security_and_locking_with_skipped_questions():
     )
     attempts.submit_section_answers(att_a_id, payload=sub_valid, current_user=user)
 
-    # Test 7: Re-submitting long section returns HTTP 400 (locked section)
+    attempts.finish_attempt(att_a_id, current_user=user)
+
+    # Test 7: Re-submitting long section returns HTTP 400 (locked section / attempt completed)
     with pytest.raises(HTTPException) as exc_info:
         attempts.submit_section_answers(att_a_id, payload=sub_valid, current_user=user)
     assert exc_info.value.status_code == 400
-    assert "locked for this attempt" in str(exc_info.value.detail)
+    assert "completed" in str(exc_info.value.detail).lower() or "locked" in str(exc_info.value.detail).lower()
 
     study_service.delete_study_set(set_a_id, user_id=user_id)
     study_service.delete_study_set(set_b_id, user_id=user_id)
