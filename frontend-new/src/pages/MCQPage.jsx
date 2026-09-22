@@ -1,16 +1,33 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+
 import { useLocation, useNavigate } from 'react-router-dom'
+
 import { useTheme } from '../context/ThemeContext'
+
 import QuizHeader from '../components/quiz/QuizHeader'
+
 import QuestionNavigator from '../components/quiz/QuestionNavigator'
+
 import QuizCenter from '../components/quiz/QuizCenter'
+
 import RoughWorkPanel from '../components/quiz/RoughWorkPanel'
+
 import AbortQuizModal from '../components/quiz/AbortQuizModal'
+
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
+
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
+
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations } from '../services/api'
+
+import {
+  submitAnswers,
+  evaluatePracticeAnswers,
+  fetchEvaluations,
+} from '../services/api'
+
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
+
 import jojoCelebration from '../assets/jojo-celebration.png'
 
 const confettiPieces = [
@@ -144,15 +161,22 @@ export default function MCQPage({ onNavigate } = {}) {
     showCelebration,
   ])
 
-  const isPracticeRetake = location.state?.isPracticeRetake || false
-  const historicalAttemptId = location.state?.historicalAttemptId
+  const isPracticeRetake =
+    location.state?.isPracticeRetake || false
+
+  const historicalAttemptId =
+    location.state?.historicalAttemptId
 
   // Restore previously saved answers for this attempt on mount
   useEffect(() => {
     let isMounted = true
 
     async function restoreSavedAnswers() {
-      if (!attemptId || isPracticeRetake || questions.length === 0) {
+      if (
+        !attemptId ||
+        isPracticeRetake ||
+        questions.length === 0
+      ) {
         return
       }
 
@@ -175,6 +199,7 @@ export default function MCQPage({ onNavigate } = {}) {
           const qIdx = questions.findIndex(
             (q) => q.question_id === rec.question_id
           )
+
           if (qIdx !== -1) {
             const questionNum = qIdx + 1
             const q = questions[qIdx]
@@ -185,7 +210,10 @@ export default function MCQPage({ onNavigate } = {}) {
               studentAns !== undefined &&
               String(studentAns).trim() !== ''
             ) {
-              const cleanAns = String(studentAns).trim().toUpperCase()
+              const cleanAns = String(studentAns)
+                .trim()
+                .toUpperCase()
+
               let optionIndex = -1
 
               if (q.options && Array.isArray(q.options)) {
@@ -197,8 +225,13 @@ export default function MCQPage({ onNavigate } = {}) {
               }
 
               if (optionIndex === -1) {
-                const charCode = cleanAns.charCodeAt(0) - 65
-                if (charCode >= 0 && charCode <= 10) {
+                const charCode =
+                  cleanAns.charCodeAt(0) - 65
+
+                if (
+                  charCode >= 0 &&
+                  charCode <= 10
+                ) {
                   optionIndex = charCode
                 }
               }
@@ -214,11 +247,21 @@ export default function MCQPage({ onNavigate } = {}) {
         })
 
         if (isMounted) {
-          setSelectedAnswers((prev) => ({ ...prev, ...restoredAnswers }))
-          setQuestionStatuses((prev) => ({ ...prev, ...restoredStatuses }))
+          setSelectedAnswers((prev) => ({
+            ...prev,
+            ...restoredAnswers,
+          }))
+
+          setQuestionStatuses((prev) => ({
+            ...prev,
+            ...restoredStatuses,
+          }))
         }
       } catch (err) {
-        console.warn('Could not restore saved evaluations for attempt:', err)
+        console.warn(
+          'Could not restore saved evaluations for attempt:',
+          err
+        )
       }
     }
 
@@ -227,7 +270,12 @@ export default function MCQPage({ onNavigate } = {}) {
     return () => {
       isMounted = false
     }
-  }, [attemptId, isPracticeRetake, questions, questionCount])
+  }, [
+    attemptId,
+    isPracticeRetake,
+    questions,
+    questionCount,
+  ])
 
   // ── Question Navigation ────────────────────────────────────────
 
@@ -278,20 +326,35 @@ export default function MCQPage({ onNavigate } = {}) {
       // Persist answer immediately to backend if normal active attempt
       if (attemptId && !isPracticeRetake) {
         const q = questions[currentQuestion - 1]
-        if (q && q.options && q.options[optionIndex]) {
-          const letter = q.options[optionIndex].letter
+
+        if (
+          q &&
+          q.options &&
+          q.options[optionIndex]
+        ) {
+          const letter =
+            q.options[optionIndex].letter
+
           submitAnswers(attemptId, 'mcq', [
             {
               question_id: q.question_id,
               student_answer: letter,
             },
           ]).catch((err) => {
-            console.warn('Failed to save MCQ answer:', err)
+            console.warn(
+              'Failed to save MCQ answer:',
+              err
+            )
           })
         }
       }
     },
-    [currentQuestion, attemptId, isPracticeRetake, questions]
+    [
+      currentQuestion,
+      attemptId,
+      isPracticeRetake,
+      questions,
+    ]
   )
 
   const handleConfirmNext = useCallback(() => {
@@ -340,11 +403,11 @@ export default function MCQPage({ onNavigate } = {}) {
 
   // ── Submit Quiz ────────────────────────────────────────────────
 
-  const isPracticeRetake = location.state?.isPracticeRetake || false
-  const historicalAttemptId = location.state?.historicalAttemptId
-
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || (!attemptId && !historicalAttemptId)) {
+    if (
+      isSubmitting ||
+      (!attemptId && !historicalAttemptId)
+    ) {
       return
     }
 
@@ -375,18 +438,21 @@ export default function MCQPage({ onNavigate } = {}) {
         }
       }
 
-      const studySetId = location.state?.studySetId
+      const studySetId =
+        location.state?.studySetId
 
       if (isPracticeRetake) {
         // Practice retake: evaluate stateless in memory without saving
         let tempResults = null
+
         if (answersPayload.length > 0) {
-          tempResults = await evaluatePracticeAnswers(
-            studySetId,
-            historicalAttemptId,
-            'mcq',
-            answersPayload
-          )
+          tempResults =
+            await evaluatePracticeAnswers(
+              studySetId,
+              historicalAttemptId,
+              'mcq',
+              answersPayload
+            )
         }
 
         antiCheatCleanup()
@@ -440,7 +506,10 @@ export default function MCQPage({ onNavigate } = {}) {
         }, 2500)
       }
     } catch (err) {
-      console.error('Failed to submit quiz:', err)
+      console.error(
+        'Failed to submit quiz:',
+        err
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -492,12 +561,26 @@ export default function MCQPage({ onNavigate } = {}) {
   // ── Keyboard Shortcuts ─────────────────────────────────────────
 
   useEffect(() => {
-    if (!isFullscreenReady || quizTerminated || isViolationActive) return
+    if (
+      !isFullscreenReady ||
+      quizTerminated ||
+      isViolationActive
+    ) {
+      return
+    }
 
     const handleKeyDown = (e) => {
-      if (showInstructionsModal || showShortcutsModal || showAbortModal || showFinishModal) return
+      if (
+        showInstructionsModal ||
+        showShortcutsModal ||
+        showAbortModal ||
+        showFinishModal
+      ) {
+        return
+      }
 
       const target = e.target
+
       if (
         target?.tagName === 'INPUT' ||
         target?.tagName === 'TEXTAREA' ||
@@ -513,25 +596,43 @@ export default function MCQPage({ onNavigate } = {}) {
         handlePrevious()
       } else if (key === 'ArrowRight') {
         e.preventDefault()
+
         if (currentQuestion === questionCount) {
           handleFinishClick()
         } else {
           handleConfirmNext()
         }
-      } else if (key === '1' || key === 'a' || key === 'A') {
+      } else if (
+        key === '1' ||
+        key === 'a' ||
+        key === 'A'
+      ) {
         e.preventDefault()
         handleSelectAnswer(0)
-      } else if (key === '2' || key === 'b' || key === 'B') {
+      } else if (
+        key === '2' ||
+        key === 'b' ||
+        key === 'B'
+      ) {
         e.preventDefault()
         handleSelectAnswer(1)
-      } else if (key === '3' || key === 'c' || key === 'C') {
+      } else if (
+        key === '3' ||
+        key === 'c' ||
+        key === 'C'
+      ) {
         e.preventDefault()
         handleSelectAnswer(2)
-      } else if (key === '4' || key === 'd' || key === 'D') {
+      } else if (
+        key === '4' ||
+        key === 'd' ||
+        key === 'D'
+      ) {
         e.preventDefault()
         handleSelectAnswer(3)
       } else if (key === 'Enter') {
         e.preventDefault()
+
         if (currentQuestion === questionCount) {
           handleFinishClick()
         } else {
@@ -540,8 +641,16 @@ export default function MCQPage({ onNavigate } = {}) {
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener(
+      'keydown',
+      handleKeyDown
+    )
+
+    return () =>
+      window.removeEventListener(
+        'keydown',
+        handleKeyDown
+      )
   }, [
     isFullscreenReady,
     quizTerminated,
@@ -776,8 +885,12 @@ export default function MCQPage({ onNavigate } = {}) {
         onToggleRoughWork={() =>
           setShowRoughWorkDrawer((prev) => !prev)
         }
-        onOpenInstructions={() => setShowInstructionsModal(true)}
-        onOpenShortcuts={() => setShowShortcutsModal(true)}
+        onOpenInstructions={() =>
+          setShowInstructionsModal(true)
+        }
+        onOpenShortcuts={() =>
+          setShowShortcutsModal(true)
+        }
       />
 
       <div className="relative flex flex-1 overflow-hidden">
@@ -804,8 +917,12 @@ export default function MCQPage({ onNavigate } = {}) {
               : handleConfirmNext
           }
           isFirstQuestion={currentQuestion === 1}
-          isLastQuestion={currentQuestion === questionCount}
-          disabled={isViolationActive || isSubmitting}
+          isLastQuestion={
+            currentQuestion === questionCount
+          }
+          disabled={
+            isViolationActive || isSubmitting
+          }
         />
 
         <RoughWorkPanel
@@ -857,7 +974,9 @@ export default function MCQPage({ onNavigate } = {}) {
               {/* Cancel */}
               <button
                 type="button"
-                onClick={() => setShowFinishModal(false)}
+                onClick={() =>
+                  setShowFinishModal(false)
+                }
                 className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                   isDarkMode
                     ? 'bg-white/10 text-white hover:bg-white/15'
@@ -888,13 +1007,17 @@ export default function MCQPage({ onNavigate } = {}) {
 
       <QuizInstructionsModal
         isOpen={showInstructionsModal}
-        onClose={() => setShowInstructionsModal(false)}
+        onClose={() =>
+          setShowInstructionsModal(false)
+        }
         quizType="mcq"
       />
 
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
-        onClose={() => setShowShortcutsModal(false)}
+        onClose={() =>
+          setShowShortcutsModal(false)
+        }
         quizType="mcq"
       />
     </div>
