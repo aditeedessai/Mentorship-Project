@@ -26,7 +26,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 // tab/window focus loss, fullscreen gating, copy/paste toasts) for manual QA testing.
 // Set to false to restore production anti-cheating enforcement.
 // ============================================================================
-const QA_DISABLE_ANTI_CHEATING = true
+const QA_DISABLE_ANTI_CHEATING = false
 
 export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}) {
   // ── Constants ───────────────────────────────────────────────────
@@ -105,7 +105,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // Exit fullscreen
     try {
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
+        document.exitFullscreen().catch(() => { })
       }
     } catch {
       // ignore
@@ -209,7 +209,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
     try {
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
+        document.exitFullscreen().catch(() => { })
       }
     } catch {
       // ignore
