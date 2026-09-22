@@ -1,6 +1,4 @@
-import json
-
-from .gemini_client import client
+from .gemini_client import client, generate_json
 from .flashcard_builder import build_flashcard_prompt
 from backend.embeddings.retriever import retrieve_chunks
 
@@ -50,26 +48,10 @@ def generate_flashcards(
 
     print("Calling Gemini for flashcards...")
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
+    flashcard_data = generate_json(
+        client,
+        feature="flashcards",
+        prompt=prompt,
     )
-
-    print("Gemini responded for flashcards.")
-
-    response_text = response.text.strip()
-
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-
-    response_text = response_text.strip()
-
-    flashcard_data = json.loads(response_text)
-
-    # Ensure format consistency
-    if isinstance(flashcard_data, list):
-        flashcard_data = {"flashcards": flashcard_data}
 
     return flashcard_data

@@ -1,8 +1,6 @@
 import uuid
-import json
-import traceback
 
-from .gemini_client import client
+from .gemini_client import client, generate_json
 from .prompt_builder import build_quiz_prompt
 from backend.database.quiz_repository import (
     save_questions,
@@ -181,36 +179,12 @@ def generate_quiz(
 
     print("Calling Gemini...")
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt
-        )
-    except Exception:
-        print("===== Gemini API call failed (generate_quiz) =====")
-        traceback.print_exc()
-        raise
-
-    print("Gemini responded.")
-
-    response_text = response.text.strip()
-
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-
-    response_text = response_text.strip()
-
-    try:
-        quiz_data = json.loads(response_text)
-    except json.JSONDecodeError:
-        print("===== Failed to parse Gemini response as JSON (generate_quiz) =====")
-        print(f"Raw response length: {len(response_text)}")
-        print("Raw response text:")
-        print(response_text)
-        traceback.print_exc()
-        raise
+    quiz_data = generate_json(
+        client,
+        feature="quiz",
+        prompt=prompt,
+        question_type=question_type,
+    )
 
     # Process and link source metadata for each generated question
     for question in quiz_data["questions"]:

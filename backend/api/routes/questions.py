@@ -1,4 +1,4 @@
-import traceback
+import logging
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -13,8 +13,10 @@ from backend.api.schemas.question import (
 from backend.database import quiz_repository, study_set_repository
 from backend.database.attempt_repository import get_attempt as get_attempt_from_db
 from backend.services import quiz_service
+from backend.quiz_generation.gemini_client import GeminiGenerationError
 
 router = APIRouter(tags=["Questions"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -100,17 +102,23 @@ def generate_questions(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except GeminiGenerationError as e:
+        headers = {"Retry-After": e.retry_after} if e.retry_after else None
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.public_message,
+            headers=headers,
+        ) from e
     except Exception as e:
         # quiz_service.run_quiz -> generate_quiz can fail deep inside the
         # Gemini call or the JSON parse of its response - str(e) alone
         # (still included below, in the HTTP response) is often too thin
         # to diagnose which one it was, so the full traceback goes to the
         # server log here too.
-        print("===== /questions/generate failed =====")
-        traceback.print_exc()
+        logger.exception("Question generation failed for study set %s", study_set_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate questions: {str(e)}"
+            detail="Failed to generate questions. Please try again later."
         )
 
     # 4. Format generated questions into QuestionResponse list

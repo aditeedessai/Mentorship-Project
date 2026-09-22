@@ -261,12 +261,13 @@ def test_generate_quiz_adaptive_flow(mock_retrieve_chunks, mock_client):
     gemini_json = {
         "questions": [
             {
-                "question_id": "q1",
+                "question_id": f"q{index}",
                 "question_type": "short",
                 "topic": "Mendelian Genetics",
-                "question": "Explain dominant vs recessive alleles.",
+                "question": f"Explain dominant vs recessive alleles ({index}).",
                 "reference_answer": "Dominant alleles express over recessive ones."
             }
+            for index in range(1, 6)
         ]
     }
     mock_response = MagicMock()
@@ -276,7 +277,7 @@ def test_generate_quiz_adaptive_flow(mock_retrieve_chunks, mock_client):
     res = generate_quiz(study_set_id=study_set_id, question_type=q_type, attempt_id=new_attempt_id)
 
     assert "questions" in res
-    assert len(res["questions"]) == 1
+    assert len(res["questions"]) == 5
     generated_q = res["questions"][0]
 
     # Topic consistency preserved
@@ -284,7 +285,7 @@ def test_generate_quiz_adaptive_flow(mock_retrieve_chunks, mock_client):
 
     # Attempt isolation: questions in DB tagged with new_attempt_id
     db_questions = get_questions_by_study_set(study_set_id, attempt_id=new_attempt_id)
-    assert len(db_questions) == 1
+    assert len(db_questions) == 5
     assert db_questions[0]["question_id"] == generated_q["question_id"]
 
     # Source traceability: source_document_ids attached

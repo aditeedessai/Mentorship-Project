@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 import uuid
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -24,9 +25,11 @@ from backend.services.evaluation_service import get_study_set_progress
 from backend.quiz_generation.summary_generator import generate_summary
 from backend.quiz_generation.flashcard_generator import generate_flashcards
 from backend.quiz_generation.mnemonic_generator import generate_mnemonic
+from backend.quiz_generation.gemini_client import GeminiGenerationError
 from backend.database import summary_repository, flashcard_repository
 
 router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -51,29 +54,34 @@ def generate_study_set_summary(
 
         summary_data = generate_summary(study_set_id=str(study_set_id), user_id=current_user.user_id)
 
-        try:
-            summary_repository.save_summary(
-                study_set_id=str(study_set_id),
-                user_id=current_user.user_id,
-                title=summary_data.get("title"),
-                overview_paragraphs=summary_data.get("overview_paragraphs", []),
-                key_takeaways=summary_data.get("key_topics", []),
-            )
-        except Exception as save_err:
-            print(f"Failed to save summary for study set {study_set_id}: {save_err}")
+        summary_repository.save_summary(
+            study_set_id=str(study_set_id),
+            user_id=current_user.user_id,
+            title=summary_data.get("title"),
+            overview_paragraphs=summary_data.get("overview_paragraphs", []),
+            key_takeaways=summary_data.get("key_topics", []),
+        )
 
         return SummaryResponse(**summary_data)
     except HTTPException:
         raise
+    except GeminiGenerationError as e:
+        headers = {"Retry-After": e.retry_after} if e.retry_after else None
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.public_message,
+            headers=headers,
+        ) from e
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
+        logger.exception("Summary generation failed for study set %s", study_set_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate summary: {str(e)}"
+            detail="Failed to generate summary. Please try again later."
         )
 
 
@@ -135,27 +143,32 @@ def generate_study_set_flashcards(
 
         flashcard_data = generate_flashcards(study_set_id=str(study_set_id))
 
-        try:
-            flashcard_repository.save_flashcards(
-                study_set_id=str(study_set_id),
-                user_id=current_user.user_id,
-                cards=flashcard_data.get("flashcards", []),
-            )
-        except Exception as save_err:
-            print(f"Failed to save flashcards for study set {study_set_id}: {save_err}")
+        flashcard_repository.save_flashcards(
+            study_set_id=str(study_set_id),
+            user_id=current_user.user_id,
+            cards=flashcard_data.get("flashcards", []),
+        )
 
         return FlashcardsResponse(**flashcard_data)
     except HTTPException:
         raise
+    except GeminiGenerationError as e:
+        headers = {"Retry-After": e.retry_after} if e.retry_after else None
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=e.public_message,
+            headers=headers,
+        ) from e
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
+        logger.exception("Flashcard generation failed for study set %s", study_set_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate flashcards: {str(e)}"
+            detail="Failed to generate flashcards. Please try again later."
         )
 
 

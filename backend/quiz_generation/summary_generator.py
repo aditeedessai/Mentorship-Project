@@ -1,6 +1,4 @@
-import json
-
-from .gemini_client import client
+from .gemini_client import client, generate_json
 from .summary_builder import build_summary_prompt
 from backend.database.student_profile_repository import get_student_profile
 from backend.embeddings.retriever import retrieve_chunks
@@ -67,22 +65,10 @@ def generate_summary(
 
     print("Calling Gemini...")
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
+    summary_data = generate_json(
+        client,
+        feature="summary",
+        prompt=prompt,
     )
-
-    print("Gemini responded.")
-
-    response_text = response.text.strip()
-
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-
-    response_text = response_text.strip()
-
-    summary_data = json.loads(response_text)
 
     return summary_data
