@@ -32,7 +32,8 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 
-backend/.envbackend/answer_evaluation/.llm_judge_cache.json
+backend/.env
+backend/answer_evaluation/.llm_judge_cache.json
 
 # Test files
 backend/tests/
