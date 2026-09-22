@@ -24,7 +24,7 @@ if not api_key:
 logger = logging.getLogger(__name__)
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "60000"))
+GEMINI_TIMEOUT_MS = int(os.getenv("GEMINI_TIMEOUT_MS", "120000"))
 GEMINI_MAX_ATTEMPTS = max(1, int(os.getenv("GEMINI_MAX_ATTEMPTS", "3")))
 GEMINI_MAX_BACKOFF_SECONDS = max(
     1.0, float(os.getenv("GEMINI_MAX_BACKOFF_SECONDS", "8"))
@@ -53,6 +53,11 @@ class GeminiGenerationError(Exception):
         feature: str | None = None,
         category: str = "generation",
         attempt: int | None = None,
+        attempts: int | None = None,
+        transient: bool | None = None,
+        provider_status: int | None = None,
+        exception_type: str | None = None,
+        provider_message: str | None = None,
     ) -> None:
         super().__init__(message)
         self.public_message = message
@@ -61,6 +66,11 @@ class GeminiGenerationError(Exception):
         self.feature = feature
         self.category = category
         self.attempt = attempt
+        self.attempts = attempts
+        self.transient = transient
+        self.provider_status = provider_status
+        self.exception_type = exception_type
+        self.provider_message = provider_message
 
 
 def _response_schema(feature: str, question_type: str | None = None) -> dict:
@@ -140,6 +150,35 @@ def _retry_after(exc: Exception) -> str | None:
 def _status_code(exc: Exception) -> int | None:
     code = getattr(exc, "code", None)
     return code if isinstance(code, int) else None
+
+
+def _safe_provider_message(exc: Exception) -> str:
+    message = getattr(exc, "message", None) or str(exc)
+    message = re.sub(r"(?:AIza|AQ\.)[A-Za-z0-9_-]+", "[REDACTED]", str(message))
+    message = re.sub(r"Bearer\s+\S+", "Bearer [REDACTED]", message, flags=re.IGNORECASE)
+    return message[:500]
+
+
+def _log_final_failure(
+    *,
+    feature: str,
+    attempt: int,
+    transient: bool,
+    status_code: int | None,
+    exception_type: str,
+    provider_message: str,
+) -> None:
+    logger.error(
+        "Gemini %s generation exhausted after attempt %d/%d "
+        "(status=%s, exception=%s, transient=%s): %s",
+        feature,
+        attempt,
+        GEMINI_MAX_ATTEMPTS,
+        status_code,
+        exception_type,
+        transient,
+        provider_message,
+    )
 
 
 def _is_transient(exc: Exception) -> bool:
@@ -315,6 +354,8 @@ def generate_json(
         except Exception as exc:
             code = _status_code(exc)
             transient = _is_transient(exc)
+            provider_message = _safe_provider_message(exc)
+            exception_type = type(exc).__name__
             logger.warning(
                 "Gemini %s generation failed on attempt %d/%d (status=%s, transient=%s, elapsed=%.2fs): %s",
                 feature,
@@ -326,25 +367,65 @@ def generate_json(
                 type(exc).__name__,
             )
             if not transient or attempt >= GEMINI_MAX_ATTEMPTS:
+                _log_final_failure(
+                    feature=feature,
+                    attempt=attempt,
+                    transient=transient,
+                    status_code=code,
+                    exception_type=exception_type,
+                    provider_message=provider_message,
+                )
                 if code == 429:
                     raise GeminiGenerationError(
                         "Gemini rate limit exceeded. Please try again later.",
                         status_code=429,
                         retry_after=_retry_after(exc),
+                        feature=feature,
+                        category="provider_rate_limit",
+                        attempt=attempt,
+                        attempts=attempt,
+                        transient=transient,
+                        provider_status=code,
+                        exception_type=exception_type,
+                        provider_message=provider_message,
                     ) from exc
                 if code in {500, 502, 503}:
                     raise GeminiGenerationError(
                         "Gemini is temporarily unavailable. Please try again later.",
                         status_code=503,
+                        feature=feature,
+                        category="provider_unavailable",
+                        attempt=attempt,
+                        attempts=attempt,
+                        transient=transient,
+                        provider_status=code,
+                        exception_type=exception_type,
+                        provider_message=provider_message,
                     ) from exc
                 if isinstance(exc, (TimeoutError, httpx.TimeoutException)):
                     raise GeminiGenerationError(
                         "Gemini generation timed out. Please try again later.",
                         status_code=504,
+                        feature=feature,
+                        category="timeout",
+                        attempt=attempt,
+                        attempts=attempt,
+                        transient=transient,
+                        provider_status=code,
+                        exception_type=exception_type,
+                        provider_message=provider_message,
                     ) from exc
                 raise GeminiGenerationError(
                     "Gemini generation failed due to a provider or configuration error.",
                     status_code=502,
+                    feature=feature,
+                    category="provider_or_configuration",
+                    attempt=attempt,
+                    attempts=attempt,
+                    transient=transient,
+                    provider_status=code,
+                    exception_type=exception_type,
+                    provider_message=provider_message,
                 ) from exc
 
             retry_after = _retry_after(exc)

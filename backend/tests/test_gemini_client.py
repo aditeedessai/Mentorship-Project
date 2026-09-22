@@ -126,6 +126,56 @@ def test_permanent_provider_error_is_not_retried():
     assert request_client.models.generate_content.call_count == 1
 
 
+def test_final_503_preserves_safe_context_and_is_logged(caplog):
+    failures = [ProviderError(503) for _ in range(3)]
+    failures[0].message = "backend overloaded with key AIzaSECRET123"
+    request_client = fake_client(failures)
+
+    with caplog.at_level("ERROR", logger=gemini_client.logger.name):
+        with patch.object(gemini_client.time, "sleep"):
+            with pytest.raises(gemini_client.GeminiGenerationError) as error:
+                call_generate(request_client, "quiz", "short")
+
+    failure = error.value
+    assert failure.status_code == 503
+    assert failure.provider_status == 503
+    assert failure.exception_type == "ProviderError"
+    assert failure.attempts == 3
+    assert failure.transient is True
+    assert failure.public_message == "Gemini is temporarily unavailable. Please try again later."
+    assert "Gemini quiz generation exhausted after attempt 3/3" in caplog.text
+    assert "503" in caplog.text
+    assert "AIzaSECRET123" not in caplog.text
+
+
+def test_final_timeout_preserves_context_and_public_message(caplog):
+    request_client = fake_client([
+        TimeoutError("read operation timed out"),
+        TimeoutError("read operation timed out"),
+        TimeoutError("read operation timed out"),
+    ])
+
+    with caplog.at_level("ERROR", logger=gemini_client.logger.name):
+        with patch.object(gemini_client.time, "sleep"):
+            with pytest.raises(gemini_client.GeminiGenerationError) as error:
+                call_generate(request_client, "quiz", "short")
+
+    failure = error.value
+    assert failure.status_code == 504
+    assert failure.category == "timeout"
+    assert failure.exception_type == "TimeoutError"
+    assert failure.attempts == 3
+    assert failure.transient is True
+    assert failure.public_message == "Gemini generation timed out. Please try again later."
+    assert "timeout" not in failure.public_message.lower()
+    assert "exception=TimeoutError" in caplog.text
+
+
+def test_configured_timeout_is_passed_to_sdk_client():
+    assert gemini_client.GEMINI_TIMEOUT_MS == 120000
+    assert gemini_client.client._api_client._http_options.timeout == gemini_client.GEMINI_TIMEOUT_MS
+
+
 def test_numeric_retry_after_is_honored_with_backoff_cap():
     request_client = fake_client([
         ProviderError(429, "60"),
