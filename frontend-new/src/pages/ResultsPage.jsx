@@ -87,6 +87,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const [evaluations, setEvaluations] = useState([]);
   const [revisionStatuses, setRevisionStatuses] = useState([]);
   const [error, setError] = useState(null);
+  const [reviewFilter, setReviewFilter] = useState('all');
 
   const isPracticeRetake = location.state?.isPracticeRetake || false;
   const temporaryResults = location.state?.temporaryResults;
@@ -300,6 +301,28 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const correctCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === true).length, [processedQuestions]);
   const skippedCount = useMemo(() => processedQuestions.filter((q) => q.isSkipped).length, [processedQuestions]);
   const wrongCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === false && !q.isSkipped).length, [processedQuestions]);
+
+  const filteredQuestions = useMemo(() => {
+    if (reviewFilter === 'right') {
+      return processedQuestions.filter(
+        (q) => q.isCorrect === true && !q.isSkipped
+      );
+    }
+
+    if (reviewFilter === 'wrong') {
+      return processedQuestions.filter(
+        (q) => q.isCorrect === false && !q.isSkipped
+      );
+    }
+
+    if (reviewFilter === 'skipped') {
+      return processedQuestions.filter(
+        (q) => q.isSkipped === true
+      );
+    }
+
+    return processedQuestions;
+  }, [processedQuestions, reviewFilter]);
 
   const weakTopics = useMemo(() => {
     const perfTopics = performanceData?.topics || [];
@@ -633,29 +656,70 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setReviewFilter('all')}
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                reviewFilter === 'all'
+                  ? isDarkMode
+                    ? 'border-[#8064C7] bg-[#8064C7]/30 text-white shadow-xs'
+                    : 'border-[#8064C7] bg-[#8064C7] text-white shadow-xs'
+                  : isDarkMode
+                  ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                  : 'border-gray-200 bg-white/80 text-gray-700 hover:bg-white hover:text-gray-900'
+              }`}
+            >
+              All
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter('right')}
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                reviewFilter === 'right'
+                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs'
+                  : isDarkMode
+                  ? 'border-emerald-500/30 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
               {correctCount} Right
-            </span>
-            <span
-              className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${
-                isDarkMode
-                  ? "border-rose-500/30 bg-rose-500/20 text-rose-400"
-                  : "border-red-200 bg-red-50 text-red-600"
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter('wrong')}
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                reviewFilter === 'wrong'
+                  ? 'border-rose-500 bg-rose-500 text-white shadow-xs'
+                  : isDarkMode
+                  ? 'border-rose-500/30 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30'
+                  : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
               }`}
             >
               {wrongCount} Wrong
-            </span>
+            </button>
+
             {skippedCount > 0 && (
-              <span className="rounded-lg border border-amber-500/30 bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-400">
+              <button
+                type="button"
+                onClick={() => setReviewFilter('skipped')}
+                className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                  reviewFilter === 'skipped'
+                    ? 'border-amber-500 bg-amber-500 text-white shadow-xs'
+                    : 'border-amber-500/30 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                }`}
+              >
                 {skippedCount} Skipped
-              </span>
+              </button>
             )}
           </div>
         </div>
 
         <div className="space-y-4">
-          {processedQuestions.map((q) => (
+          {filteredQuestions.length > 0 ? (
+            filteredQuestions.map((q) => (
             <div
               key={q.id}
               className={`space-y-3 rounded-2xl border p-5 backdrop-blur-xl transition-all ${
@@ -706,7 +770,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
               <div className="grid grid-cols-1 gap-3 pt-1 text-xs font-medium sm:grid-cols-2">
                 <div
-                  className={`rounded-xl border p-3 ${
+                  className={`min-w-0 rounded-xl border p-3 ${
                     isDarkMode ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-gray-50'
                   }`}
                 >
@@ -714,7 +778,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                     Your Submitted Answer
                   </span>
                   <span
-                    className={
+                    className={`block break-words ${
                       q.isSkipped
                         ? 'font-bold italic text-amber-400'
                         : q.isCorrect === true
@@ -722,14 +786,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                         : isDarkMode
                         ? 'font-bold text-rose-400'
                         : 'font-bold text-red-600'
-                    }
+                    }`}
                   >
                     {q.userAnswer}
                   </span>
                 </div>
 
                 <div
-                  className={`rounded-xl border p-3 ${
+                  className={`min-w-0 rounded-xl border p-3 ${
                     isDarkMode
                       ? 'border-[#8064C7]/30 bg-[#8064C7]/15'
                       : 'border-[#8064C7]/20 bg-purple-50'
@@ -738,12 +802,12 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                   <span className="mb-1 block text-[10px] font-bold uppercase text-[#8064C7] dark:text-[#A78BFA]">
                     Correct / Expected Solution
                   </span>
-                  <span className="font-bold">{q.correctAnswer}</span>
+                  <span className="block break-words font-bold">{q.correctAnswer}</span>
                 </div>
               </div>
 
               <div
-                className={`rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs ${
+                className={`min-w-0 rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs break-words ${
                   isDarkMode ? 'bg-white/5' : 'bg-purple-50/50'
                 }`}
               >
@@ -753,7 +817,16 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                 {q.feedback}
               </div>
             </div>
-          ))}
+          ))
+          ) : (
+            <div
+              className={`rounded-2xl border p-8 text-center text-xs font-semibold ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-white/60' : 'border-gray-200 bg-gray-50 text-gray-500'
+              }`}
+            >
+              No {reviewFilter} questions in this quiz attempt.
+            </div>
+          )}
         </div>
       </div>
 
