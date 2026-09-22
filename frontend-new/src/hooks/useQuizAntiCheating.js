@@ -19,13 +19,22 @@ import { useState, useEffect, useRef, useCallback } from 'react'
  *
  * @param {{ enabled: boolean, onTerminate: (reason: string) => void }} options
  */
+// ============================================================================
+// QA / LOCAL TESTING MODE TOGGLE
+// Set QA_DISABLE_ANTI_CHEATING to true to temporarily disable all anti-cheating
+// restrictions (DevTools detection, F12/Inspect shortcuts, right-click menu,
+// tab/window focus loss, fullscreen gating, copy/paste toasts) for manual QA testing.
+// Set to false to restore production anti-cheating enforcement.
+// ============================================================================
+const QA_DISABLE_ANTI_CHEATING = true
+
 export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}) {
   // ── Constants ───────────────────────────────────────────────────
   const MAX_WARNINGS = 2
 
   // ── State ────────────────────────────────────────────────────────
   const [warnings, setWarnings] = useState([])
-  const [isFullscreenReady, setIsFullscreenReady] = useState(false)
+  const [isFullscreenReady, setIsFullscreenReady] = useState(QA_DISABLE_ANTI_CHEATING ? true : false)
   const [quizTerminated, setQuizTerminated] = useState(false)
 
   // Warning system state
@@ -58,6 +67,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
   // ── Warning helpers ──────────────────────────────────────────────
   const addWarning = useCallback((type, title, message) => {
+    if (QA_DISABLE_ANTI_CHEATING) return
     setWarnings(prev => {
       if (prev.some(w => w.type === type)) return prev
       return [...prev, { type, title, message }]
@@ -70,6 +80,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
   // ── Centralized quiz termination ─────────────────────────────────
   const terminateQuiz = useCallback(() => {
+    if (QA_DISABLE_ANTI_CHEATING) return
     // Guard: only terminate once
     if (quizTerminatedRef.current || cleanedUpRef.current || isTerminatingRef.current) return
 
@@ -127,6 +138,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
   // ── Centralized violation handler ─────────────────────────────────
   const handleViolation = useCallback((reason, message, isBlocking = false) => {
+    if (QA_DISABLE_ANTI_CHEATING) return
     if (cleanedUpRef.current || quizTerminatedRef.current || isTerminatingRef.current) return
 
     // For DevTools: check violation-session guard
@@ -206,7 +218,10 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
   // ── Main effect: register all listeners ──────────────────────────
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || QA_DISABLE_ANTI_CHEATING) {
+      setIsFullscreenReady(true)
+      return
+    }
 
     // Reset state for this activation
     cleanedUpRef.current = false

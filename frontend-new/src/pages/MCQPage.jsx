@@ -320,8 +320,8 @@ export default function MCQPage({ onNavigate } = {}) {
           selectedAnswers[currentQuestion] !== undefined
             ? 'attempted'
             : prev[currentQuestion] === 'attempted'
-            ? 'attempted'
-            : 'skipped',
+              ? 'attempted'
+              : 'skipped',
       }))
 
       setCurrentQuestion((prev) => prev - 1)
@@ -340,8 +340,6 @@ export default function MCQPage({ onNavigate } = {}) {
 
   // ── Submit Quiz ────────────────────────────────────────────────
 
-  const isPracticeRetake = location.state?.isPracticeRetake || false
-  const historicalAttemptId = location.state?.historicalAttemptId
 
   const handleFinishQuiz = useCallback(async () => {
     if (isSubmitting || (!attemptId && !historicalAttemptId)) {
@@ -568,19 +566,17 @@ export default function MCQPage({ onNavigate } = {}) {
   if (showCelebration) {
     return (
       <div
-        className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${
-          isDarkMode
+        className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${isDarkMode
             ? 'bg-[#0E0B15] text-white'
             : 'bg-[#F6F3FC] text-[#292530]'
-        }`}
+          }`}
       >
         {/* Celebration glow */}
         <div
-          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
-            isDarkMode
+          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${isDarkMode
               ? 'bg-[#8064C7]/20'
               : 'bg-[#8064C7]/15'
-          }`}
+            }`}
         />
 
         {/* Confetti */}
@@ -618,11 +614,10 @@ export default function MCQPage({ onNavigate } = {}) {
           {/* Jojo */}
           <div className="relative mb-7 flex h-64 w-64 items-center justify-center">
             <div
-              className={`absolute inset-0 rounded-full blur-3xl ${
-                isDarkMode
+              className={`absolute inset-0 rounded-full blur-3xl ${isDarkMode
                   ? 'bg-[#8064C7]/20'
                   : 'bg-[#8064C7]/15'
-              }`}
+                }`}
             />
 
             <img
@@ -638,39 +633,35 @@ export default function MCQPage({ onNavigate } = {}) {
           </h1>
 
           <p
-            className={`mt-3 max-w-md text-sm leading-relaxed ${
-              isDarkMode
+            className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode
                 ? 'text-white/55'
                 : 'text-gray-500'
-            }`}
+              }`}
           >
             Great job! Jojo is celebrating your progress.
           </p>
 
           {/* Progress message */}
           <div
-            className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
-              isDarkMode
+            className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${isDarkMode
                 ? 'border-white/10 bg-white/5'
                 : 'border-[#8064C7]/10 bg-white/70'
-            }`}
+              }`}
           >
             <p
-              className={`text-sm font-bold ${
-                isDarkMode
+              className={`text-sm font-bold ${isDarkMode
                   ? 'text-white/80'
                   : 'text-[#514863]'
-              }`}
+                }`}
             >
               Your answers have been submitted successfully.
             </p>
 
             <p
-              className={`mt-1 text-xs ${
-                isDarkMode
+              className={`mt-1 text-xs ${isDarkMode
                   ? 'text-white/35'
                   : 'text-gray-400'
-              }`}
+                }`}
             >
               Taking you to your results...
             </p>
@@ -703,20 +694,18 @@ export default function MCQPage({ onNavigate } = {}) {
 
   return (
     <div
-      className={`flex h-screen w-screen select-none flex-col overflow-hidden font-sans ${
-        isDarkMode
+      className={`flex h-screen w-screen select-none flex-col overflow-hidden font-sans ${isDarkMode
           ? 'bg-[#0E0B15] text-white'
           : 'bg-[#F6F3FC] text-[#292530]'
-      }`}
+        }`}
     >
       {/* Fullscreen gate */}
       {!isFullscreenReady && (
         <div
-          className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${
-            isDarkMode
+          className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${isDarkMode
               ? 'bg-[#0E0B15]/90 text-white'
               : 'bg-white/90 text-[#292530]'
-          }`}
+            }`}
         >
           <div className="max-w-sm px-6 text-center">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#8064C7]/20 text-[#8064C7]">
@@ -743,11 +732,10 @@ export default function MCQPage({ onNavigate } = {}) {
             </h2>
 
             <p
-              className={`text-xs leading-relaxed ${
-                isDarkMode
+              className={`text-xs leading-relaxed ${isDarkMode
                   ? 'text-white/60'
                   : 'text-gray-500'
-              }`}
+                }`}
             >
               This quiz requires fullscreen mode for a secure
               exam environment. Click anywhere or press any
@@ -831,22 +819,20 @@ export default function MCQPage({ onNavigate } = {}) {
       {showFinishModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
           <div
-            className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${
-              isDarkMode
+            className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${isDarkMode
                 ? 'border-white/10 bg-[#171320] text-white'
                 : 'border-[#8064C7]/10 bg-white text-[#292530]'
-            }`}
+              }`}
           >
             <h2 className="text-xl font-black tracking-tight">
               Finish Quiz?
             </h2>
 
             <p
-              className={`mt-2 text-sm leading-relaxed ${
-                isDarkMode
+              className={`mt-2 text-sm leading-relaxed ${isDarkMode
                   ? 'text-white/60'
                   : 'text-gray-500'
-              }`}
+                }`}
             >
               Are you sure you want to finish the quiz? Your
               answers will be submitted and you won't be able to
@@ -858,11 +844,10 @@ export default function MCQPage({ onNavigate } = {}) {
               <button
                 type="button"
                 onClick={() => setShowFinishModal(false)}
-                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
-                  isDarkMode
+                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${isDarkMode
                     ? 'bg-white/10 text-white hover:bg-white/15'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Cancel
               </button>

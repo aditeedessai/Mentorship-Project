@@ -33,3 +33,6 @@ backend/uploads/
 Thumbs.db
 
 backend/.envbackend/answer_evaluation/.llm_judge_cache.json
+
+# Test files
+backend/tests/
