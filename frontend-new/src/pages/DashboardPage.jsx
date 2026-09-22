@@ -3,7 +3,6 @@ import { BookOpen, Sparkles } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import TodaysTasksCard from "../components/dashboard/TodaysTasksCard";
 import UpcomingExamsCard from "../components/dashboard/UpcomingExamsCard";
-import StudySetProgressCard from "../components/dashboard/StudySetProgressCard";
 import ActivityCalendarCard from "../components/dashboard/ActivityCalendarCard";
 import MotivationalTaglineCard from "../components/dashboard/MotivationalTaglineCard";
 import PerformanceGraphCard from "../components/dashboard/PerformanceGraphCard";
@@ -793,9 +792,7 @@ function DashboardPage({ user, onNavigate }) {
         <div className="flex flex-col gap-6 lg:flex-row">
 
           {/* LEFT COLUMN */}
-
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-
             <div className="dashboard-card-reveal dashboard-delay-1 dashboard-interactive-card rounded-3xl">
               <TodaysTasksCard onNavigate={onNavigate} />
             </div>
@@ -803,20 +800,10 @@ function DashboardPage({ user, onNavigate }) {
             <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
               <PerformanceGraphCard onNavigate={onNavigate} />
             </div>
-
-            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
-              <StudySetProgressCard onNavigate={onNavigate} />
-            </div>
-
-            <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl">
-              <MotivationalTaglineCard />
-            </div>
           </div>
 
           {/* RIGHT COLUMN */}
-
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-
             <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
               <UpcomingExamsCard
                 onNavigate={onNavigate}
@@ -827,8 +814,15 @@ function DashboardPage({ user, onNavigate }) {
             <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl">
               <ActivityCalendarCard />
             </div>
-
           </div>
+        </div>
+
+        {/* =================================================
+            MOTIVATIONAL QUOTE CARD
+        ================================================= */}
+
+        <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card mt-6 sm:mt-8 rounded-3xl">
+          <MotivationalTaglineCard />
         </div>
       </div>
     </>
