@@ -791,6 +791,19 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       validFiles.push(file);
     });
 
+    const existingFileKeys = new Set(
+      selectedFiles.map((f) => `${f.name}-${f.size}`)
+    );
+    const duplicateFileNames = [];
+
+    validFiles.forEach((file) => {
+      if (existingFileKeys.has(`${file.name}-${file.size}`)) {
+        if (!duplicateFileNames.includes(file.name)) {
+          duplicateFileNames.push(file.name);
+        }
+      }
+    });
+
     // Handle error messages for invalid formats or oversized files
     const errorMessages = [];
 
@@ -805,6 +818,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     if (oversizedFileNames.length > 0) {
       errorMessages.push(
         `File size exceeds 20 MB limit: ${oversizedFileNames.join(", ")}`
+      );
+    }
+
+    if (duplicateFileNames.length > 0) {
+      errorMessages.push(
+        duplicateFileNames.length === 1
+          ? `File already added: ${duplicateFileNames[0]}`
+          : `Files already added: ${duplicateFileNames.join(", ")}`
       );
     }
 
