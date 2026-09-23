@@ -95,7 +95,7 @@ def evaluate_study_material_heuristics(ocr_details: dict) -> tuple[bool, float, 
     - Average and high-confidence OCR scores
     - Bounding-box spatial dispersion across page canvas
     - Quadrant grid coverage
-    - Safeguards for sparse-text diagrams, handwritten notes, and formulas
+    - Strict thresholding to reject random non-note images
 
     Returns:
         tuple: (is_valid: bool, score: float, metrics: dict)
@@ -141,54 +141,43 @@ def evaluate_study_material_heuristics(ocr_details: dict) -> tuple[bool, float, 
     # Multi-signal scoring
     score = 0.0
 
-    # 1. Text Amount Signals
-    if total_words >= 15:
-        score += 3.0
+    # 1. Stricter Text Amount Signals
+    if total_words >= 30:
+        score += 4.0
+    elif total_words >= 15:
+        score += 2.5
     elif total_words >= 8:
-        score += 2.0
-    elif total_words >= 3:
         score += 1.0
+    else:
+        score -= 2.0  # Penalize very sparse text heavily
 
-    if total_lines >= 5:
-        score += 1.5
-    elif total_lines >= 3:
+    if total_lines >= 8:
+        score += 2.0
+    elif total_lines >= 4:
         score += 1.0
-    elif total_lines >= 1:
-        score += 0.5
 
     # 2. Confidence Signals
     if avg_confidence >= 0.80:
-        score += 2.0
-    elif avg_confidence >= 0.65:
-        score += 1.0
-
-    # 3. Text Region Count
-    if total_boxes >= 5:
-        score += 2.5
-    elif total_boxes >= 3:
         score += 1.5
-    elif total_boxes >= 1:
+    elif avg_confidence >= 0.65:
         score += 0.5
 
-    # 4. Spatial Dispersion & Grid Coverage (Document/Page-like composition)
-    if vert_dispersion >= 0.30:
-        score += 1.5
-    elif vert_dispersion >= 0.15:
-        score += 0.75
-
-    if horiz_dispersion >= 0.30:
+    # 3. Text Region Count
+    if total_boxes >= 8:
+        score += 2.0
+    elif total_boxes >= 4:
         score += 1.0
 
-    if quadrant_coverage >= 3:
-        score += 2.5
-    elif quadrant_coverage >= 2:
+    # 4. Spatial Dispersion & Grid Coverage
+    if vert_dispersion >= 0.40:
         score += 1.5
+    elif vert_dispersion >= 0.20:
+        score += 0.75
 
-    # 5. False-Rejection Safeguard for Diagrams, Graphs & Handwritten Notes
-    # If text is sparse but there are multiple distinct text boxes, decent confidence,
-    # and spatial dispersion (e.g. labeled diagram, math formula, chart), give bonus.
-    if total_boxes >= 2 and avg_confidence >= 0.60 and (quadrant_coverage >= 2 or vert_dispersion >= 0.20):
+    if quadrant_coverage >= 3:
         score += 2.0
+    elif quadrant_coverage >= 2:
+        score += 1.0
 
     metrics = {
         "total_lines": total_lines,
@@ -201,8 +190,8 @@ def evaluate_study_material_heuristics(ocr_details: dict) -> tuple[bool, float, 
         "score": round(score, 2),
     }
 
-    # Conservative pass threshold: 3.5 points
-    is_valid = score >= 3.5
+    # Stricter pass threshold: score >= 6.0 and minimum 10 words required
+    is_valid = score >= 6.0 and total_words >= 10
     return is_valid, score, metrics
 
 
