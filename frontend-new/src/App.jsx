@@ -288,13 +288,31 @@ function AppContent() {
         });
         setAuthPage("app");
       } else {
-        setUser(null);
-        setHasProfile(null);
-        setStudySets([]);
-        setSelectedStudySetId(null);
-        sessionStorage.removeItem("jot_current_page");
-        sessionStorage.removeItem("jot_selected_study_set_id");
-        setAuthPage("landing");
+        // A null session here isn't necessarily a real sign-out: the
+        // browser's setTimeout-scheduled token auto-refresh doesn't run
+        // while the OS is actually asleep, so a device sleep/wake can
+        // leave the access token stale, and the refresh attempt right
+        // after waking can transiently fail (e.g. Wi-Fi not yet back)
+        // before ever confirming a genuine logout. Reading
+        // window.location.pathname directly (not the `location` from
+        // useLocation() above, which would be stale-captured from mount
+        // since this listener is registered once) so it's a live check
+        // of the URL at the moment this event actually fires. Tearing
+        // the whole app down and forcing this user to the landing page
+        // while they're mid-quiz used to silently evict them with none
+        // of the quiz's own anti-cheat warning UI ever shown (DF044).
+        const path = window.location.pathname;
+        const isActiveQuiz = path === "/quiz/mcq" || path === "/quiz/qna";
+
+        if (!isActiveQuiz) {
+          setUser(null);
+          setHasProfile(null);
+          setStudySets([]);
+          setSelectedStudySetId(null);
+          sessionStorage.removeItem("jot_current_page");
+          sessionStorage.removeItem("jot_selected_study_set_id");
+          setAuthPage("landing");
+        }
       }
     });
 

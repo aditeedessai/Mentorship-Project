@@ -244,6 +244,15 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
+        // Reset the failed-attempt counter on every successful (re-)entry.
+        // Without this it accumulated for the whole session, so attempts
+        // spent getting into fullscreen at quiz start counted against the
+        // budget for re-entering later - meaning a single flaky re-request
+        // after a device sleep/wake (browsers are often momentarily fussy
+        // about granting fullscreen right after waking) could tip the
+        // cumulative count to the termination threshold and silently kick
+        // the user to the dashboard with no warning shown (DF044).
+        fullscreenAttemptCountRef.current = 0
       } else {
         setIsFullscreenReady(false)
         // Only trigger violation if fullscreen was actually established previously

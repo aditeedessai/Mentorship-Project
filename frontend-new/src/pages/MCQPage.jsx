@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import QuizHeader from '../components/quiz/QuizHeader'
@@ -83,6 +83,29 @@ export default function MCQPage({ onNavigate } = {}) {
   // Finish Quiz confirmation popup
   const [showFinishModal, setShowFinishModal] = useState(false)
 
+  // Controls the timeout screen
+  const [isTimedOut, setIsTimedOut] = useState(false)
+
+  // Holds the live countdown interval so it can be cleared imperatively
+  // (from a click handler, not just effect cleanup) the instant the quiz ends.
+  const timerIntervalRef = useRef(null)
+
+  // Guards manual submission, abort, and timer-expiry from all firing —
+  // whichever reaches this first "wins" and the others become no-ops.
+  const quizEndedRef = useRef(false)
+
+  // Always holds the latest handleFinishQuiz closure so handleTimeExpired
+  // (defined above it) can auto-submit on timeout instead of discarding
+  // progress - see the effect right after handleFinishQuiz's definition.
+  const handleFinishQuizRef = useRef(null)
+
+  const clearQuizTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+  }, [])
+
   // ── Anti-Cheating ──────────────────────────────────────────────
   const {
     isFullscreenReady,
@@ -118,6 +141,18 @@ export default function MCQPage({ onNavigate } = {}) {
     location.state?.studySetId,
   ])
 
+  // Auto-submit triggered when the countdown reaches zero, instead of
+  // discarding progress - whatever's answered so far (skipped questions
+  // included as empty answers, same as a manual finish) is submitted via
+  // the same path as clicking "Finish Quiz". Guarded by quizEndedRef
+  // (set inside handleFinishQuiz itself) so a manual submit/abort that
+  // lands in the same tick wins instead of both handlers running.
+  const handleTimeExpired = useCallback(() => {
+    if (quizEndedRef.current) return
+    setIsTimedOut(true)
+    handleFinishQuizRef.current?.()
+  }, [])
+
   // Timer — only ticks when fullscreen is established
   // and no active violation
   useEffect(() => {
@@ -125,24 +160,34 @@ export default function MCQPage({ onNavigate } = {}) {
       remainingSeconds <= 0 ||
       !isFullscreenReady ||
       isViolationActive ||
-      showCelebration
+      showCelebration ||
+      quizEndedRef.current
     ) {
       return
     }
 
-    const interval = setInterval(() => {
+    timerIntervalRef.current = setInterval(() => {
       setRemainingSeconds((prev) =>
         Math.max(0, prev - 1)
       )
     }, 1000)
 
-    return () => clearInterval(interval)
+    return () => clearQuizTimer()
   }, [
     remainingSeconds,
     isFullscreenReady,
     isViolationActive,
     showCelebration,
+    clearQuizTimer,
   ])
+
+  // Auto-abort the instant the countdown reaches zero — races against a
+  // manual submit/abort via quizEndedRef, so only one of the two can win.
+  useEffect(() => {
+    if (questionCount > 0 && remainingSeconds === 0) {
+      handleTimeExpired()
+    }
+  }, [questionCount, remainingSeconds, handleTimeExpired])
 
   const isPracticeRetake = location.state?.isPracticeRetake || false
   const historicalAttemptId = location.state?.historicalAttemptId
@@ -342,10 +387,12 @@ export default function MCQPage({ onNavigate } = {}) {
 
 
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || (!attemptId && !historicalAttemptId)) {
+    if (quizEndedRef.current || isSubmitting || (!attemptId && !historicalAttemptId)) {
       return
     }
 
+    quizEndedRef.current = true
+    clearQuizTimer()
     setIsSubmitting(true)
 
     try {
@@ -439,6 +486,7 @@ export default function MCQPage({ onNavigate } = {}) {
       }
     } catch (err) {
       console.error('Failed to submit quiz:', err)
+      quizEndedRef.current = false
     } finally {
       setIsSubmitting(false)
     }
@@ -454,11 +502,20 @@ export default function MCQPage({ onNavigate } = {}) {
     onNavigate,
     location.state,
     antiCheatCleanup,
+    clearQuizTimer,
   ])
+
+  useEffect(() => {
+    handleFinishQuizRef.current = handleFinishQuiz
+  }, [handleFinishQuiz])
 
   // ── Abort Quiz ─────────────────────────────────────────────────
 
   const handleAbortConfirm = useCallback(() => {
+    if (quizEndedRef.current) return
+    quizEndedRef.current = true
+    clearQuizTimer()
+
     antiCheatCleanup()
     onNavigate?.('dashboard')
     navigate('/')
@@ -466,6 +523,7 @@ export default function MCQPage({ onNavigate } = {}) {
     navigate,
     onNavigate,
     antiCheatCleanup,
+    clearQuizTimer,
   ])
 
   // ── Scratchpad ────────────────────────────────────────────────
@@ -559,6 +617,50 @@ export default function MCQPage({ onNavigate } = {}) {
   // Don't render if no questions or quiz was terminated
   if (questionCount === 0 || quizTerminated) {
     return null
+  }
+
+  // ── TIME'S UP SCREEN ───────────────────────────────────────────
+
+  if (isTimedOut) {
+    return (
+      <div className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${
+        isDarkMode ? 'bg-[#0E0B15] text-white' : 'bg-[#F6F3FC] text-[#292530]'
+      }`}>
+        <div className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
+          isDarkMode ? 'bg-red-500/15' : 'bg-red-500/10'
+        }`} />
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
+          <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-3xl bg-red-500/15 text-red-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+            Time&apos;s up!
+          </h1>
+
+          <p className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode ? 'text-white/55' : 'text-gray-500'}`}>
+            The countdown reached 00:00. Your answers are being submitted
+            automatically - you'll be taken to your results in a moment.
+          </p>
+
+          <div className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
+            isDarkMode ? 'border-white/10 bg-white/5' : 'border-red-500/10 bg-white/70'
+          }`}>
+            <p className={`text-sm font-bold ${isDarkMode ? 'text-white/80' : 'text-[#514863]'}`}>
+              Your answers have been submitted successfully.
+            </p>
+
+            <p className={`mt-1 text-xs ${isDarkMode ? 'text-white/35' : 'text-gray-400'}`}>
+              Taking you to your results...
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // ── JOJO CELEBRATION SCREEN ───────────────────────────────────
