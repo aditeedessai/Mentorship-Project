@@ -139,17 +139,26 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         setLoading(true);
         setError(null);
 
+        let resError = null;
+        let perfError = null;
+
         const [resData, perfData, evalsData, revStatus] = await Promise.all([
-          fetchResults(passedAttemptId).catch(() => null),
-          fetchPerformance(passedAttemptId).catch(() => null),
-          fetchEvaluations(passedAttemptId).catch(() => []),
+          fetchResults(passedAttemptId).catch((err) => {
+            resError = err;
+            return null;
+          }),
+          fetchPerformance(passedAttemptId).catch((err) => {
+            perfError = err;
+            return null;
+          }),
+          fetchEvaluations(passedAttemptId),
           studySetId ? fetchRevisionStatus(studySetId).catch(() => null) : Promise.resolve(null),
         ]);
 
         if (!isMounted) return;
 
         if (!perfData && !resData) {
-          throw new Error(`Attempt with ID '${passedAttemptId}' not found`);
+          throw perfError || resError || new Error(`Attempt with ID '${passedAttemptId}' not found`);
         }
 
         setPerformanceData(perfData || resData);
@@ -718,7 +727,15 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         </div>
 
         <div className="space-y-4">
-          {filteredQuestions.length > 0 ? (
+          {processedQuestions.length === 0 ? (
+            <div
+              className={`rounded-2xl border p-8 text-center text-xs font-semibold ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-white/60' : 'border-gray-200 bg-gray-50 text-gray-500'
+              }`}
+            >
+              No detailed question evaluations available.
+            </div>
+          ) : filteredQuestions.length > 0 ? (
             filteredQuestions.map((q) => (
             <div
               key={q.id}
@@ -824,7 +841,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                 isDarkMode ? 'border-white/10 bg-white/5 text-white/60' : 'border-gray-200 bg-gray-50 text-gray-500'
               }`}
             >
-              No {reviewFilter} questions in this quiz attempt.
+              No questions match this filter.
             </div>
           )}
         </div>
