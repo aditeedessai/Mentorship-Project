@@ -68,10 +68,32 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
         });
 
       if (authError) {
-        setError(
-          authError.message ||
-            "Failed to create account."
-        );
+        if (
+          authError.status === 409 ||
+          authError.message?.includes("users_email_partial_key") ||
+          authError.message?.includes("already exists") ||
+          authError.code === "23505" ||
+          authError.code === "user_already_exists"
+        ) {
+          setError("An account with this email already exists.");
+        } else {
+          setError(
+            authError.message ||
+              "Failed to create account."
+          );
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Defense-in-depth: if GoTrue returned an empty identities array indicating an existing account
+      const isExistingAccount =
+        data?.user &&
+        Array.isArray(data.user.identities) &&
+        data.user.identities.length === 0;
+
+      if (isExistingAccount) {
+        setError("An account with this email already exists.");
         setLoading(false);
         return;
       }
