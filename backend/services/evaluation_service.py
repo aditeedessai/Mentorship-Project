@@ -31,7 +31,7 @@ from backend.database.quiz_repository import (
     get_question_by_id
 )
 
-from backend.database import study_set_repository, quiz_repository
+from backend.database import study_set_repository, quiz_repository, activity_log_repository
 
 from backend.answer_evaluation.grading import grade_for_percentage
 
@@ -602,6 +602,15 @@ def evaluate_and_save_attempt_answers(
             evaluation=eval_results[idx],
             attempt_id=attempt_id
         )
+
+    # Record today as a studied day in the independent activity log, not
+    # just implicitly via the evaluations rows just saved above - those
+    # get cascade-deleted if the student later deletes this study set
+    # (evaluations -> questions -> study_sets), which used to silently
+    # erase this day from the activity calendar. activity_log has no FK
+    # to any of that, so it survives.
+    if answers:
+        activity_log_repository.record_activity(attempt.get("user_id"))
 
     eval_records = get_evaluations_with_question_details(attempt_id)
 
