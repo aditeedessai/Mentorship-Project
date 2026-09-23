@@ -85,20 +85,10 @@ def validate_image_file_properties(file_path: str) -> tuple[bytes, int, int]:
 
 def evaluate_study_material_heuristics(ocr_details: dict) -> tuple[bool, float, dict]:
     """
-    Evaluates whether OCR metadata from an image provides reasonable evidence
-    that it contains study/document material (notes, textbook pages, worksheets,
-    mathematical workings, diagrams, graphs, slides).
-
-    Uses a multi-signal decision model combining:
-    - Text amount (words, lines, character count)
-    - Number of detected text regions / bounding boxes
-    - Average and high-confidence OCR scores
-    - Bounding-box spatial dispersion across page canvas
-    - Quadrant grid coverage
-    - Strict thresholding to reject random non-note images
-
-    Returns:
-        tuple: (is_valid: bool, score: float, metrics: dict)
+    Hybrid Evaluation Model combining:
+    - Text volume and vertical line structure
+    - Academic/Study vocabulary cues
+    - Bullet point/numbering or high-density paragraph layouts
     """
     lines = ocr_details.get("lines", [])
     confidences = ocr_details.get("confidences", [])
@@ -106,120 +96,75 @@ def evaluate_study_material_heuristics(ocr_details: dict) -> tuple[bool, float, 
     width = ocr_details.get("width", 1)
     height = ocr_details.get("height", 1)
 
-    total_lines = len(lines)
-    all_words = [w for line in lines for w in line.split() if w.strip()]
+    valid_lines = [l.strip() for l in lines if l and l.strip()]
+    total_lines = len(valid_lines)
+    
+    all_words = [w for line in valid_lines for w in line.split() if w.strip()]
     total_words = len(all_words)
-    total_chars = sum(len(line) for line in lines)
+    full_text_lower = " ".join(all_words).lower()
 
     avg_confidence = (sum(confidences) / len(confidences)) if confidences else 0.0
     total_boxes = len(boxes)
 
-    # Filter non-zero valid bounding boxes for spatial calculations
     valid_boxes = [b for b in boxes if b != (0.0, 0.0, 0.0, 0.0)]
-
-    # Spatial dispersion metrics
+    vert_dispersion = 0.0
     if valid_boxes and width > 0 and height > 0:
-        box_centers_x = [(b[0] + b[2]) / 2.0 for b in valid_boxes]
         box_centers_y = [(b[1] + b[3]) / 2.0 for b in valid_boxes]
         vert_dispersion = (max(box_centers_y) - min(box_centers_y)) / float(height)
-        horiz_dispersion = (max(box_centers_x) - min(box_centers_x)) / float(width)
 
-        # Quadrant grid coverage (2x2 grid)
-        mid_x = width / 2.0
-        mid_y = height / 2.0
-        quadrants = set()
-        for cx, cy in zip(box_centers_x, box_centers_y):
-            q_x = 0 if cx < mid_x else 1
-            q_y = 0 if cy < mid_y else 1
-            quadrants.add((q_x, q_y))
-        quadrant_coverage = len(quadrants)
-    else:
-        vert_dispersion = 0.0
-        horiz_dispersion = 0.0
-        quadrant_coverage = 0
+    # 1. Academic & Study Vocabulary Keywords
+    academic_keywords = [
+        "definition", "theorem", "equation", "chapter", "exercise", 
+        "question", "note", "notes", "example", "solution", "page", 
+        "summary", "topic", "module", "assignment", "problem", "protection"
+    ]
+    keyword_matches = sum(1 for kw in academic_keywords if kw in full_text_lower)
+    
+    # 2. Structured formatting checks
+    has_structured_bullets = any(
+        line.startswith(("1.", "2.", "3.", "4.", "5.", "a)", "b)", "c)", "i.", "ii.", "iii.", "Q)")) 
+        for line in valid_lines
+    )
 
-    # Multi-signal scoring
+    # 3. High Density Paragraph check (for notes without bullets)
+    has_high_density = total_lines >= 5 and total_words >= 25
+
+    # 4. Scoring Matrix
     score = 0.0
-
-    # 1. Stricter Text Amount Signals
-    if total_words >= 30:
-        score += 4.0
-    elif total_words >= 15:
-        score += 2.5
-    elif total_words >= 8:
-        score += 1.0
-    else:
-        score -= 2.0  # Penalize very sparse text heavily
-
-    if total_lines >= 8:
+    if total_words >= 15:
         score += 2.0
-    elif total_lines >= 4:
-        score += 1.0
-
-    # 2. Confidence Signals
-    if avg_confidence >= 0.80:
-        score += 1.5
-    elif avg_confidence >= 0.65:
-        score += 0.5
-
-    # 3. Text Region Count
-    if total_boxes >= 8:
+    if total_lines >= 4:
         score += 2.0
-    elif total_boxes >= 4:
-        score += 1.0
-
-    # 4. Spatial Dispersion & Grid Coverage
-    if vert_dispersion >= 0.40:
-        score += 1.5
-    elif vert_dispersion >= 0.20:
-        score += 0.75
-
-    if quadrant_coverage >= 3:
+    if vert_dispersion >= 0.25:
         score += 2.0
-    elif quadrant_coverage >= 2:
-        score += 1.0
+    if keyword_matches > 0 or has_structured_bullets or has_high_density:
+        score += 3.0
 
     metrics = {
         "total_lines": total_lines,
         "total_words": total_words,
-        "total_chars": total_chars,
-        "avg_confidence": round(avg_confidence, 3),
-        "total_boxes": total_boxes,
+        "keyword_matches": keyword_matches,
         "vert_dispersion": round(vert_dispersion, 3),
-        "quadrant_coverage": quadrant_coverage,
         "score": round(score, 2),
     }
 
-    # Stricter pass threshold: score >= 6.0 and minimum 10 words required
-    is_valid = score >= 6.0 and total_words >= 10
+    # Flexible Final Gate: Passes with keywords, bullets, OR dense paragraph structure
+    is_valid = score >= 5.5 and total_lines >= 3 and (keyword_matches > 0 or has_structured_bullets or has_high_density)
     return is_valid, score, metrics
 
 
 def validate_and_extract_image_study_material(file_path: str) -> str:
     """
     Full single-pass image validation and text extraction pipeline.
-
-    1. Validates basic file properties (type, size <= 15MB, readable, min 200x200px).
-    2. Runs a SINGLE pass of PaddleOCR returning text and structured details.
-    3. Evaluates study material evidence heuristics.
-    4. If invalid, raises ImageValidationError (HTTP 400 user-friendly rejection).
-    5. If valid, returns extracted OCR text directly (avoiding double OCR).
-
-    Returns:
-        str: Extracted OCR text for valid study material images.
     """
-    # Step 1: Basic property validation (file type, size, dimensions, corrupted check)
     img_bytes, width, height = validate_image_file_properties(file_path)
 
-    # Step 2: Single-pass OCR execution with details
     ocr_details = run_ocr_on_bytes(img_bytes, return_details=True)
 
-    # Fall back to validated width/height if OCR canvas dimensions missing
     if not ocr_details.get("width") or not ocr_details.get("height"):
         ocr_details["width"] = width
         ocr_details["height"] = height
 
-    # Step 3: Heuristic study material decision
     is_valid, score, metrics = evaluate_study_material_heuristics(ocr_details)
 
     if not is_valid:
