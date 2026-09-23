@@ -290,13 +290,38 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
       const associatedTopic = formatTopicName(rawTopic);
 
+      const missedList = Array.isArray(item.missed_concepts)
+        ? item.missed_concepts
+        : Array.isArray(item.missed)
+        ? item.missed
+        : [];
+
+      const validMissedConcepts = missedList.filter(
+        (concept) =>
+          typeof concept === 'string' &&
+          concept.trim() !== '' &&
+          !concept.toLowerCase().includes('skipped')
+      );
+
+      let computedFeedback = '';
+      if (isSkipped) {
+        computedFeedback = 'Question skipped. Review this topic in your study material to reinforce the concept.';
+      } else if (isCorrect) {
+        computedFeedback = 'Great job! Your answer is correct.';
+      } else {
+        computedFeedback = 'Your answer is incorrect. Review this topic in your study material and compare it with the expected solution.';
+        if (validMissedConcepts.length > 0) {
+          computedFeedback += `\nMissed key concepts: ${validMissedConcepts.join(', ')}`;
+        }
+      }
+
       return {
         id: idx + 1,
         question_id: questionId,
         prompt: promptText,
         userAnswer: isSkipped ? 'Skipped' : rawAns,
         correctAnswer: item.correct_answer || item.model_answer || item.expected_answer || 'N/A',
-        feedback: item.feedback && String(item.feedback).trim() !== '' ? item.feedback : 'No feedback available.',
+        feedback: computedFeedback,
         awardedMarks: Math.round(awardedMarks * 100) / 100,
         maxMarks: Math.round(maxMarks * 100) / 100,
         isCorrect,
@@ -824,12 +849,12 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
               </div>
 
               <div
-                className={`min-w-0 rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs break-words ${
+                className={`min-w-0 rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs break-words whitespace-pre-line ${
                   isDarkMode ? 'bg-white/5' : 'bg-purple-50/50'
                 }`}
               >
                 <span className="font-bold text-[#8064C7] dark:text-[#A78BFA]">
-                  Explanation & Feedback:{' '}
+                  Feedback:{' '}
                 </span>
                 {q.feedback}
               </div>
