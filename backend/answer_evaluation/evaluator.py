@@ -73,6 +73,8 @@ from backend.answer_evaluation.similarity import (
     detect_negation_shift_spacy,
     has_causal_connector,
     split_causal_clauses,
+    question_echo_signal,
+    QUESTION_ECHO_MIN_GAP,
 )
 from backend.answer_evaluation.normalization import normalize_text, extract_dynamic_protected_terms, real_word_ratio
 from backend.answer_evaluation import llm_judge
@@ -121,6 +123,20 @@ CONCEPT_GATE_COVERAGE_THRESHOLD = 0.30
 CONCEPT_GATE_SEMANTIC_THRESHOLD = 0.60
 CONCEPT_GATE_PENALTY_MULTIPLIER = 0.80
 STUFFING_PENALTY_MULTIPLIER = 0.50
+
+# Stricter than CONCEPT_GATE_*_THRESHOLD above (which only applies a mild
+# 0.80 penalty multiplier pre-escalation): when BOTH scores are this
+# confidently low, the answer isn't genuinely ambiguous - it's off-topic
+# or wrong on every free signal available - so _should_escalate_to_llm_judge()
+# skips the borderline-score-band trigger entirely instead of paying for
+# a judge call whose only realistic outcomes are "correctly fail" or,
+# via the LLM_CONFIRM_SCORE_FLOOR rescue, "wrongly reward an irrelevant
+# answer" (EVALUATION_ENGINE_REPORT.md Issue #2). Deliberately scoped to
+# only that one trigger - the other escalation triggers (negation,
+# causal-clause, NLI contradiction, hallucination) key off different,
+# more specific signals and still get their own chance to fire.
+CLEARLY_WRONG_CONCEPT_CEILING = 0.20
+CLEARLY_WRONG_SEMANTIC_CEILING = 0.40
 
 # --- Negation trigger: NLI-informed local penalty ---------------------
 # A flat, unconditional negation penalty makes EVERY negation-flagged
@@ -188,6 +204,17 @@ LLM_OVERRIDE_SCORE_CAP = 0.30
 # trusted, just in the other direction (raises final_score to a floor
 # instead of only ever being able to cap it).
 LLM_CONFIRM_SCORE_FLOOR = 0.75
+
+# Minimum concept_score required before a clean judge verdict is trusted
+# as a full rescue to LLM_CONFIRM_SCORE_FLOOR (see the rescue branch in
+# _finalize_result() for the full reasoning). Deliberately set above the
+# real "file sharing" production example (concept_score=0.4, wrongly
+# rescued to 0.75 against a 4-concept reference) documented in
+# EVALUATION_ENGINE_REPORT.md Issue #2, so that exact failure shape is
+# excluded, while still low enough not to block genuinely terse-but-
+# correct short answers, which typically clear well above this on
+# concept coverage alone even before the judge is involved.
+LLM_CONFIRM_MIN_CONCEPT_SCORE = 0.55
 
 # --- Self-consistency polling thresholds ---------------------------------
 # Confirmed via repeated live testing (2026-08-31, the "btirhs delasiph
@@ -318,7 +345,11 @@ def _should_escalate_to_llm_judge(
     # resolved the direction - trust the free local signal instead of
     # escalating just because the embedding score alone couldn't decide.
     if not nli_locally_resolved:
-        if BORDERLINE_LOW <= final_score <= BORDERLINE_HIGH:
+        is_clearly_wrong = (
+            concept_score < CLEARLY_WRONG_CONCEPT_CEILING
+            and semantic_score < CLEARLY_WRONG_SEMANTIC_CEILING
+        )
+        if BORDERLINE_LOW <= final_score <= BORDERLINE_HIGH and not is_clearly_wrong:
             return True, "borderline_score_band"
 
         if concept_score >= DIVERGENCE_CONCEPT_THRESHOLD and semantic_score < DIVERGENCE_SEMANTIC_THRESHOLD:
@@ -375,7 +406,9 @@ def _should_escalate_to_llm_judge(
     return False, None
 
 
-def _compute_statistical_result(student_answer: str, reference_answer: str) -> dict:
+def _compute_statistical_result(
+    student_answer: str, reference_answer: str, question_text: str | None = None
+) -> dict:
     """
     Runs the full statistical pipeline (normalization, semantic score,
     concept coverage, stuffing detection, NLI pre-filter, score
@@ -383,6 +416,10 @@ def _compute_statistical_result(student_answer: str, reference_answer: str) -> d
     judge. Shared by both evaluate_answer (single item, judge call
     inline) and evaluate_answers_batch (many items, judge calls batched
     together) so the statistical logic only lives in one place.
+
+    question_text is optional and purely additive - omitting it (the
+    default) reproduces the exact old behavior with zero change, since
+    the question-echo gate below is skipped entirely when it's absent.
     """
     if not student_answer or not student_answer.strip():
         return {"empty": True}
@@ -409,6 +446,33 @@ def _compute_statistical_result(student_answer: str, reference_answer: str) -> d
         return {
             "empty": False,
             "is_gibberish": True,
+            "should_escalate": False,
+            "escalate_reason": None,
+        }
+
+    # --- Question-echo gate ----------------------------------------------
+    # Catches "the student typed the question back instead of answering
+    # it." A cheap, free, local bi-encoder check - same short-circuit
+    # pattern as the gibberish gate above: if it fires, is_correct is
+    # unconditionally False and nothing below (including an LLM judge
+    # call) ever runs, so this can't be overridden by a later rescue.
+    # Skipped entirely when question_text isn't provided - existing
+    # callers that don't pass it see zero behavior change.
+    #
+    # Uses the RELATIVE gap between similarity-to-question and
+    # similarity-to-reference, not an absolute threshold - see
+    # QUESTION_ECHO_MIN_GAP's comment in similarity.py for why an
+    # absolute bar alone produces false positives on genuinely correct
+    # short definitional answers ("X is Y" answers necessarily restate
+    # the term being asked about).
+    with _timed_stage(stage_timings, "question_echo_ms"):
+        echo_signal = question_echo_signal(normalized_student, question_text, normalized_reference)
+    if echo_signal is not None and echo_signal["gap"] >= QUESTION_ECHO_MIN_GAP:
+        return {
+            "empty": False,
+            "is_gibberish": False,
+            "is_question_echo": True,
+            "question_echo_signal": echo_signal,
             "should_escalate": False,
             "escalate_reason": None,
         }
@@ -652,6 +716,34 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
             "judge_unavailable_unverified": False,
         }
 
+    if stat.get("is_question_echo"):
+        # Same unconditional-zero treatment as is_gibberish above, for the
+        # same reason: the gate fired specifically because the pipeline is
+        # confident the student restated the question rather than
+        # answering it, so nothing downstream (including an LLM judge
+        # call) ever ran - is_correct is unconditionally False here, not
+        # capped from some other computed value.
+        return {
+            "semantic_score": 0.0,
+            "concept_score": 0.0,
+            "final_score": 0.0,
+            "marks_awarded": 0.0,
+            "is_correct": False,
+            "matched_concepts": [],
+            "missed_concepts": [],
+            "keyword_stuffing_detected": False,
+            "logic_inversion_detected": False,
+            "stuffing_signals": [],
+            "nli_signal": None,
+            "clause_nli_signal": None,
+            "hallucination_signal": None,
+            "llm_judge_triggered": False,
+            "llm_judge_reason": None,
+            "llm_judge_verdict": None,
+            "judge_unavailable_unverified": False,
+            "question_echo_signal": stat.get("question_echo_signal"),
+        }
+
     final_score = stat["final_score"]
     llm_forced_incorrect = False
 
@@ -687,7 +779,13 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
         if llm_judge_available and flagged_count >= POLL_PENALTY_MIN_FLAGGED_VOTES:
             llm_forced_incorrect = True
             final_score = min(final_score, LLM_OVERRIDE_SCORE_CAP)
-        elif llm_judge_available and flagged_count == 0 and clean_count > 0 and not stat["is_stuffing"]:
+        elif (
+            llm_judge_available
+            and flagged_count == 0
+            and clean_count > 0
+            and not stat["is_stuffing"]
+            and stat["concept_score"] >= LLM_CONFIRM_MIN_CONCEPT_SCORE
+        ):
             # Every poll vote was clean - a positive confirmation, not a
             # no-op - use it as a floor the same way a confirmed-bad
             # verdict is used as a ceiling. A single dissenting vote
@@ -696,6 +794,18 @@ def _finalize_result(stat: dict, llm_judge_verdict: dict, max_marks: float, pass
             # why that asymmetry is deliberate. Skipped for is_stuffing
             # items because the judge's questions say nothing about whether
             # the text is a genuine sentence vs. a keyword dump.
+            #
+            # Also requires a minimum concept_score: the judge's 4 questions
+            # (contradiction / hallucination / invalid logic / coherence)
+            # never ask whether the answer is actually RELEVANT or
+            # COMPLETE - a coherent-but-irrelevant or badly-incomplete
+            # answer clears all 4 trivially (nothing to contradict, nothing
+            # hallucinated, "valid" if vacuous logic, genuinely coherent
+            # text) and used to get floored to LLM_CONFIRM_SCORE_FLOOR
+            # regardless of how low its concept coverage was. Confirmed via
+            # real production data (eval id ..., "file sharing" scored
+            # concept_score=0.4 against a 4-concept reference and still got
+            # floored to 0.75) - see EVALUATION_ENGINE_REPORT.md Issue #2.
             final_score = max(final_score, LLM_CONFIRM_SCORE_FLOOR)
 
     final_score = max(0.0, min(1.0, final_score))
@@ -760,6 +870,7 @@ def evaluate_answer(
     max_marks: float = 10.0,
     pass_threshold: float = CORRECTNESS_THRESHOLD,
     use_llm_judge: bool = True,
+    question_text: str | None = None,
 ) -> dict:
     """
     Evaluates a SINGLE student answer against a reference answer, calling
@@ -767,8 +878,8 @@ def evaluate_answer(
 
     Existing call sites using the old 3-positional-arg style
     (student_answer, reference_answer, max_marks) keep working exactly as
-    before - the two new parameters are keyword-only-by-convention and
-    both have safe defaults. For grading many answers at once, prefer
+    before - the new parameters are keyword-only-by-convention and all
+    have safe defaults. For grading many answers at once, prefer
     evaluate_answers_batch() - it batches all escalated judge calls
     together into far fewer API round-trips.
 
@@ -776,12 +887,16 @@ def evaluate_answer(
         use_llm_judge: set False to skip the LLM-judge escalation
             entirely. The statistical pipeline still runs in full either
             way, so scoring stays deterministic/free if you need it to.
+        question_text: optional. When provided, enables the question-echo
+            gate (see similarity.question_echo_score) - catches a student
+            answer that's essentially the question restated rather than
+            answered. Omitting it reproduces the exact old behavior.
 
     Returns dict - see module docstring / evaluate_answers_batch for
     field details.
     """
     eval_start = time.perf_counter()
-    stat = _compute_statistical_result(student_answer, reference_answer)
+    stat = _compute_statistical_result(student_answer, reference_answer, question_text)
     if stat.get("empty"):
         return _finalize_result(stat, None, max_marks, pass_threshold)
 
@@ -820,11 +935,12 @@ def evaluate_answer(
     if stage_timings:
         total_ms = round((time.perf_counter() - eval_start) * 1000, 3)
         logger.info(
-            "evaluator.py: TIMING total=%.1fms normalization=%.1fms semantic=%.1fms "
-            "concept=%.1fms stuffing=%.1fms negation=%.1fms nli=%.1fms clause_nli=%.1fms "
-            "hallucination=%.1fms llm_judge=%.1fms (escalated=%s reason=%s)",
+            "evaluator.py: TIMING total=%.1fms normalization=%.1fms question_echo=%.1fms "
+            "semantic=%.1fms concept=%.1fms stuffing=%.1fms negation=%.1fms nli=%.1fms "
+            "clause_nli=%.1fms hallucination=%.1fms llm_judge=%.1fms (escalated=%s reason=%s)",
             total_ms,
             stage_timings.get("normalization_ms", 0.0),
+            stage_timings.get("question_echo_ms", 0.0),
             stage_timings.get("semantic_ms", 0.0),
             stage_timings.get("concept_ms", 0.0),
             stage_timings.get("stuffing_ms", 0.0),
@@ -869,7 +985,11 @@ def evaluate_answers_batch(
 
     Args:
         items: list of {"student": str, "reference": str} dicts, in the
-            order results should come back in.
+            order results should come back in. An optional "question" key
+            per item enables the question-echo gate for that item (see
+            evaluate_answer()'s question_text arg) - omit it (or leave it
+            empty) on any item to reproduce the exact old behavior for
+            that item specifically.
         use_llm_judge: set False to skip the LLM-judge escalation
             entirely for every item.
 
@@ -877,7 +997,10 @@ def evaluate_answers_batch(
         list of result dicts, same shape/order as `items`, each identical
         to what evaluate_answer() would return for that pair.
     """
-    stats = [_compute_statistical_result(it["student"], it["reference"]) for it in items]
+    stats = [
+        _compute_statistical_result(it["student"], it["reference"], it.get("question"))
+        for it in items
+    ]
 
     escalate_indices = [
         i for i, s in enumerate(stats)

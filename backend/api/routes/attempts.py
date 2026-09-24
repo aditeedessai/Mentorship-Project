@@ -518,6 +518,7 @@ def evaluate_practice_answers(
             batch_items.append({
                 "student": student_ans,
                 "reference": question.get("reference_answer", ""),
+                "question": question.get("question", ""),
             })
 
     if batch_items:

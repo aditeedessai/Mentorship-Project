@@ -196,6 +196,70 @@ def concept_coverage_score(student_answer: str, reference_answer: str) -> dict:
     }
 
 
+# An absolute bi-encoder similarity threshold alone does NOT work here:
+# real production testing (100 brand-new short "X is Y" definitional
+# answers, judge disabled) showed a 20% false-positive rate - a
+# genuinely correct answer like "kinetic energy is the energy something
+# has because its moving" against "What is kinetic energy?" scores 0.896
+# similarity to the QUESTION, comfortably above any reasonable absolute
+# bar, simply because a definitional answer necessarily restates the
+# term being asked about. That's expected and correct, not cheating.
+#
+# The reliable signal turned out to be RELATIVE: compare similarity-to-
+# question against similarity-to-REFERENCE. Confirmed on real cases:
+#   - Genuine short answers: MORE similar to the reference than the
+#     question (gap is negative, e.g. -0.04 to -0.11), since they
+#     actually contain real answer content that overlaps with the
+#     reference.
+#   - Actual question echoes: MORE similar to the question than the
+#     reference (gap is positive, e.g. +0.11 to +0.13), since they
+#     contain none of the reference's actual content.
+# QUESTION_ECHO_MIN_GAP sits with margin on both sides of that split.
+QUESTION_ECHO_MIN_GAP = 0.05
+
+
+def question_echo_signal(
+    student_answer: str, question_text: str, reference_answer: str
+) -> dict | None:
+    """
+    Bi-encoder comparison of the student's answer against BOTH the
+    question and the reference answer - a cheap, free, local signal for
+    "the student typed the question back instead of answering it,"
+    using the relative gap between the two similarities (see
+    QUESTION_ECHO_MIN_GAP's comment for why an absolute threshold alone
+    produces false positives). Uses the same already-loaded bi-encoder
+    concept_coverage_score() uses - the student embedding is computed
+    once and reused for both comparisons, so this adds two cheap cosine
+    similarities, not two separate model loads, dwarfed by the LLM-judge
+    cost it's specifically designed to help avoid paying for on these
+    cases (they're flagged before ever reaching escalation - see
+    evaluator.py's is_question_echo short-circuit).
+
+    Returns None (rather than raising) if question_text is empty/missing,
+    so callers that don't have it (or don't pass it) see no behavior
+    change at all - this check is purely additive/opt-in.
+    """
+    if not question_text or not question_text.strip():
+        return None
+    if not student_answer or not student_answer.strip():
+        return None
+    if not reference_answer or not reference_answer.strip():
+        return None
+
+    student_embedding = get_embedding(student_answer)
+    question_embedding = get_embedding(question_text)
+    reference_embedding = get_embedding(reference_answer)
+
+    sim_to_question = util.cos_sim(student_embedding, question_embedding).item()
+    sim_to_reference = util.cos_sim(student_embedding, reference_embedding).item()
+
+    return {
+        "sim_to_question": round(sim_to_question, 3),
+        "sim_to_reference": round(sim_to_reference, 3),
+        "gap": round(sim_to_question - sim_to_reference, 3),
+    }
+
+
 def _longest_common_run(a: list, b: list) -> int:
     """Calculates longest run of consecutive words shared between two token lists."""
     if not a or not b:

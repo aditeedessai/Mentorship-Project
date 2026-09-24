@@ -570,6 +570,7 @@ def evaluate_and_save_attempt_answers(
             batch_items.append({
                 "student": student_ans,
                 "reference": question.get("reference_answer", ""),
+                "question": question.get("question", ""),
             })
 
     if batch_items:
