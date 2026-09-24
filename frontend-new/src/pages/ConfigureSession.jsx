@@ -13,6 +13,7 @@ import {
   generateQuestions,
   fetchStudySets,
   fetchRevisionStatus,
+  fetchActiveAttempt,
   fromBackendType,
 } from '../services/api'
 
@@ -100,6 +101,7 @@ export default function ConfigureSession({
   const { isDarkMode } = useTheme()
 
   const [statusByType, setStatusByType] = useState({})
+  const [activeAttemptsByType, setActiveAttemptsByType] = useState({})
   const [selectedType, setSelectedType] = useState(null)
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -147,7 +149,7 @@ export default function ConfigureSession({
 
 
   /* =========================================================
-     LOAD REVISION STATUS
+     LOAD REVISION STATUS & ACTIVE ATTEMPTS
   ========================================================= */
 
   useEffect(() => {
@@ -162,7 +164,13 @@ export default function ConfigureSession({
       try {
         setLoadingStatus(true)
 
-        const result = await fetchRevisionStatus(studySetId)
+        const [result, ...activeAttempts] = await Promise.all([
+          fetchRevisionStatus(studySetId),
+          ...questionTypes.map((t) =>
+            fetchActiveAttempt(studySetId, t.id).catch(() => null)
+          ),
+        ])
+
         const statuses = result?.statuses || []
 
         if (!isMounted) return
@@ -174,6 +182,16 @@ export default function ConfigureSession({
         }
 
         setStatusByType(byType)
+
+        const activeByType = {}
+        questionTypes.forEach((t, index) => {
+          const attempt = activeAttempts[index]
+          if (attempt && attempt.status === 'in_progress') {
+            activeByType[t.id] = attempt
+          }
+        })
+
+        setActiveAttemptsByType(activeByType)
 
         const normalizedPreselect = preselectType
           ? toFrontendTypeId(preselectType)
@@ -795,6 +813,12 @@ export default function ConfigureSession({
                 const s =
                   statusByType[type.id]
 
+                const activeAttempt =
+                  activeAttemptsByType[type.id]
+
+                const isInProgress =
+                  Boolean(activeAttempt && activeAttempt.status === 'in_progress')
+
                 const needsAttention =
                   Boolean(s?.needs_attention)
 
@@ -821,6 +845,10 @@ export default function ConfigureSession({
                     dueText
                       ? `Due ${dueText}`
                       : 'Not yet due'
+
+                } else if (isInProgress) {
+
+                  statusLabel = 'Attempt in progress'
 
                 } else if (
                   s &&
@@ -857,6 +885,7 @@ export default function ConfigureSession({
                     needsAttention={
                       needsAttention
                     }
+                    isInProgress={isInProgress}
                     statusLabel={statusLabel}
                     explanation={explanation}
                     onSelect={() =>

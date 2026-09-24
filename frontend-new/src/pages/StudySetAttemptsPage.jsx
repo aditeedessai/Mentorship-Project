@@ -98,7 +98,10 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
         // Fetch attempts
         const attemptsData = await fetchAttemptsForStudySet(studySetId);
         if (isMounted) {
-          setAttempts(attemptsData || []);
+          const completedOnly = (attemptsData || []).filter(
+            (att) => att.status === "completed"
+          );
+          setAttempts(completedOnly);
         }
       } catch (err) {
         console.error("Failed to load attempt history:", err);

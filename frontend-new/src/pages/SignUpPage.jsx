@@ -5,12 +5,19 @@ import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
 import { validatePasswordStrength } from "../utils/passwordValidation";
 import jojoWaving from "../assets/jojo-waving.png";
+import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 
 function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
+
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] =
+    useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] =
     useState(false);
 
   const [name, setName] = useState("");
@@ -1224,26 +1231,46 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
                 </div>
               )}
 
-              {/* TERMS */}
+              {/* TERMS & PRIVACY */}
 
-              <div className="signup-field-animation signup-field-6 flex items-start gap-2 pt-1">
+              <div className="signup-field-animation signup-field-6 flex items-start gap-2.5 pt-1">
 
                 <input
+                  id="agree-terms-checkbox"
                   type="checkbox"
                   required
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#8064C7]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-[#8064C7] cursor-pointer"
                 />
 
-                <p
-                  className={`text-xs ${
+                <label
+                  htmlFor="agree-terms-checkbox"
+                  className={`text-xs leading-relaxed ${
                     isDarkMode
                       ? "text-white/60"
                       : "text-gray-500"
                   }`}
                 >
-                  I agree to the Terms of Service and
-                  Privacy Policy.
-                </p>
+                  I agree to the{" "}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(true)}
+                    className="font-bold text-[#8064C7] dark:text-[#A78BFA] transition-all hover:underline cursor-pointer"
+                  >
+                    Terms & Conditions
+                  </button>{" "}
+
+                  and{" "}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivacyModalOpen(true)}
+                    className="font-bold text-[#8064C7] dark:text-[#A78BFA] transition-all hover:underline cursor-pointer"
+                  >
+                    Privacy Policy
+                  </button>
+                  .
+                </label>
 
               </div>
 
@@ -1292,6 +1319,20 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
         </div>
       </div>
+
+      {/* ======================================
+          LEGAL MODALS
+      ====================================== */}
+
+      <TermsAndConditionsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
+
+      <PrivacyPolicyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
     </>
   );
 }

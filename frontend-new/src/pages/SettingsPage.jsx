@@ -31,6 +31,7 @@ import {
 
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 
 import jojoThinking from "../assets/jojo-thinking.png";
 
@@ -55,6 +56,9 @@ const SettingsPage = ({
     useState("");
 
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] =
+    useState(false);
+
+  const [isTermsModalOpen, setIsTermsModalOpen] =
     useState(false);
 
   const [confirmAction, setConfirmAction] =
@@ -1877,6 +1881,42 @@ const SettingsPage = ({
           </button>
 
 
+          {/* TERMS & CONDITIONS */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setIsTermsModalOpen(true)
+            }
+            className="settings-action flex w-full cursor-pointer items-center justify-between py-4 text-left"
+          >
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Terms & Conditions
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Read our platform terms of service
+              </p>
+
+            </div>
+
+            <ChevronRight
+              size={18}
+              className="opacity-40"
+            />
+
+          </button>
+
+
           {/* PRIVACY POLICY */}
 
           <button
@@ -2125,8 +2165,15 @@ const SettingsPage = ({
 
 
       {/* =====================================================
-          PRIVACY MODAL
+          LEGAL MODALS
       ===================================================== */}
+
+      <TermsAndConditionsModal
+        isOpen={isTermsModalOpen}
+        onClose={() =>
+          setIsTermsModalOpen(false)
+        }
+      />
 
       <PrivacyPolicyModal
         isOpen={isPrivacyModalOpen}

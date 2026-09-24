@@ -155,13 +155,19 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           studySetId ? fetchRevisionStatus(studySetId).catch(() => null) : Promise.resolve(null),
         ]);
 
-        if (!isMounted) return;
+        const targetData = perfData || resData;
 
-        if (!perfData && !resData) {
+        if (!targetData) {
           throw perfError || resError || new Error(`Attempt with ID '${passedAttemptId}' not found`);
         }
 
-        setPerformanceData(perfData || resData);
+        if (targetData.status === 'in_progress' && !targetData.is_attempt_complete) {
+          setError('This attempt is currently in progress. Please complete the quiz before viewing its results.');
+          setEvaluations([]);
+          return;
+        }
+
+        setPerformanceData(targetData);
 
         let rawList = [];
         if (Array.isArray(evalsData)) {

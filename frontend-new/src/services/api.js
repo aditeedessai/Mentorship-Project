@@ -467,7 +467,11 @@ export async function fetchAttemptsForStudySet(studySetId) {
       return [];
     }
 
-    return data || [];
+    const completedAttempts = (data || []).filter(
+      (att) => att.status === "completed"
+    );
+
+    return completedAttempts;
   } catch (err) {
     console.error(
       "Failed to fetch attempts for study set:",

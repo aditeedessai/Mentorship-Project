@@ -7,6 +7,7 @@ export default function QuestionTypeCard({
   isLocked = false,
   isMastered = false,
   needsAttention = false,
+  isInProgress = false,
   statusLabel,
   explanation,
   onSelect,
@@ -41,6 +42,14 @@ export default function QuestionTypeCard({
     ? isDarkMode
       ? 'border-white/8 bg-white/5 text-white/50 cursor-not-allowed opacity-70'
       : 'border-black/5 bg-black/5 text-[#706A78] cursor-not-allowed opacity-70'
+    : isInProgress
+    ? isSelected
+      ? isDarkMode
+        ? 'border-[#8064C7] bg-[#8064C7]/20 text-white shadow-[0_15px_35px_rgba(128,100,199,0.25)] ring-1 ring-[#8064C7]'
+        : 'border-[#8064C7] bg-white text-[#292530] shadow-[0_15px_35px_rgba(128,100,199,0.15)] ring-1 ring-[#8064C7]'
+      : isDarkMode
+      ? 'border-[#8064C7]/40 bg-[#14101D]/90 text-[#F3F0F8] hover:border-[#8064C7]/60 hover:bg-white/10'
+      : 'border-[#8064C7]/30 bg-[#F8F8FC]/95 text-[#231B33] hover:border-[#8064C7]/50 hover:bg-white'
     : isSelected
     ? isDarkMode
       ? 'border-[#8064C7] bg-[#8064C7]/20 text-white shadow-[0_15px_35px_rgba(128,100,199,0.25)]'
@@ -89,6 +98,16 @@ export default function QuestionTypeCard({
           <Clock className="w-[12px] h-[12px]" strokeWidth={3} />
           Not Yet Due
         </div>
+      ) : isInProgress ? (
+        <div className={`absolute top-[13px] right-[13px] px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 text-[11px] font-bold ${
+          isDarkMode ? 'bg-[#8064C7]/20 border-[#8064C7]/40 text-[#A78BFA]' : 'bg-[#8064C7]/15 border-[#8064C7]/30 text-[#8064C7]'
+        }`}>
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8064C7] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8064C7]"></span>
+          </span>
+          In Progress
+        </div>
       ) : (
         isSelected && (
           <div className="absolute top-[13px] right-[13px] w-5 h-5 rounded-full bg-[#8064C7] flex items-center justify-center shadow-md">
@@ -129,6 +148,14 @@ export default function QuestionTypeCard({
             isDarkMode ? 'text-white/50 bg-white/5 border border-white/10' : 'text-[#706A78] bg-black/5 border border-black/10'
           }`}>
             {statusLabel || 'Not yet due'}
+          </span>
+        ) : isInProgress ? (
+          <span className={`inline-block text-[10px] font-bold rounded-lg px-2.5 py-1 ${
+            isDarkMode
+              ? 'text-[#A78BFA] bg-[#8064C7]/25 border border-[#8064C7]/40'
+              : 'text-[#8064C7] bg-[#8064C7]/15 border border-[#8064C7]/30'
+          }`}>
+            {statusLabel || 'Attempt in progress'}
           </span>
         ) : (
           <span className={`inline-block text-[10px] font-bold rounded-lg px-2.5 py-1 ${
