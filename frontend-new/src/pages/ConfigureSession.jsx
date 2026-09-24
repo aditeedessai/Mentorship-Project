@@ -611,7 +611,7 @@ export default function ConfigureSession({
           SCROLLABLE CONTENT
       ===================================================== */}
 
-      <div className="flex-1 overflow-y-auto pb-8">
+      <div className="flex-1 pb-8">
 
         {/* Top Back Navigation Bar */}
         <header className="mb-8 lg:mb-12 flex items-center justify-between">

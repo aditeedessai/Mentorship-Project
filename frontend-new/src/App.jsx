@@ -64,7 +64,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
 
   return (
     <div
-      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
+      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-clip relative ${isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
         }`}
     >
       {/* Subtle Background Ambient Glow Orbs */}
@@ -128,7 +128,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />
-        <main className="lg:ml-64 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 min-w-0">{children}</main>
+        <main className="lg:ml-64 flex-1 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 min-w-0">{children}</main>
       </div>
     </div>
   );
