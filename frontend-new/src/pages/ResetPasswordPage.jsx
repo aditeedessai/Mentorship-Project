@@ -3,6 +3,7 @@ import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
+import { validatePasswordStrength } from "../utils/passwordValidation";
 import { createAuditLog } from "../services/api";
 
 function ResetPasswordPage({ onComplete }) {
@@ -19,6 +20,17 @@ function ResetPasswordPage({ onComplete }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validate password strength BEFORE hashing
+    const validation = validatePasswordStrength(password);
+    if (!validation.isValid) {
+      setError(
+        "Password does not meet the requirements: " +
+          validation.errors.join(", ") +
+          "."
+      );
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -219,6 +231,41 @@ function ResetPasswordPage({ onComplete }) {
                   )}
                 </button>
               </div>
+
+              {/* Password Requirements Checklist */}
+              {password.length > 0 && (() => {
+                const v = validatePasswordStrength(password);
+                return (
+                  <div
+                    className={`mt-2 space-y-1 rounded-lg px-3 py-2 text-[11px] font-medium ${
+                      isDarkMode
+                        ? "bg-white/5 text-white/60"
+                        : "bg-gray-50 text-gray-500"
+                    }`}
+                  >
+                    <div className={v.requirements.minLength ? "text-green-400" : ""}>
+                      {v.requirements.minLength ? "✓" : "○"} At least 8 characters
+                    </div>
+                    <div className={v.requirements.uppercase ? "text-green-400" : ""}>
+                      {v.requirements.uppercase ? "✓" : "○"} Uppercase letter
+                    </div>
+                    <div className={v.requirements.lowercase ? "text-green-400" : ""}>
+                      {v.requirements.lowercase ? "✓" : "○"} Lowercase letter
+                    </div>
+                    <div className={v.requirements.number ? "text-green-400" : ""}>
+                      {v.requirements.number ? "✓" : "○"} Number
+                    </div>
+                    <div className={v.requirements.specialChar ? "text-green-400" : ""}>
+                      {v.requirements.specialChar ? "✓" : "○"} Special character (!@#$%...)
+                    </div>
+                    {!v.requirements.notCommon && (
+                      <div className="text-red-400">
+                        ✗ Password is too common
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Confirm Password */}
