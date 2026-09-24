@@ -25,7 +25,7 @@ class SubmitAnswersRequest(BaseModel):
     )
     answers: list[AnswerItem] = Field(
         ...,
-        min_items=1,
+        min_length=1,
         description="List of student answers for the questions"
     )
 
@@ -45,7 +45,7 @@ class EvaluatePracticeRequest(BaseModel):
     )
     answers: list[AnswerItem] = Field(
         ...,
-        min_items=1,
+        min_length=1,
         description="List of student answers for the practice retake"
     )
 

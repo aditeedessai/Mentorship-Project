@@ -305,18 +305,62 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
       const associatedTopic = formatTopicName(rawTopic);
 
-      const missedList = Array.isArray(item.missed_concepts)
+      const rawMissedList = Array.isArray(item.missed_concepts)
         ? item.missed_concepts
         : Array.isArray(item.missed)
         ? item.missed
         : [];
 
-      const validMissedConcepts = missedList.filter(
+      const cleanedMissedConcepts = rawMissedList.filter(
         (concept) =>
           typeof concept === 'string' &&
           concept.trim() !== '' &&
           !concept.toLowerCase().includes('skipped')
       );
+
+      const uniqueConceptMap = new Map();
+      cleanedMissedConcepts.forEach((c) => {
+        const key = c.trim().toLowerCase();
+        if (!uniqueConceptMap.has(key)) {
+          uniqueConceptMap.set(key, c.trim());
+        }
+      });
+      const uniqueConcepts = Array.from(uniqueConceptMap.values());
+
+      const multiWordConcepts = uniqueConcepts.filter((c) => c.split(/\s+/).length > 1);
+      const singleWordConcepts = uniqueConcepts.filter((c) => c.split(/\s+/).length === 1);
+
+      const multiWordTokensSet = new Set();
+      multiWordConcepts.forEach((m) => {
+        const tokens = m.toLowerCase().match(/[a-z0-9\-]+/gi) || [];
+        tokens.forEach((t) => multiWordTokensSet.add(t));
+      });
+
+      const filteredSingleWord = singleWordConcepts.filter(
+        (s) => !multiWordTokensSet.has(s.toLowerCase())
+      );
+
+      const filteredMultiWord = multiWordConcepts.filter((p) => {
+        const pTokens = p.toLowerCase().match(/[a-z0-9\-]+/gi) || [];
+        return !multiWordConcepts.some((other) => {
+          if (other.toLowerCase() === p.toLowerCase()) return false;
+          const otherTokens = other.toLowerCase().match(/[a-z0-9\-]+/gi) || [];
+          if (pTokens.length >= otherTokens.length) return false;
+          for (let i = 0; i <= otherTokens.length - pTokens.length; i++) {
+            let match = true;
+            for (let j = 0; j < pTokens.length; j++) {
+              if (otherTokens[i + j] !== pTokens[j]) {
+                match = false;
+                break;
+              }
+            }
+            if (match) return true;
+          }
+          return false;
+        });
+      });
+
+      const validMissedConcepts = [...filteredMultiWord, ...filteredSingleWord].slice(0, 5);
 
       let computedFeedback = '';
       if (isSkipped) {

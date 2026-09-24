@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 
 const OTP_LENGTH = 8;
 const OTP_VALIDITY_SECONDS = 120;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -22,6 +23,8 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
   const [resending, setResending] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(OTP_VALIDITY_SECONDS);
   const [resendKey, setResendKey] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+  const resendLockRef = useRef(false);
 
   const isRecovery = type === "recovery";
   const isExpired = secondsLeft <= 0;
@@ -39,6 +42,16 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
 
     return () => clearInterval(intervalId);
   }, [resendKey]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,6 +94,9 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
   };
 
   const handleResend = async () => {
+    if (resendLockRef.current || resending || resendCooldown > 0) return;
+    resendLockRef.current = true;
+
     setError("");
     setInfo("");
     setResending(true);
@@ -92,6 +108,13 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
 
       if (resendError) {
         setError(resendError.message || "Failed to resend the code.");
+        if (
+          resendError.status === 429 ||
+          resendError.message?.toLowerCase().includes("rate limit") ||
+          resendError.message?.toLowerCase().includes("security purposes")
+        ) {
+          setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        }
         return;
       }
 
@@ -99,10 +122,12 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
       setInfo("A new code has been sent to your email.");
       setSecondsLeft(OTP_VALIDITY_SECONDS);
       setResendKey((prev) => prev + 1);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setResending(false);
+      resendLockRef.current = false;
     }
   };
 
@@ -290,10 +315,20 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
             <button
               type="button"
               onClick={handleResend}
-              disabled={resending}
-              className="text-[#8064C7] hover:underline disabled:opacity-50"
+              disabled={resending || resendCooldown > 0}
+              className={`transition-all disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed ${
+                resending || resendCooldown > 0
+                  ? isDarkMode
+                    ? "text-white/40 font-medium"
+                    : "text-gray-400 font-medium"
+                  : "text-[#8064C7] dark:text-[#A78BFA] hover:underline font-bold"
+              }`}
             >
-              {resending ? "Resending..." : "Resend code"}
+              {resending
+                ? "Resending..."
+                : resendCooldown > 0
+                ? `Resend OTP in ${resendCooldown}s`
+                : "Resend code"}
             </button>
 
             <button
