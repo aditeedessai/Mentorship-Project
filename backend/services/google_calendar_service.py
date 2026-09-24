@@ -377,8 +377,9 @@ def get_connection_status(user_id: str) -> dict:
 
 def disconnect(user_id: str) -> bool:
     """
-    Revoke the Google Calendar connection: delete credentials and all
-    event mappings. Does NOT delete Jot tasks or exams.
+    Revoke the Google Calendar connection: delete all application-created
+    Google Calendar events, then remove credentials and event mappings.
+    Does NOT delete Jot tasks or exams.
     """
     from backend.database import (
         google_calendar_repository,
@@ -389,8 +390,59 @@ def disconnect(user_id: str) -> bool:
         .get_connection_by_user(user_id)
     )
 
-    # Try to revoke access token at Google
-    if conn and conn.get("access_token"):
+    if not conn:
+        return (
+            google_calendar_repository
+            .delete_connection(user_id)
+        )
+
+    # ── 1. Retrieve all event mappings before any cleanup ────────────
+    mappings = (
+        google_calendar_repository
+        .get_all_event_mappings(user_id)
+    )
+
+    # ── 2. Delete each Google Calendar event individually ────────────
+    if mappings:
+        service = _get_calendar_service(user_id)
+
+        if service:
+            for mapping in mappings:
+                google_event_id = mapping.get(
+                    "google_event_id"
+                )
+
+                if not google_event_id:
+                    continue
+
+                try:
+                    service.events().delete(
+                        calendarId="primary",
+                        eventId=google_event_id,
+                    ).execute()
+
+                    logger.info(
+                        "Deleted Google Calendar event %s during disconnect for user %s",
+                        google_event_id,
+                        user_id,
+                    )
+
+                except Exception as exc:
+                    # Event may have been manually deleted already;
+                    # continue with the rest of the cleanup.
+                    logger.warning(
+                        "Could not delete Google Calendar event %s during disconnect: %s",
+                        google_event_id,
+                        exc,
+                    )
+
+    # ── 3. Remove all event mappings ────────────────────────────────
+    google_calendar_repository.delete_all_event_mappings(
+        user_id
+    )
+
+    # ── 4. Revoke access token at Google ────────────────────────────
+    if conn.get("access_token"):
         try:
             import requests as http_requests
 
@@ -405,10 +457,7 @@ def disconnect(user_id: str) -> bool:
         except Exception:
             pass
 
-    google_calendar_repository.delete_all_event_mappings(
-        user_id
-    )
-
+    # ── 5. Delete the connection ────────────────────────────────────
     return (
         google_calendar_repository
         .delete_connection(user_id)

@@ -178,6 +178,24 @@ def get_event_mapping(
         connection.close()
 
 
+def get_all_event_mappings(user_id: str) -> list[dict]:
+    """Return every entity→event mapping for *user_id* (used before disconnect cleanup)."""
+    connection = get_connection()
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, user_id, entity_type, entity_id, google_event_id,
+                   created_at, updated_at
+            FROM google_calendar_events
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        connection.close()
+
+
 def delete_event_mapping(
     user_id: str,
     entity_type: str,

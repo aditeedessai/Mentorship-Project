@@ -398,12 +398,24 @@ def test_no_duplicate_events_on_resync(mock_conn, mock_save, mock_get_map):
 
 @patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
 @patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=3)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_t1", "entity_type": "task", "entity_id": "t1"},
+])
 @patch("backend.database.google_calendar_repository.get_connection_by_user",
-       return_value={"access_token": "tok", "is_active": True})
-def test_disconnect_preserves_tasks(mock_conn, mock_del_maps, mock_del_conn):
+       return_value={
+           "access_token": "tok",
+           "is_active": True,
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_preserves_tasks(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
     """Disconnecting should delete GCal mappings but NOT touch Jot tasks/exams."""
-    with patch("requests.post"):  # Mock the token revocation HTTP call
-        result = google_calendar_service.disconnect(str(uuid.uuid4()))
+    mock_service = MagicMock()
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):  # Mock the token revocation HTTP call
+                result = google_calendar_service.disconnect(str(uuid.uuid4()))
     assert result is True
     mock_del_maps.assert_called_once()
     mock_del_conn.assert_called_once()
@@ -489,3 +501,237 @@ def test_token_encryption_round_trip():
     encrypted = google_calendar_service._encrypt_token(original)
     decrypted = google_calendar_service._decrypt_token(encrypted)
     assert decrypted == original
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 16. Disconnect deletes task events from Google Calendar
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=1)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_task_100", "entity_type": "task", "entity_id": "task_1"},
+])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_deletes_task_event(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """Disconnect should call GCal events().delete() for the mapped task event."""
+    mock_service = MagicMock()
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):
+                google_calendar_service.disconnect(str(uuid.uuid4()))
+
+    mock_service.events.return_value.delete.assert_called_once_with(
+        calendarId="primary",
+        eventId="gcal_task_100",
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 17. Disconnect deletes exam events from Google Calendar
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=1)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_exam_200", "entity_type": "exam", "entity_id": "exam_1"},
+])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_deletes_exam_event(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """Disconnect should call GCal events().delete() for the mapped exam event."""
+    mock_service = MagicMock()
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):
+                google_calendar_service.disconnect(str(uuid.uuid4()))
+
+    mock_service.events.return_value.delete.assert_called_once_with(
+        calendarId="primary",
+        eventId="gcal_exam_200",
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 18. Disconnect deletes multiple task and exam events
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=4)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_t1", "entity_type": "task", "entity_id": "t1"},
+    {"google_event_id": "gcal_t2", "entity_type": "task", "entity_id": "t2"},
+    {"google_event_id": "gcal_e1", "entity_type": "exam", "entity_id": "e1"},
+    {"google_event_id": "gcal_e2", "entity_type": "exam", "entity_id": "e2"},
+])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_deletes_multiple_events(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """Disconnect should delete every mapped GCal event (tasks and exams)."""
+    mock_service = MagicMock()
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):
+                google_calendar_service.disconnect(str(uuid.uuid4()))
+
+    delete_calls = mock_service.events.return_value.delete.call_args_list
+    deleted_event_ids = {call[1]["eventId"] for call in delete_calls}
+    assert deleted_event_ids == {"gcal_t1", "gcal_t2", "gcal_e1", "gcal_e2"}
+    assert len(delete_calls) == 4
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 19. Disconnect preserves application data (tasks/exams not deleted)
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=2)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_t1", "entity_type": "task", "entity_id": "t1"},
+    {"google_event_id": "gcal_e1", "entity_type": "exam", "entity_id": "e1"},
+])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_does_not_delete_application_data(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """Disconnect must never call task or exam deletion repositories."""
+    mock_service = MagicMock()
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):
+                with patch("backend.database.task_repository.delete_task") as mock_del_task, \
+                     patch("backend.database.exam_repository.delete_exam") as mock_del_exam:
+                    google_calendar_service.disconnect(str(uuid.uuid4()))
+
+    mock_del_task.assert_not_called()
+    mock_del_exam.assert_not_called()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 20. Event mappings are cleaned up after GCal deletion
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=1)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_t1", "entity_type": "task", "entity_id": "t1"},
+])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_cleans_up_event_mappings(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """Event mappings should be deleted after the GCal events are removed."""
+    mock_service = MagicMock()
+    call_order = []
+
+    def track_delete_execute():
+        call_order.append("gcal_delete")
+
+    def track_mapping_delete(uid):
+        call_order.append("mapping_delete")
+        return 1
+
+    mock_service.events.return_value.delete.return_value.execute.side_effect = track_delete_execute
+    mock_del_maps.side_effect = track_mapping_delete
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):
+                google_calendar_service.disconnect(str(uuid.uuid4()))
+
+    mock_del_maps.assert_called_once()
+    # GCal deletion must happen before mapping deletion
+    assert call_order.index("gcal_delete") < call_order.index("mapping_delete")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 21. Disconnect succeeds with no event mappings
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=0)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_no_event_mappings(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """Disconnect should succeed cleanly when user has no synced events."""
+    with patch("requests.post"):
+        result = google_calendar_service.disconnect(str(uuid.uuid4()))
+    assert result is True
+    mock_del_maps.assert_called_once()
+    mock_del_conn.assert_called_once()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 22. Disconnect handles missing Google Calendar event gracefully
+# ═══════════════════════════════════════════════════════════════════════
+
+@patch("backend.database.google_calendar_repository.delete_connection", return_value=True)
+@patch("backend.database.google_calendar_repository.delete_all_event_mappings", return_value=2)
+@patch("backend.database.google_calendar_repository.get_all_event_mappings", return_value=[
+    {"google_event_id": "gcal_exists", "entity_type": "task", "entity_id": "t1"},
+    {"google_event_id": "gcal_gone", "entity_type": "exam", "entity_id": "e1"},
+])
+@patch("backend.database.google_calendar_repository.get_connection_by_user",
+       return_value={
+           "is_active": True,
+           "access_token": "tok",
+           "token_expiry": "2099-01-01T00:00:00",
+           "encrypted_refresh_token": "ref",
+       })
+def test_disconnect_handles_missing_gcal_event(mock_conn, mock_get_all, mock_del_maps, mock_del_conn):
+    """If a GCal event no longer exists, disconnect should still complete cleanup."""
+    mock_service = MagicMock()
+
+    def selective_delete(**kwargs):
+        mock_exec = MagicMock()
+        if kwargs.get("eventId") == "gcal_gone":
+            mock_exec.execute.side_effect = Exception("404 Not Found")
+        return mock_exec
+
+    mock_service.events.return_value.delete.side_effect = selective_delete
+
+    with patch("googleapiclient.discovery.build", return_value=mock_service):
+        with patch("google.oauth2.credentials.Credentials"):
+            with patch("requests.post"):
+                result = google_calendar_service.disconnect(str(uuid.uuid4()))
+
+    assert result is True
+    # Both events should have been attempted
+    assert mock_service.events.return_value.delete.call_count == 2
+    # Mappings and connection should still be cleaned up
+    mock_del_maps.assert_called_once()
+    mock_del_conn.assert_called_once()
