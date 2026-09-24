@@ -377,7 +377,7 @@ function Sidebar({
       =================================================== */}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r transition-transform duration-300 backdrop-blur-2xl lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 flex h-screen w-72 max-w-[85vw] lg:w-64 flex-col border-r transition-transform duration-300 backdrop-blur-2xl lg:translate-x-0 ${
           isOpen
             ? "translate-x-0 shadow-2xl"
             : "-translate-x-full"
@@ -391,22 +391,22 @@ function Sidebar({
             LOGO & HEADER
         ================================================= */}
 
-        <div className="flex items-center justify-between border-b border-inherit px-6 py-6">
+        <div className="flex items-center justify-between border-b border-inherit px-4 py-5 sm:px-6 sm:py-6">
           <div
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0"
             style={{
               animation:
                 "logoEnter 650ms cubic-bezier(0.22, 1, 0.36, 1) both",
             }}
           >
-            <JojoLogo className="h-8 w-auto" />
-            <div className="text-3xl font-black tracking-[-0.08em]">
+            <JojoLogo className="h-7 w-auto sm:h-8 shrink-0" />
+            <div className="text-2xl sm:text-3xl font-black tracking-[-0.08em] shrink-0">
               Jot
               <span className="text-[#8064C7]">.</span>
             </div>
 
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-widest ${
+              className={`rounded-full px-2 py-0.5 text-[8.5px] sm:px-2.5 sm:text-[9px] font-bold uppercase tracking-wider shrink-0 ${
                 isDarkMode
                   ? "bg-[#8064C7]/20 text-[#A78BFA]"
                   : "bg-[#8064C7]/10 text-[#8064C7]"
@@ -416,7 +416,7 @@ function Sidebar({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Theme Toggle */}
 
             <button
@@ -426,7 +426,7 @@ function Sidebar({
                   ? "Switch to Light Mode"
                   : "Switch to Dark Mode"
               }
-              className={`sidebar-theme-button flex h-9 w-9 items-center justify-center rounded-xl border text-sm ${
+              className={`sidebar-theme-button flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border text-sm ${
                 isDarkMode
                   ? "border-white/10 bg-white/10 text-yellow-300 hover:bg-white/20"
                   : "border-white/80 bg-white/80 text-purple-600 hover:bg-white shadow-sm"
@@ -436,13 +436,13 @@ function Sidebar({
               {isDarkMode ? (
                 <Sun
                   key="sun"
-                  size={16}
+                  size={15}
                   className="sidebar-theme-icon"
                 />
               ) : (
                 <Moon
                   key="moon"
-                  size={16}
+                  size={15}
                   className="sidebar-theme-icon"
                 />
               )}
@@ -452,14 +452,14 @@ function Sidebar({
 
             <button
               onClick={onClose}
-              className={`sidebar-close-button flex h-9 w-9 items-center justify-center rounded-xl border lg:hidden ${
+              className={`sidebar-close-button flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border lg:hidden ${
                 isDarkMode
                   ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
                   : "border-gray-200 bg-white text-gray-600 hover:bg-gray-100"
               }`}
               aria-label="Close Mobile Navigation"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>

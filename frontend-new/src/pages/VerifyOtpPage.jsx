@@ -223,7 +223,7 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
         </div>
 
         {/* ================= RIGHT SECTION ================= */}
-        <div className="p-8 sm:p-12 lg:p-14">
+        <div className="p-5 sm:p-12 lg:p-14">
           <div className="mb-7 flex items-center gap-2 lg:hidden">
             <JojoLogo className="h-7 w-auto" />
             <div className="text-3xl font-black tracking-[-0.08em]">

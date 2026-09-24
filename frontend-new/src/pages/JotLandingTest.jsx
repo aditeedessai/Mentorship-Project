@@ -108,11 +108,14 @@ const Jojo = ({
       <div
         className={`
           absolute
-          h-[330px]
-          w-[330px]
+          h-[220px]
+          w-[220px]
           rounded-full
-          blur-[90px]
+          blur-[70px]
           animate-pulse-slow
+          sm:h-[330px]
+          sm:w-[330px]
+          sm:blur-[90px]
           ${
             isDarkMode
               ? "bg-[#8064C7]/15"
@@ -135,13 +138,17 @@ const Jojo = ({
           absolute
           left-1/2
           top-1/2
-          h-[375px]
-          w-[375px]
-          -ml-[187.5px]
-          -mt-[187.5px]
+          h-[250px]
+          w-[250px]
+          -ml-[125px]
+          -mt-[125px]
           rounded-full
           border
           border-[#8064C7]/10
+          sm:h-[375px]
+          sm:w-[375px]
+          sm:-ml-[187.5px]
+          sm:-mt-[187.5px]
           md:h-[415px]
           md:w-[415px]
           md:-ml-[207.5px]
@@ -235,11 +242,15 @@ const Jojo = ({
           absolute
           left-1/2
           top-1/2
-          h-[345px]
-          w-[345px]
-          -ml-[172.5px]
-          -mt-[172.5px]
+          h-[225px]
+          w-[225px]
+          -ml-[112.5px]
+          -mt-[112.5px]
           rounded-full
+          sm:h-[345px]
+          sm:w-[345px]
+          sm:-ml-[172.5px]
+          sm:-mt-[172.5px]
           md:h-[385px]
           md:w-[385px]
           md:-ml-[192.5px]
@@ -298,8 +309,8 @@ const Jojo = ({
         className={`
           relative
           flex
-          h-[290px]
-          w-[290px]
+          h-[190px]
+          w-[190px]
           items-center
           justify-center
           overflow-hidden
@@ -309,6 +320,8 @@ const Jojo = ({
           transition-all
           duration-500
           hover:scale-[1.025]
+          sm:h-[290px]
+          sm:w-[290px]
           md:h-[330px]
           md:w-[330px]
           ${
@@ -323,7 +336,8 @@ const Jojo = ({
         <div
           className={`
             absolute
-            inset-5
+            inset-3
+            sm:inset-5
             rounded-full
             border
             border-dashed
@@ -345,7 +359,8 @@ const Jojo = ({
             h-full
             w-full
             object-contain
-            p-5
+            p-3
+            sm:p-5
           "
         />
       </div>
@@ -1672,11 +1687,12 @@ const JotLandingTest = ({
           className="
             mx-auto
             flex
-            h-[76px]
+            h-[68px]
             max-w-6xl
             items-center
             justify-between
-            px-4
+            px-3
+            sm:h-[76px]
             sm:px-6
             lg:px-8
           "
@@ -1692,10 +1708,11 @@ const JotLandingTest = ({
               flex
               cursor-pointer
               items-center
-              gap-3
+              gap-2.5
+              sm:gap-3
             "
           >
-            <JojoLogo className="h-9 w-auto" />
+            <JojoLogo className="h-8 w-auto sm:h-9" />
 
             <div className="flex items-center gap-2">
               <span
@@ -2023,10 +2040,11 @@ const JotLandingTest = ({
           min-h-screen
           scroll-mt-24
           overflow-hidden
-          px-4
-          pb-14
-          pt-24
+          px-3.5
+          pb-10
+          pt-20
           sm:px-6
+          sm:pb-14
           sm:pt-28
           md:px-10
           lg:px-16
@@ -2109,7 +2127,8 @@ const JotLandingTest = ({
             min-h-[calc(100vh-110px)]
             max-w-6xl
             items-center
-            gap-10
+            gap-6
+            sm:gap-10
             lg:grid-cols-[.92fr_1.08fr]
           "
         >
@@ -2369,7 +2388,8 @@ const JotLandingTest = ({
               hero-entrance
               hero-delay-5
               relative
-              min-h-[520px]
+              min-h-[350px]
+              sm:min-h-[520px]
               lg:min-h-[600px]
             "
             style={{
@@ -2385,15 +2405,69 @@ const JotLandingTest = ({
                 absolute
                 left-1/2
                 top-1/2
-                h-[430px]
-                w-[430px]
+                h-[260px]
+                w-[260px]
                 -translate-x-1/2
                 -translate-y-1/2
                 rounded-full
                 bg-[#8064C7]/7
                 blur-3xl
+                sm:h-[430px]
+                sm:w-[430px]
               "
             />
+
+            {/* MOBILE ONLY TOP CHIP */}
+            <div
+              className={`
+                absolute
+                left-1/2
+                top-2
+                z-30
+                flex
+                -translate-x-1/2
+                items-center
+                gap-2.5
+                rounded-2xl
+                border
+                px-3.5
+                py-2
+                shadow-md
+                backdrop-blur-xl
+                sm:hidden
+                whitespace-nowrap
+                ${
+                  isDarkMode
+                    ? "border-white/10 bg-[#17131F]/90 text-white shadow-[0_8px_25px_rgba(0,0,0,0.35)]"
+                    : "border-[#8064C7]/15 bg-white/90 text-[#231B33] shadow-[0_8px_25px_rgba(80,60,120,0.10)]"
+                }
+              `}
+            >
+              <div
+                className="
+                  flex
+                  h-7
+                  w-7
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-[#E5DCF8]
+                  text-[#8064C7]
+                "
+              >
+                <FileText size={15} />
+              </div>
+
+              <div>
+                <p className="text-xs font-black leading-tight">
+                  Lecture Notes.pdf
+                </p>
+                <div className="flex items-center gap-1 text-[9px] font-bold text-[#8064C7]">
+                  <Upload size={9} />
+                  Uploaded
+                </div>
+              </div>
+            </div>
 
             {/* NOTES */}
 
@@ -2405,10 +2479,12 @@ const JotLandingTest = ({
                 left-[2%]
                 top-[13%]
                 z-30
+                hidden
                 w-[190px]
                 rounded-2xl
                 p-4
                 shadow-[0_20px_45px_rgba(80,60,120,.12)]
+                sm:block
                 sm:w-[215px]
               "
             >
@@ -2494,10 +2570,12 @@ const JotLandingTest = ({
                 right-[1%]
                 top-[22%]
                 z-30
+                hidden
                 w-[195px]
                 rounded-2xl
                 p-4
                 shadow-[0_20px_45px_rgba(80,60,120,.12)]
+                sm:block
                 sm:w-[225px]
               "
             >
@@ -2616,10 +2694,11 @@ const JotLandingTest = ({
               className="
                 absolute
                 left-1/2
-                top-[48%]
+                top-[46%]
                 z-20
                 -translate-x-1/2
                 -translate-y-1/2
+                sm:top-[48%]
               "
             >
               <Jojo
@@ -2637,13 +2716,22 @@ const JotLandingTest = ({
               className="
                 speech-pop
                 absolute
-                right-[8%]
-                top-[49%]
+                left-1/2
+                bottom-2
                 z-40
+                -translate-x-1/2
+                whitespace-nowrap
                 rounded-2xl
-                px-4
-                py-3
+                px-3.5
+                py-2.5
                 shadow-[0_15px_35px_rgba(80,60,120,.15)]
+                sm:bottom-auto
+                sm:left-auto
+                sm:right-[8%]
+                sm:top-[49%]
+                sm:translate-x-0
+                sm:px-4
+                sm:py-3
               "
             >
               <div className="flex items-center gap-2">
@@ -2668,10 +2756,12 @@ const JotLandingTest = ({
                 bottom-[10%]
                 left-[2%]
                 z-30
+                hidden
                 w-[185px]
                 rounded-2xl
                 p-4
                 shadow-[0_20px_45px_rgba(80,60,120,.12)]
+                sm:block
                 sm:w-[215px]
               "
             >
@@ -2756,10 +2846,12 @@ const JotLandingTest = ({
                 bottom-[7%]
                 right-[4%]
                 z-30
+                hidden
                 w-[175px]
                 rounded-2xl
                 p-4
                 shadow-[0_20px_45px_rgba(80,60,120,.12)]
+                sm:block
                 sm:w-[200px]
               "
             >

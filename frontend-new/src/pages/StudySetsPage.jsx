@@ -637,6 +637,26 @@ function StudySetsPage({
         }
 
         /* =====================================================
+           MOBILE / RESPONSIVE ORBITS
+        ===================================================== */
+
+        @media (max-width: 768px) {
+          .study-orbit-outer {
+            width: 150px !important;
+            height: 150px !important;
+            margin-left: -75px !important;
+            margin-top: -75px !important;
+          }
+
+          .study-orbit-inner {
+            width: 115px !important;
+            height: 115px !important;
+            margin-left: -57.5px !important;
+            margin-top: -57.5px !important;
+          }
+        }
+
+        /* =====================================================
            REDUCED MOTION
         ===================================================== */
 
@@ -733,7 +753,7 @@ function StudySetsPage({
             {/* =================================================
                 JOJO HEADER + ORBITS
             ================================================= */}
-            <div className="relative flex h-[170px] w-[330px] shrink-0 items-center justify-center">
+            <div className="relative flex h-[170px] w-full max-w-[280px] sm:w-[330px] sm:max-w-none shrink-0 items-center justify-center self-center sm:self-auto">
               {/* Soft ambient glow */}
               <div className="study-orbit-glow pointer-events-none absolute left-1/2 top-1/2 h-[210px] w-[210px] -ml-[105px] -mt-[105px] rounded-full bg-[#8064C7]/10 blur-3xl" />
 
@@ -802,7 +822,7 @@ function StudySetsPage({
               {/* =================================================
                   SPEECH BUBBLE
               ================================================= */}
-              <div className="study-speech absolute left-[calc(50%+72px)] top-[4px] z-20">
+              <div className="study-speech absolute left-[calc(50%+72px)] top-[4px] z-20 hidden md:block">
                 <div
                   className={`relative w-[175px] rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)] ${
                     isDarkMode

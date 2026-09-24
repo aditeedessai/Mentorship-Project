@@ -1123,7 +1123,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               JOJO HEADER MASCOT + ROTATING ELEMENTS
           ================================================= */}
 
-          <div className="relative flex h-[170px] w-[330px] shrink-0 items-center justify-center">
+          <div className="relative flex h-[170px] w-full max-w-[280px] sm:w-[330px] sm:max-w-none shrink-0 items-center justify-center self-center sm:self-auto">
 
             {/* Outer soft orbit glow */}
 
@@ -1245,7 +1245,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 SPEECH BUBBLE
             ================================================= */}
 
-            <div className="absolute left-[calc(50%+65px)] top-[3px] z-20 speech-bubble-animation">
+            <div className="absolute left-[calc(50%+65px)] top-[3px] z-20 speech-bubble-animation hidden md:block">
               <div className="relative w-[175px] rounded-2xl border border-[#8064C7]/15 bg-white px-4 py-3 shadow-[0_10px_24px_rgba(70,55,110,0.12)]">
                 <p className="whitespace-nowrap text-[11px] font-black leading-tight text-[#4F3A7D] sm:text-xs">
                   Ready when you are! 📖

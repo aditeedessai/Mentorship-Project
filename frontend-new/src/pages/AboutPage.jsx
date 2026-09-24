@@ -987,7 +987,7 @@ export default function AboutPage({ onNavigate }) {
               ================================================= */}
 
               <div
-                className={`pointer-events-none absolute left-1/2 top-1/2 z-10 h-[350px] w-[350px] -ml-[175px] -mt-[175px] rounded-full border ${
+                className={`about-orbit-outer pointer-events-none absolute left-1/2 top-1/2 z-10 h-[350px] w-[350px] -ml-[175px] -mt-[175px] rounded-full border ${
                   isDarkMode
                     ? "border-purple-300/15"
                     : "border-purple-300/40"
@@ -999,7 +999,7 @@ export default function AboutPage({ onNavigate }) {
               ================================================= */}
 
               <div
-                className={`pointer-events-none absolute left-1/2 top-1/2 z-10 h-[285px] w-[285px] -ml-[142.5px] -mt-[142.5px] rounded-full border border-dashed ${
+                className={`about-orbit-inner pointer-events-none absolute left-1/2 top-1/2 z-10 h-[285px] w-[285px] -ml-[142.5px] -mt-[142.5px] rounded-full border border-dashed ${
                   isDarkMode
                     ? "border-purple-300/15"
                     : "border-purple-300/35"

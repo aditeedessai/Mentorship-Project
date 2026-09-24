@@ -62,7 +62,7 @@ export default function AddExamModal({ isOpen, onClose, onAddExam, studySets = [
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div
-        className={`w-full max-w-lg rounded-3xl border p-6 sm:p-8 backdrop-blur-2xl shadow-2xl transition-all duration-300 ${
+        className={`w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border p-5 sm:p-8 backdrop-blur-2xl shadow-2xl transition-all duration-300 ${
           isDarkMode
             ? "border-white/10 bg-[#17131F] text-[#F3F0F8]"
             : "border-white/80 bg-white text-[#292530]"

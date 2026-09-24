@@ -949,8 +949,9 @@ const SettingsPage = ({
         @media (max-width: 640px) {
 
           .settings-jojo-area {
-            width: 270px !important;
-            height: 145px !important;
+            width: 175px !important;
+            height: 155px !important;
+            margin: 0 auto;
           }
 
           .settings-jojo-wrapper {
@@ -963,7 +964,7 @@ const SettingsPage = ({
           }
 
           .settings-speech {
-            right: 115px !important;
+            display: none !important;
           }
 
         }

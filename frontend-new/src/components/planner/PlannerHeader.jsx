@@ -189,7 +189,7 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
         </div>
 
         {/* JOJO + ORBIT */}
-        <div className="relative flex h-40 w-40 sm:h-44 sm:w-44 md:h-52 md:w-52 shrink-0 items-center justify-center planner-mascot-orbit">
+        <div className="relative flex h-40 w-40 sm:h-44 sm:w-44 md:h-52 md:w-52 shrink-0 items-center justify-center planner-mascot-orbit self-center sm:self-auto">
 
           {/* Soft glow behind Jojo */}
           <div

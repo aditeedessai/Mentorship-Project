@@ -652,7 +652,7 @@ function DashboardPage({ user, onNavigate }) {
               JOJO + ROTATING ELEMENTS
           ================================================= */}
 
-          <div className="relative z-10 flex h-40 w-40 sm:h-48 sm:w-48 shrink-0 items-center justify-center">
+          <div className="relative z-10 flex h-40 w-40 sm:h-48 sm:w-48 shrink-0 items-center justify-center self-center sm:self-auto">
 
             {/* Outer soft orbit glow */}
 

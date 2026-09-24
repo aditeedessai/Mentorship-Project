@@ -464,7 +464,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
       `}</style>
 
       <div
-        className={`relative flex min-h-screen items-center justify-center overflow-hidden p-4 font-sans transition-colors duration-500 sm:p-6 ${
+        className={`relative flex min-h-screen items-center justify-center overflow-hidden p-3 font-sans transition-colors duration-500 sm:p-6 ${
           isDarkMode
             ? "bg-[#0E0B15] text-[#F5F2FA]"
             : "bg-[#F6F3FC] text-[#292530]"
@@ -530,7 +530,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
         </div>
 
         {/* ================= TOP CONTROLS ================= */}
-        <div className="absolute right-4 top-4 z-50 flex items-center gap-3 sm:right-6 sm:top-6">
+        <div className="absolute right-3 top-3 z-50 flex items-center gap-2.5 sm:right-6 sm:top-6 sm:gap-3">
           {onBack && (
             <button
               type="button"
@@ -572,7 +572,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
 
         {/* ================= MAIN CARD ================= */}
         <div
-          className={`login-card-entrance mt-12 grid w-full max-w-5xl overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-500 sm:rounded-[32px] lg:mt-0 lg:grid-cols-2 ${
+          className={`login-card-entrance mx-auto mt-6 grid w-full max-w-[480px] overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-500 sm:mt-10 sm:max-w-[520px] sm:rounded-[32px] lg:mt-0 lg:max-w-5xl lg:grid-cols-2 ${
             isDarkMode
               ? "border-white/10 bg-[#17131F]/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
               : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
@@ -699,10 +699,10 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
           </div>
 
           {/* ================= RIGHT SECTION ================= */}
-          <div className="p-6 sm:p-12 lg:p-14">
+          <div className="p-4 sm:p-8 md:p-10 lg:p-14">
 
             {/* Mobile Brand */}
-            <div className="mb-6 flex items-center justify-between lg:mb-8">
+            <div className="mb-2.5 flex items-center justify-between sm:mb-6 lg:mb-8">
               <div className="flex items-center gap-2 text-3xl font-black tracking-[-0.08em] lg:hidden">
                 <JojoLogo className="h-7 w-auto" />
                 <span>Jot<span className="text-[#8064C7]">.</span></span>
@@ -710,47 +710,41 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
             </div>
 
             {/* ================= MOBILE JOJO ================= */}
-            <div className="mb-7 flex justify-center lg:hidden">
-              <div className="relative flex h-[145px] w-[290px] items-center justify-center">
+            <div className="mb-3 flex justify-center sm:mb-6 lg:hidden">
+              <div className="relative flex max-w-[300px] items-center justify-center gap-3 sm:gap-4">
+                <div className="relative flex h-[68px] w-[68px] shrink-0 items-center justify-center sm:h-[84px] sm:w-[84px]">
+                  <div
+                    className="absolute inset-0 rounded-full border border-[#8064C7]/20 dark:border-white/10"
+                    style={{
+                      animation: "orbitRotate 12s linear infinite",
+                    }}
+                  />
+                  <img
+                    src={jojoWaving}
+                    alt="Jojo waving"
+                    className="login-jojo relative z-10 h-[56px] w-[56px] object-contain drop-shadow-[0_8px_16px_rgba(128,100,199,0.2)] sm:h-[72px] sm:w-[72px]"
+                  />
+                </div>
 
-                <div
-                  className="absolute left-1/2 top-1/2 h-[125px] w-[125px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#8064C7]/15"
-                  style={{
-                    animation: "orbitRotate 12s linear infinite",
-                  }}
-                />
-
-                <img
-                  src={jojoWaving}
-                  alt="Jojo waving"
-                  className="login-jojo relative z-10 h-[115px] w-[115px] object-contain"
-                />
-
-                <div className="login-speech absolute right-0 top-[8px] z-20 w-[145px]">
-                  <div className="relative rounded-2xl border border-[#8064C7]/15 bg-white px-3 py-2.5 text-left shadow-lg">
-
-                    <p className="text-[11px] font-black leading-tight text-[#4F3A7D]">
-                      Hey! I'm Jojo 👋
-                    </p>
-
-                    <p className="mt-0.5 text-[10px] font-semibold leading-4 text-[#75678E]">
-                      Ready to study?
-                    </p>
-
-                    <div className="absolute -bottom-1.5 left-6 h-3 w-3 rotate-45 border-b border-r border-[#8064C7]/15 bg-white" />
-                  </div>
+                <div className="login-speech rounded-2xl border border-[#8064C7]/15 bg-white/90 px-3.5 py-2 text-left shadow-md dark:border-white/10 dark:bg-[#1E192B]">
+                  <p className="text-[11px] font-black leading-tight text-[#4F3A7D] dark:text-[#C4B5FD]">
+                    Hey! I'm Jojo 👋
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-semibold leading-3 text-[#75678E] dark:text-white/60">
+                    Ready to study?
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Heading */}
-            <div className="login-heading mb-8">
-              <h2 className="text-3xl font-black tracking-tight">
+            <div className="login-heading mb-3 sm:mb-6 lg:mb-8">
+              <h2 className="text-2xl font-black tracking-tight sm:text-3xl">
                 Welcome back
               </h2>
 
               <p
-                className={`mt-2 text-sm ${
+                className={`mt-1 sm:mt-2 text-xs sm:text-sm ${
                   isDarkMode
                     ? "text-white/55"
                     : "text-[#706A78]"
@@ -763,12 +757,12 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
             {/* ================= LOGIN FORM ================= */}
             <form
               onSubmit={handleSubmit}
-              className="space-y-5"
+              className="space-y-3 sm:space-y-4 lg:space-y-5"
             >
               {/* Email */}
               <div className="login-form-item-1">
                 <label
-                  className={`mb-2 block text-xs font-bold uppercase tracking-wider ${
+                  className={`mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider ${
                     isDarkMode
                       ? "text-white/70"
                       : "text-[#292530]"
@@ -783,7 +777,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className={`login-input w-full rounded-xl border px-4 py-3 text-sm outline-none ${
+                  className={`login-input w-full rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm outline-none ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10 focus:shadow-[0_0_0_4px_rgba(128,100,199,0.10)]"
                       : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white focus:shadow-[0_0_0_4px_rgba(128,100,199,0.10)]"
@@ -793,7 +787,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
 
               {/* Password */}
               <div className="login-form-item-2">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-1.5 sm:mb-2 flex items-center justify-between">
                   <label
                     className={`text-xs font-bold uppercase tracking-wider ${
                       isDarkMode
@@ -820,7 +814,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className={`login-input w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none ${
+                    className={`login-input w-full rounded-xl border px-3.5 py-2.5 pr-11 sm:px-4 sm:py-3 text-sm outline-none ${
                       isDarkMode
                         ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10 focus:shadow-[0_0_0_4px_rgba(128,100,199,0.10)]"
                         : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white focus:shadow-[0_0_0_4px_rgba(128,100,199,0.10)]"
@@ -882,7 +876,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="login-main-button w-full rounded-xl bg-[#8064C7] py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="login-main-button w-full rounded-xl bg-[#8064C7] py-3 sm:py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="relative z-10">
                     {loading
@@ -896,7 +890,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
             </form>
 
             {/* ================= SIGN UP ================= */}
-            <div className="login-form-item-5 mt-8 text-center">
+            <div className="login-form-item-5 mt-4 sm:mt-6 lg:mt-8 text-center">
               <p
                 className={`text-sm ${
                   isDarkMode
