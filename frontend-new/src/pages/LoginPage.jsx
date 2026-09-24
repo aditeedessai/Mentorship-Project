@@ -5,6 +5,7 @@ import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
 import { createAuditLog } from "../services/api";
 import jojoWaving from "../assets/jojo-waving.png";
+import JojoLogo from "../components/JojoLogo";
 
 function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -599,6 +600,7 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
 
             {/* Logo */}
             <div className="login-logo-entrance relative z-30 flex items-center gap-3">
+              <JojoLogo className="h-9 w-auto" />
               <div className="text-4xl font-black tracking-[-0.08em] text-white">
                 Jot<span className="text-purple-200">.</span>
               </div>
@@ -701,8 +703,9 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
 
             {/* Mobile Brand */}
             <div className="mb-6 flex items-center justify-between lg:mb-8">
-              <div className="text-3xl font-black tracking-[-0.08em] lg:hidden">
-                Jot<span className="text-[#8064C7]">.</span>
+              <div className="flex items-center gap-2 text-3xl font-black tracking-[-0.08em] lg:hidden">
+                <JojoLogo className="h-7 w-auto" />
+                <span>Jot<span className="text-[#8064C7]">.</span></span>
               </div>
             </div>
 

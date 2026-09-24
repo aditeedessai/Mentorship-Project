@@ -22,6 +22,7 @@ import {
 
 import { useTheme } from "../context/ThemeContext";
 
+import JojoLogo from "../components/JojoLogo";
 import jojoWaving from "../assets/jojo-waving.png";
 import shanePic from "../assets/team/shane.png";
 import riyaPic from "../assets/team/riya.png";
@@ -854,13 +855,7 @@ export default function AboutPage({ onNavigate }) {
           </button>
 
           <div className="hidden items-center gap-3 sm:flex">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl">
-              <img
-                src={jojoWaving}
-                alt="Jojo the JOT pencil"
-                className="h-full w-full object-contain"
-              />
-            </div>
+            <JojoLogo className="h-9 w-auto" />
 
             <div>
               <div

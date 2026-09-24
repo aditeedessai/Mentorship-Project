@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JojoLogo from '../components/JojoLogo';
 import {
   Sparkles,
   BookOpen,
@@ -462,15 +463,7 @@ export default function LandingPage({ onNavigate }) {
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-lg ${
-                isDarkMode
-                  ? 'bg-gradient-to-br from-[#38BDF8] to-[#4F46E5] text-white shadow-cyan-500/20'
-                  : 'bg-[#4F46E5] text-white shadow-[#4F46E5]/25'
-              }`}
-            >
-              <Sparkles size={22} className="stroke-[2.2]" />
-            </div>
+            <JojoLogo className="h-9 w-auto" />
             <span className={`font-black text-xl tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
               AI STUDY ENGINE
             </span>
@@ -1003,15 +996,7 @@ export default function LandingPage({ onNavigate }) {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/10">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-md ${
-                    isDarkMode
-                      ? 'bg-gradient-to-br from-[#38BDF8] to-[#4F46E5] text-white shadow-cyan-500/20'
-                      : 'bg-[#4F46E5] text-white shadow-[#4F46E5]/25'
-                  }`}
-                >
-                  <Sparkles size={16} className="stroke-[2.2]" />
-                </div>
+                <JojoLogo className="h-8 w-auto" />
                 <span className={`font-black text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                   AI STUDY ENGINE
                 </span>

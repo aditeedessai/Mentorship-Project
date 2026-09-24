@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
 import GoogleCalendarPrompt from "./components/GoogleCalendarPrompt";
+import JojoLogo from "./components/JojoLogo";
 
 // Every page is loaded on demand (its own network chunk fetched the
 // first time currentPage/authPage actually selects it) instead of all
@@ -101,6 +102,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
         </button>
 
         <div className="flex items-center gap-1.5 font-black text-xl tracking-tight">
+          <JojoLogo className="h-7 w-auto" />
           <span>Jot</span>
           <span className="text-[#8064C7]">.</span>
           <span

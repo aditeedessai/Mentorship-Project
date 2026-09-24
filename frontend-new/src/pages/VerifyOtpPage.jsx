@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
+import JojoLogo from "../components/JojoLogo";
 
 const OTP_LENGTH = 8;
 const OTP_VALIDITY_SECONDS = 120;
@@ -193,6 +194,7 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
 
           <div className="relative z-10">
             <div className="mb-10 flex items-center gap-3">
+              <JojoLogo className="h-9 w-auto" />
               <div className="text-4xl font-black tracking-[-0.08em] text-white">
                 Jot<span className="text-purple-200">.</span>
               </div>
@@ -223,6 +225,7 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
         {/* ================= RIGHT SECTION ================= */}
         <div className="p-8 sm:p-12 lg:p-14">
           <div className="mb-7 flex items-center gap-2 lg:hidden">
+            <JojoLogo className="h-7 w-auto" />
             <div className="text-3xl font-black tracking-[-0.08em]">
               Jot<span className="text-[#8064C7]">.</span>
             </div>

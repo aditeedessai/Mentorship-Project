@@ -9,6 +9,7 @@ import {
   CURRICULUM_OPTIONS,
 } from "../data/academicOptions";
 import jojoWorking from "../assets/jojo-working.png";
+import JojoLogo from "../components/JojoLogo";
 
 /* =========================================================
    STUDENT PROFILE ANIMATIONS
@@ -664,6 +665,7 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
             <div className="relative z-10 profile-left-entrance">
               {/* Brand */}
               <div className="profile-brand-entrance mb-10 flex items-center gap-3">
+                <JojoLogo className="h-9 w-auto" />
                 <div className="text-4xl font-black tracking-[-0.08em] text-white">
                   Jot<span className="text-purple-200">.</span>
                 </div>
@@ -730,6 +732,7 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
           <div className="profile-right-entrance p-6 sm:p-10 lg:p-12 overflow-y-auto max-h-[90vh]">
             {/* Mobile brand */}
             <div className="mb-6 flex items-center gap-2 lg:hidden profile-brand-entrance">
+              <JojoLogo className="h-7 w-auto" />
               <div className="text-3xl font-black tracking-[-0.08em]">
                 Jot<span className="text-[#8064C7]">.</span>
               </div>

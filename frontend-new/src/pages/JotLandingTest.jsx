@@ -18,6 +18,7 @@ import {
 import { useTheme } from "../context/ThemeContext";
 import jojoImage from "../assets/jojo-waving.png";
 import JotFooter from "../components/JotFooter";
+import JojoLogo from "../components/JojoLogo";
 
 /* =========================================================
    JOT BRAND COLORS
@@ -1694,27 +1695,7 @@ const JotLandingTest = ({
               gap-3
             "
           >
-            <div
-              className="
-                flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-xl
-                bg-[#8064C7]
-                text-lg
-                font-black
-                text-white
-                shadow-[0_8px_20px_rgba(128,100,199,.25)]
-                transition
-                duration-300
-                hover:-rotate-3
-                hover:scale-105
-              "
-            >
-              J
-            </div>
+            <JojoLogo className="h-9 w-auto" />
 
             <div className="flex items-center gap-2">
               <span

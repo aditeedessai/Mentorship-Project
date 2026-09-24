@@ -7,6 +7,7 @@ import { validatePasswordStrength } from "../utils/passwordValidation";
 import jojoWaving from "../assets/jojo-waving.png";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
+import JojoLogo from "../components/JojoLogo";
 
 function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -580,6 +581,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
             ====================================== */}
 
             <div className="signup-logo-animation relative z-10 flex items-center gap-3">
+              <JojoLogo className="h-9 w-auto" />
 
               <div className="text-4xl font-black tracking-[-0.08em] text-white">
                 Jot<span className="text-purple-200">.</span>
@@ -847,8 +849,9 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
             <div className="signup-logo-animation mb-6 flex items-center justify-between lg:mb-8">
 
-              <div className="text-3xl font-black tracking-[-0.08em] lg:hidden">
-                Jot<span className="text-[#8064C7]">.</span>
+              <div className="flex items-center gap-2 text-3xl font-black tracking-[-0.08em] lg:hidden">
+                <JojoLogo className="h-7 w-auto" />
+                <span>Jot<span className="text-[#8064C7]">.</span></span>
               </div>
 
             </div>

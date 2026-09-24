@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
+import JojoLogo from "./JojoLogo";
 
 const menuItems = [
   { name: "Home", page: "dashboard", icon: Home },
@@ -398,6 +399,7 @@ function Sidebar({
                 "logoEnter 650ms cubic-bezier(0.22, 1, 0.36, 1) both",
             }}
           >
+            <JojoLogo className="h-8 w-auto" />
             <div className="text-3xl font-black tracking-[-0.08em]">
               Jot
               <span className="text-[#8064C7]">.</span>
