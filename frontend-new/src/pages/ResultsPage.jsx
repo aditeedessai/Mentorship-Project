@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useParams, matchPath } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -91,6 +91,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
   const isPracticeRetake = location.state?.isPracticeRetake || false;
   const temporaryResults = location.state?.temporaryResults;
+  const finishedAttemptIdsRef = useRef(new Set());
 
   useEffect(() => {
     if (!passedAttemptId && !isPracticeRetake) {
@@ -187,7 +188,15 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           setRevisionStatuses(revStatus.statuses);
         }
 
-        finishAttempt(passedAttemptId).catch(() => {});
+        if (
+          targetData.status === 'in_progress' &&
+          targetData.is_attempt_complete &&
+          passedAttemptId &&
+          !finishedAttemptIdsRef.current.has(passedAttemptId)
+        ) {
+          finishedAttemptIdsRef.current.add(passedAttemptId);
+          finishAttempt(passedAttemptId).catch(() => {});
+        }
       } catch (err) {
         console.error('Error loading attempt results:', err);
         if (isMounted) {
