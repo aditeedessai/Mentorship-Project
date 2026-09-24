@@ -1,6 +1,8 @@
 import uuid
 from pathlib import Path
 
+import psycopg2
+
 from backend.services.document_service import (
     process_pdf,
     process_multiple_files,
@@ -11,9 +13,29 @@ from backend.services.evaluation_service import run_evaluation
 from backend.database import study_set_repository
 
 
+class DuplicateStudySetError(Exception):
+    """Raised when a user tries to create a study set with a name they already own."""
+    pass
+
+
 def create_study_set(name: str, user_id: str | None = None) -> dict:
+    # Duplicate-name guard: only applies to authenticated users
+    if user_id and study_set_repository.study_set_exists_for_user(name, user_id):
+        raise DuplicateStudySetError(
+            "A study set with this name already exists. Please choose a different name."
+        )
+
     study_set_id = str(uuid.uuid4())
-    return study_set_repository.create_study_set(study_set_id, name, user_id=user_id)
+    try:
+        return study_set_repository.create_study_set(study_set_id, name, user_id=user_id)
+    except psycopg2.errors.UniqueViolation:
+        # Race condition: another concurrent request inserted the same
+        # (user_id, name) between our check and our INSERT.  Surface the
+        # same user-friendly error rather than a raw 500.
+        raise DuplicateStudySetError(
+            "A study set with this name already exists. Please choose a different name."
+        )
+
 
 
 def list_study_sets(user_id: str | None = None) -> list[dict]:

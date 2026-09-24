@@ -954,7 +954,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         );
       } else {
         setUploadError(
-          "The study set could not be created. Please try again."
+          error.message ||
+            "The study set could not be created. Please try again."
         );
       }
     } finally {

@@ -20,6 +20,7 @@ from backend.api.schemas.study_set import (
     SummaryResponse,
 )
 from backend.services import study_service
+from backend.services.study_service import DuplicateStudySetError
 from backend.services.evaluation_service import get_study_set_progress
 from backend.quiz_generation.summary_generator import generate_summary
 from backend.quiz_generation.flashcard_generator import generate_flashcards
@@ -249,6 +250,11 @@ def create_study_set(
     try:
         data = study_service.create_study_set(payload.name, user_id=current_user.user_id)
         return StudySetResponse(**data)
+    except DuplicateStudySetError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

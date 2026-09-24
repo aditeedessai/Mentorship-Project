@@ -3,6 +3,29 @@ from datetime import datetime
 from backend.database.database import get_connection
 
 
+def study_set_exists_for_user(name: str, user_id: str) -> bool:
+    """
+    Check whether the given user already owns a study set with the
+    exact same name.  Used as a pre-INSERT guard so the API can return
+    a clear 409 Conflict instead of letting the database unique-index
+    violation bubble up as a raw 500.
+    """
+    connection = get_connection()
+    try:
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM study_sets
+            WHERE user_id = ? AND name = ?
+            LIMIT 1
+            """,
+            (user_id, name)
+        ).fetchone()
+        return row is not None
+    finally:
+        connection.close()
+
+
 def create_study_set(study_set_id: str, name: str, user_id: str = None) -> dict:
     """
     Create a new study_set entry.
