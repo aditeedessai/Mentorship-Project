@@ -78,6 +78,36 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     setWarnings(prev => prev.filter(w => w.type !== type))
   }, [])
 
+  // ── Screen Wake Lock ────────────────────────────────────────────
+  // Keeps the screen from sleeping due to inactivity timeout while a
+  // quiz is active. Best-effort only: unsupported browsers, insecure
+  // (non-HTTPS/non-localhost) contexts, and low-battery situations all
+  // fail silently rather than breaking the quiz, and a wake lock can't
+  // override a deliberate action like closing a laptop lid or pressing
+  // a physical power button - it only stops the OS's own idle timer.
+  const wakeLockRef = useRef(null)
+
+  const requestWakeLock = useCallback(async () => {
+    if (QA_DISABLE_ANTI_CHEATING) return
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen')
+      }
+    } catch {
+      // Unsupported / denied / insecure context - not fatal, the quiz
+      // just won't be protected from idle sleep in that environment.
+    }
+  }, [])
+
+  const releaseWakeLock = useCallback(() => {
+    try {
+      wakeLockRef.current?.release()
+    } catch {
+      // ignore
+    }
+    wakeLockRef.current = null
+  }, [])
+
   // ── Centralized quiz termination ─────────────────────────────────
   const terminateQuiz = useCallback(() => {
     if (QA_DISABLE_ANTI_CHEATING) return
@@ -102,6 +132,8 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       clipboardDismissTimerRef.current = null
     }
 
+    releaseWakeLock()
+
     // Exit fullscreen
     try {
       if (document.fullscreenElement) {
@@ -115,7 +147,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     if (onTerminateRef.current) {
       onTerminateRef.current()
     }
-  }, [])
+  }, [releaseWakeLock])
 
   // ── Clear active violation (auto-resume) ──────────────────────────
   const clearViolation = useCallback(() => {
@@ -207,6 +239,8 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     setActiveViolation(null)
     setIsViolationActive(false)
 
+    releaseWakeLock()
+
     try {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => { })
@@ -214,7 +248,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     } catch {
       // ignore
     }
-  }, [])
+  }, [releaseWakeLock])
 
   // ── Main effect: register all listeners ──────────────────────────
   useEffect(() => {
@@ -327,6 +361,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     document.addEventListener('pointerdown', handleFirstInteraction)
     document.addEventListener('keydown', handleFirstInteractionKey)
     attemptFullscreen()
+    requestWakeLock()
 
     // ────────────────────────────────────────────────────────────────
     // 2. VISIBILITY MONITORING — tab switch
@@ -339,6 +374,12 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
           'You left the controlled quiz environment.',
           false // transient
         )
+      } else {
+        // The wake lock releases itself automatically whenever the
+        // document goes hidden (per spec), so it has to be re-requested
+        // every time visibility returns or it stays off for the rest
+        // of the quiz.
+        requestWakeLock()
       }
     }
 
@@ -538,9 +579,10 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
         clipboardDismissTimerRef.current = null
       }
 
+      releaseWakeLock()
       historyPushedRef.current = false
     }
-  }, [enabled, addWarning, removeWarning, handleViolation, clearViolation, terminateQuiz])
+  }, [enabled, addWarning, removeWarning, handleViolation, clearViolation, terminateQuiz, requestWakeLock, releaseWakeLock])
 
   return {
     isFullscreenReady,
