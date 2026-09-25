@@ -866,6 +866,7 @@ def get_attempt_performance_summary(attempt_id: str) -> dict:
 
     return {
         "attempt_id": attempt_id,
+        "study_set_id": attempt.get("study_set_id"),
         "status": attempt.get("status", "in_progress"),
         "question_type": attempt.get("question_type"),
         "completed_sections": completion_info["completed_sections"],

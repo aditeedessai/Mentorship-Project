@@ -9,7 +9,7 @@ import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations } from '../services/api'
+import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations, finishAttempt } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import jojoCelebration from '../assets/jojo-celebration.png'
 
@@ -463,6 +463,12 @@ export default function MCQPage({ onNavigate } = {}) {
             'mcq',
             answersPayload
           )
+        }
+
+        try {
+          await finishAttempt(attemptId)
+        } catch (finishErr) {
+          console.warn('Could not finalize attempt on quiz submission:', finishErr)
         }
 
         antiCheatCleanup()

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from backend.database import revision_repository, exam_repository
 from backend.database.database import get_connection
@@ -15,6 +15,17 @@ MAX_ATTEMPTS = 4
 # Exam-aware pacing
 EXAM_BUFFER_DAYS = 1
 EXAM_CRUNCH_MIN_DAYS_FOR_SPACING = 2
+
+
+def _get_schedule_attempt_date(schedule: dict) -> date:
+    att_dt = schedule.get("last_attempt_at")
+    if isinstance(att_dt, datetime):
+        if att_dt.tzinfo is not None:
+            return att_dt.astimezone().date()
+        return att_dt.date()
+    elif isinstance(att_dt, date):
+        return att_dt
+    return date.today()
 
 
 def _tier_wait_days(accuracy: float) -> int:
@@ -114,7 +125,7 @@ def compute_next_due(study_set_id: str, question_type: str, user_id: str) -> dic
     # attempts_taken=1 (see record_attempt_result()), and that case is
     # handled by the `schedule is None` branch above. Every row reaching
     # this point has a real last_attempt_at to compute a wait from.
-    last_attempt_date = schedule["last_attempt_at"].date()
+    last_attempt_date = _get_schedule_attempt_date(schedule)
     tier_wait_days = _tier_wait_days(last_accuracy)
     next_due_date = last_attempt_date + timedelta(days=tier_wait_days)
 
@@ -191,7 +202,7 @@ def _compute_next_due_from_schedule(schedule: dict, user_id: str) -> dict:
 
     today = date.today()
 
-    last_attempt_date = schedule["last_attempt_at"].date()
+    last_attempt_date = _get_schedule_attempt_date(schedule)
     tier_wait_days = _tier_wait_days(last_accuracy)
     next_due_date = last_attempt_date + timedelta(days=tier_wait_days)
 

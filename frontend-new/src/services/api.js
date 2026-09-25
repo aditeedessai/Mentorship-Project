@@ -71,17 +71,22 @@ const CACHE_TTL_MS = 30_000;
 const _cache = new Map();
 const _inFlight = new Map();
 
-async function cachedGet(url) {
-  const cached = _cache.get(url);
+async function cachedGet(url, forceFresh = false) {
+  if (forceFresh) {
+    _cache.delete(url);
+    _inFlight.delete(url);
+  } else {
+    const cached = _cache.get(url);
 
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
-  }
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
 
-  const pending = _inFlight.get(url);
+    const pending = _inFlight.get(url);
 
-  if (pending) {
-    return pending;
+    if (pending) {
+      return pending;
+    }
   }
 
   const promise = request(url)
@@ -109,6 +114,11 @@ function invalidateCache(prefix) {
   for (const key of _cache.keys()) {
     if (key.startsWith(prefix)) {
       _cache.delete(key);
+    }
+  }
+  for (const key of _inFlight.keys()) {
+    if (key.startsWith(prefix)) {
+      _inFlight.delete(key);
     }
   }
 }
@@ -538,9 +548,10 @@ export async function createAttempt(
   return result;
 }
 
-export async function fetchRevisionStatus(studySetId) {
+export async function fetchRevisionStatus(studySetId, forceFresh = false) {
   return cachedGet(
-    `/api/study-sets/${studySetId}/revision-status`
+    `/api/study-sets/${studySetId}/revision-status`,
+    forceFresh
   );
 }
 
@@ -613,6 +624,7 @@ export async function finishAttempt(attemptId) {
 
   invalidateCache(`/api/attempts/${attemptId}`);
   invalidateCache("/api/study-sets");
+  invalidateCache("/api/planner");
 
   return result;
 }

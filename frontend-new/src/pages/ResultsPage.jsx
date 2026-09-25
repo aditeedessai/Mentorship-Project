@@ -6,6 +6,7 @@ import {
   fetchPerformance,
   fetchEvaluations,
   fetchRevisionStatus,
+  fetchQuestions,
   finishAttempt,
 } from '../services/api';
 import {
@@ -89,6 +90,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const [revisionStatuses, setRevisionStatuses] = useState([]);
   const [error, setError] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
+  const [fallbackOptionQuestions, setFallbackOptionQuestions] = useState([]);
 
   const isPracticeRetake = location.state?.isPracticeRetake || false;
   const temporaryResults = location.state?.temporaryResults;
@@ -125,7 +127,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         });
         setEvaluations(temporaryResults.results || []);
         if (studySetId) {
-          fetchRevisionStatus(studySetId).then((revStatus) => {
+          fetchRevisionStatus(studySetId, true).then((revStatus) => {
             if (isMounted && revStatus?.statuses) {
               setRevisionStatuses(revStatus.statuses);
             }
@@ -144,7 +146,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         let resError = null;
         let perfError = null;
 
-        const [resData, perfData, evalsData, revStatus] = await Promise.all([
+        const [resData, perfData, evalsData] = await Promise.all([
           fetchResults(passedAttemptId).catch((err) => {
             resError = err;
             return null;
@@ -154,7 +156,6 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             return null;
           }),
           fetchEvaluations(passedAttemptId),
-          studySetId ? fetchRevisionStatus(studySetId).catch(() => null) : Promise.resolve(null),
         ]);
 
         const targetData = perfData || resData;
@@ -185,10 +186,40 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         }
         setEvaluations(rawList);
 
-        if (revStatus?.statuses) {
-          setRevisionStatuses(revStatus.statuses);
+        // --- Bug fix: MCQ submitted-answer option text on revisit ---
+        // `passedQuestions` only exists when this page was reached via an
+        // in-app navigation that explicitly forwarded `questions` in router
+        // state (e.g. straight after submitting a quiz). Revisiting this page
+        // later (e.g. "View Results" from Attempt History) never carries that
+        // state, so `questionOptionsMap` below would be empty and the
+        // submitted-answer text would silently fall back to just the raw
+        // letter. When that state is missing, re-fetch the exact same
+        // persisted question set (with options) straight from the backend,
+        // scoped to this attempt, via the same fetchQuestions() helper already
+        // used elsewhere (StudySetAttemptsPage's practice-retake flow) for
+        // this exact purpose.
+        if (passedQuestions.length === 0 && studySetId && passedAttemptId) {
+          const derivedTypeForOptions =
+            targetData?.question_type ||
+            (rawList[0] && (rawList[0].question_type || rawList[0].type)) ||
+            location.state?.questionType ||
+            'mcq';
+
+          if (toBackendType(derivedTypeForOptions) === 'mcq') {
+            try {
+              const fetchedQs = await fetchQuestions(studySetId, derivedTypeForOptions, passedAttemptId);
+              if (isMounted && Array.isArray(fetchedQs)) {
+                setFallbackOptionQuestions(fetchedQs);
+              }
+            } catch (_e) {
+              // Best-effort only: if this fails, the submitted answer simply
+              // falls back to the raw letter, exactly as it did before this
+              // fix - it must never block or error the results page.
+            }
+          }
         }
 
+        let finalizedAttempt = null;
         if (
           targetData.status === 'in_progress' &&
           targetData.is_attempt_complete &&
@@ -196,7 +227,29 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           !finishedAttemptIdsRef.current.has(passedAttemptId)
         ) {
           finishedAttemptIdsRef.current.add(passedAttemptId);
-          finishAttempt(passedAttemptId).catch(() => {});
+          try {
+            finalizedAttempt = await finishAttempt(passedAttemptId);
+            if (isMounted) {
+              setPerformanceData((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+            }
+          } catch (finishErr) {
+            if (finishErr?.status !== 400 && !finishErr?.message?.toLowerCase().includes('already completed')) {
+              console.error('Failed to finalize attempt:', finishErr);
+              finishedAttemptIdsRef.current.delete(passedAttemptId);
+            }
+          }
+        }
+
+        const effectiveStudySetId = studySetId || targetData?.study_set_id || finalizedAttempt?.study_set_id;
+        if (effectiveStudySetId) {
+          try {
+            const revStatus = await fetchRevisionStatus(effectiveStudySetId, true);
+            if (isMounted && revStatus?.statuses) {
+              setRevisionStatuses(revStatus.statuses);
+            }
+          } catch (revErr) {
+            console.error('Failed to fetch revision status:', revErr);
+          }
         }
       } catch (err) {
         console.error('Error loading attempt results:', err);
@@ -277,10 +330,15 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     return map;
   }, [passedQuestions]);
 
-  // Map question IDs to their options for MCQ correct answer resolution (Bug 4)
+  // Map question IDs to their options for MCQ correct answer resolution (Bug 4).
+  // Prefers questions passed in via router state (present right after
+  // submitting a quiz); falls back to the persisted set fetched above when
+  // that state isn't available (e.g. revisiting from Attempt History).
   const questionOptionsMap = useMemo(() => {
     const map = new Map();
-    passedQuestions.forEach((q, idx) => {
+    const optionSourceQuestions =
+      passedQuestions.length > 0 ? passedQuestions : fallbackOptionQuestions;
+    optionSourceQuestions.forEach((q, idx) => {
       if (q.options && Array.isArray(q.options)) {
         if (q.question_id) map.set(String(q.question_id), q.options);
         if (q.id) map.set(String(q.id), q.options);
@@ -288,7 +346,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
       }
     });
     return map;
-  }, [passedQuestions]);
+  }, [passedQuestions, fallbackOptionQuestions]);
 
   const processedQuestions = useMemo(() => {
     const isMcq = toBackendType(rawQuestionType) === 'mcq';
@@ -410,7 +468,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         }
       }
 
-      // Resolve user answer — for MCQ, format as "Letter. OptionText"
+      // Resolve user answer — for MCQ, format as "Option {Letter}: {OptionText}"
+      // (matches the same convention the backend already uses for
+      // correct_answer, per the requested display format).
       let resolvedUserAnswer = isSkipped ? 'Skipped' : rawAns;
       if (isMcq && !isSkipped && rawAns) {
         const userLetter = String(rawAns).trim().toUpperCase();
@@ -423,7 +483,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             (opt) => opt.letter && opt.letter.toUpperCase() === userLetter
           );
           if (matchedOption && matchedOption.text) {
-            resolvedUserAnswer = `${matchedOption.letter}. ${matchedOption.text}`;
+            resolvedUserAnswer = `Option ${matchedOption.letter}: ${matchedOption.text}`;
           }
         }
       }
@@ -1100,6 +1160,18 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                 <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-3 text-xs font-bold text-purple-300 flex items-center gap-2">
                   <CheckCircle2 size={16} className="shrink-0 text-purple-400" />
                   <span>Section Mastered: All 4 revision slots have been completed for {questionTypeName}.</span>
+                </div>
+              ) : (currentRevisionStatus?.next_due_date && currentRevisionStatus.next_due_date > new Date().toLocaleDateString('en-CA')) ? (
+                <div className="rounded-xl border border-[#8064C7]/30 bg-[#8064C7]/15 p-3 text-xs font-bold text-[#A78BFA] flex items-center gap-2">
+                  <Calendar size={16} className="shrink-0 text-[#8064C7]" />
+                  <span>
+                    Next Revision Due:{' '}
+                    {new Date(`${currentRevisionStatus.next_due_date}T00:00:00`).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
                 </div>
               ) : currentRevisionStatus?.available ? (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-bold text-emerald-400 flex items-center gap-2">
