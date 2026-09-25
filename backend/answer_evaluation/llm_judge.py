@@ -106,7 +106,7 @@ except ImportError:  # pragma: no cover
     # Run `pip install python-dotenv` to enable it.
     pass
 
-_JUDGE_MODEL = os.environ.get("JUDGE_MODEL_NAME", "gemini-3.6-flash")
+_JUDGE_MODEL = os.environ.get("JUDGE_MODEL_NAME", "gemini-3.5-flash-lite")
 _MAX_OUTPUT_TOKENS = 800  # thinking tokens were eating a smaller budget
 _MAX_RETRIES = int(os.environ.get("JUDGE_MAX_RETRIES", "3"))
 

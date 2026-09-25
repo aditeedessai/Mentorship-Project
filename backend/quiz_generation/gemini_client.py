@@ -21,9 +21,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     logger.warning("GEMINI_API_KEY not found in environment variables.")
 
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3.6-flash")
-GEMINI_FALLBACK_MODEL_NAME = os.getenv("GEMINI_FALLBACK_MODEL_NAME", "gemini-3.5-flash-lite")
-GEMINI_SECONDARY_FALLBACK_MODEL_NAME = os.getenv("GEMINI_SECONDARY_FALLBACK_MODEL_NAME", "gemini-flash-lite-latest")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash-lite")
+GEMINI_FALLBACK_MODEL_NAME = os.getenv("GEMINI_FALLBACK_MODEL_NAME", "gemini-flash-lite-latest")
+GEMINI_SECONDARY_FALLBACK_MODEL_NAME = os.getenv("GEMINI_SECONDARY_FALLBACK_MODEL_NAME", "gemini-2.5-flash-lite")
 GEMINI_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
 GEMINI_MAX_CONCURRENT_REQUESTS = int(os.getenv("GEMINI_MAX_CONCURRENT_REQUESTS", "5"))
 GEMINI_MAX_CONTEXT_CHARS = int(os.getenv("GEMINI_MAX_CONTEXT_CHARS", "100000"))
@@ -307,7 +307,7 @@ def generate_content_with_retry(
                     model_chain.append(cleaned)
 
         if not model_chain:
-            model_chain = ["gemini-3.6-flash"]
+            model_chain = ["gemini-3.5-flash-lite"]
 
         logger.info(
             "Starting Gemini request [task=%s, primary_model=%s, chain_length=%d, prompt_chars=%d]",
