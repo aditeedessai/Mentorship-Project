@@ -22,6 +22,7 @@ if not GEMINI_API_KEY:
     logger.warning("GEMINI_API_KEY not found in environment variables.")
 
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3.6-flash")
+GEMINI_FALLBACK_MODEL_NAME = os.getenv("GEMINI_FALLBACK_MODEL_NAME", "gemini-2.5-flash")
 GEMINI_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
 GEMINI_MAX_CONCURRENT_REQUESTS = int(os.getenv("GEMINI_MAX_CONCURRENT_REQUESTS", "5"))
 GEMINI_MAX_CONTEXT_CHARS = int(os.getenv("GEMINI_MAX_CONTEXT_CHARS", "100000"))
@@ -144,7 +145,7 @@ def is_transient_error(exc: Exception) -> Tuple[bool, str, int]:
     if isinstance(exc, genai_errors.APIError):
         code = getattr(exc, "code", getattr(exc, "status_code", code))
 
-    # Check Rate Limit / Quota / 429
+    # Check Rate Limit / Quota / 429 / Higher Model Usage
     if (
         code == 429
         or "resource_exhausted" in exc_str
@@ -153,6 +154,7 @@ def is_transient_error(exc: Exception) -> Tuple[bool, str, int]:
         or "rate limit" in exc_str
         or "ratelimit" in exc_str
         or "too many requests" in exc_str
+        or "higher model usage" in exc_str
     ):
         return True, "rate_limit", 429
 
@@ -283,6 +285,7 @@ def generate_content_with_retry(
     - In-flight duplicate request deduplication (_DEDUPLICATOR)
     - Context size protection (truncate_text_chunks)
     - Exponential backoff retry with jitter on transient failures (429/503)
+    - Automatic transition to configured fallback model on quota exhaustion / model overload
     - Clean exception mapping (GeminiRateLimitError, GeminiServiceUnavailableError)
     - Backward compatible response object (.text)
     """
@@ -290,11 +293,12 @@ def generate_content_with_retry(
         # Enforce context length protection
         safe_prompt = truncate_text_chunks(prompt, max_chars=GEMINI_MAX_CONTEXT_CHARS)
         retries_limit = max_retries if max_retries is not None else GEMINI_MAX_RETRIES
-        target_model = model_name or os.getenv("GEMINI_MODEL_NAME", GEMINI_MODEL_NAME)
+        primary_model = model_name or os.getenv("GEMINI_MODEL_NAME", GEMINI_MODEL_NAME)
+        fallback_model = os.getenv("GEMINI_FALLBACK_MODEL_NAME", GEMINI_FALLBACK_MODEL_NAME)
 
         logger.info(
             "Starting Gemini request [task=%s, model=%s, prompt_chars=%d]",
-            task_name, target_model, len(safe_prompt)
+            task_name, primary_model, len(safe_prompt)
         )
 
         acq_start = time.perf_counter()
@@ -307,57 +311,83 @@ def generate_content_with_retry(
         if acq_duration > 0.1:
             logger.info("Throttled by concurrency limit for %.2fs [task=%s]", acq_duration, task_name)
 
-        attempt = 0
-        last_exception = None
-
         try:
-            while attempt <= retries_limit:
-                attempt += 1
-                try:
-                    start_time = time.perf_counter()
-                    raw_text = _single_gemini_call(
-                        prompt=safe_prompt,
-                        model_name=target_model,
-                        system_instruction=system_instruction,
-                        max_output_tokens=max_output_tokens
-                    )
-                    elapsed = time.perf_counter() - start_time
-                    logger.info(
-                        "Gemini request succeeded [task=%s, duration=%.2fs, attempt=%d/%d]",
-                        task_name, elapsed, attempt, retries_limit + 1
-                    )
-                    return GeminiResponseWrapper(text=raw_text)
-
-                except Exception as exc:
-                    last_exception = exc
-                    is_transient, category, status_code = is_transient_error(exc)
-
-                    if not is_transient or attempt > retries_limit:
-                        logger.error(
-                            "Gemini call failed (non-retryable or retries exhausted) [task=%s, category=%s, attempt=%d/%d, status=%s]: %s",
-                            task_name, category, attempt, retries_limit + 1, status_code, str(exc)
+            def _run_model_attempts(target_model: str, is_fallback: bool = False):
+                attempt = 0
+                while attempt <= retries_limit:
+                    attempt += 1
+                    try:
+                        start_time = time.perf_counter()
+                        raw_text = _single_gemini_call(
+                            prompt=safe_prompt,
+                            model_name=target_model,
+                            system_instruction=system_instruction,
+                            max_output_tokens=max_output_tokens
                         )
-                        if category == "rate_limit":
-                            raise GeminiRateLimitError(raw_error=exc) from exc
-                        elif category == "service_unavailable":
-                            raise GeminiServiceUnavailableError(raw_error=exc) from exc
+                        elapsed = time.perf_counter() - start_time
+                        logger.info(
+                            "Gemini request succeeded [task=%s, model=%s, duration=%.2fs, attempt=%d/%d, is_fallback=%s]",
+                            task_name, target_model, elapsed, attempt, retries_limit + 1, is_fallback
+                        )
+                        return GeminiResponseWrapper(text=raw_text), None, None
+                    except Exception as exc:
+                        is_transient, category, status_code = is_transient_error(exc)
+                        if not is_transient or attempt > retries_limit:
+                            return None, exc, category
+
+                        # Calculate retry backoff delay
+                        suggested_delay = parse_retry_after(exc)
+                        if suggested_delay:
+                            delay = suggested_delay
                         else:
-                            raise GeminiConfigurationError(f"Gemini API configuration or request error: {str(exc)}", raw_error=exc) from exc
+                            base_delay = 1.0 * (2 ** (attempt - 1))
+                            jitter = random.uniform(0.1, 0.5)
+                            delay = min(15.0, base_delay + jitter)
 
-                    # Calculate retry backoff delay
-                    suggested_delay = parse_retry_after(exc)
-                    if suggested_delay:
-                        delay = suggested_delay
-                    else:
-                        base_delay = 1.0 * (2 ** (attempt - 1))
-                        jitter = random.uniform(0.1, 0.5)
-                        delay = min(15.0, base_delay + jitter)
+                        logger.warning(
+                            "Gemini transient failure, retrying in %.2fs [task=%s, model=%s, category=%s, attempt=%d/%d, is_fallback=%s]: %s",
+                            delay, task_name, target_model, category, attempt, retries_limit + 1, is_fallback, str(exc)
+                        )
+                        time.sleep(delay)
 
-                    logger.warning(
-                        "Gemini transient failure, retrying in %.2fs [task=%s, category=%s, attempt=%d/%d]: %s",
-                        delay, task_name, category, attempt, retries_limit + 1, str(exc)
+            # 1. Attempt Primary Model
+            res, last_exc, category = _run_model_attempts(primary_model, is_fallback=False)
+            if res is not None:
+                return res
+
+            # Determine if fallback is eligible
+            can_fallback = (
+                category in ("rate_limit", "service_unavailable")
+                and bool(fallback_model)
+                and (fallback_model != primary_model)
+            )
+
+            if can_fallback:
+                logger.warning(
+                    "Primary Gemini model '%s' failed due to %s [task=%s]. Switching to configured fallback model '%s'.",
+                    primary_model, category, task_name, fallback_model
+                )
+                res_fb, last_exc_fb, category_fb = _run_model_attempts(fallback_model, is_fallback=True)
+                if res_fb is not None:
+                    logger.info(
+                        "Fallback Gemini model '%s' succeeded for task '%s' after primary model '%s' failed.",
+                        fallback_model, task_name, primary_model
                     )
-                    time.sleep(delay)
+                    return res_fb
+                last_exc = last_exc_fb
+                category = category_fb
+
+            # Final failure handling after primary and fallback attempts
+            logger.error(
+                "Gemini call failed (all attempts & fallbacks exhausted) [task=%s, category=%s, status=%s]: %s",
+                task_name, category, getattr(last_exc, "code", getattr(last_exc, "status_code", "N/A")), str(last_exc)
+            )
+            if category == "rate_limit":
+                raise GeminiRateLimitError(raw_error=last_exc) from last_exc
+            elif category == "service_unavailable":
+                raise GeminiServiceUnavailableError(raw_error=last_exc) from last_exc
+            else:
+                raise GeminiConfigurationError(f"Gemini API configuration or request error: {str(last_exc)}", raw_error=last_exc) from last_exc
 
         finally:
             _CONCURRENCY_SEMAPHORE.release()
@@ -370,3 +400,4 @@ def generate_content_with_retry(
 
 # Backward Compatibility Export
 client = get_genai_client
+

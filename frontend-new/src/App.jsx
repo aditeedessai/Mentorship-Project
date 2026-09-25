@@ -1,6 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, AlertTriangle } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 import Sidebar from "./components/Sidebar";
@@ -167,6 +167,7 @@ function AppContent() {
   // false = no profile → must show mandatory form
   const [hasProfile, setHasProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileCheckError, setProfileCheckError] = useState(null);
 
   // ================= USER STATE =================
   const [user, setUser] = useState(null);
@@ -320,6 +321,7 @@ function AppContent() {
         if (!isActiveQuiz) {
           setUser(null);
           setHasProfile(null);
+          setProfileCheckError(null);
           setStudySets([]);
           setSelectedStudySetId(null);
           sessionStorage.removeItem("jot_current_page");
@@ -336,36 +338,48 @@ function AppContent() {
   // Runs whenever the user object changes (login / logout / refresh).
   // Sets `hasProfile` so the rendering gate knows whether to show
   // the mandatory profile form or the main application.
-  useEffect(() => {
+  const checkProfile = async () => {
     if (!user) {
       setHasProfile(null);
+      setProfileCheckError(null);
+      setProfileLoading(false);
       return;
     }
 
-    const checkProfile = async () => {
-      setProfileLoading(true);
-      try {
-        const { data, error: fetchErr } = await supabase
-          .from("student_profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
+    setProfileLoading(true);
+    setProfileCheckError(null);
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from("student_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-        if (fetchErr) {
-          console.error("Failed to check student profile:", fetchErr);
-          // On error, assume no profile so the form stays visible
-          // (safe default — never silently grant access).
-          setHasProfile(false);
-        } else {
-          setHasProfile(!!data);
-        }
-      } catch (err) {
-        console.error("Unexpected error checking profile:", err);
-        setHasProfile(false);
-      } finally {
-        setProfileLoading(false);
+      if (fetchErr) {
+        console.error("Failed to check student profile:", fetchErr);
+        // On error, do NOT set hasProfile(false). Set profileCheckError instead
+        // so we never falsely redirect an existing user to mandatory onboarding.
+        setProfileCheckError(fetchErr.message || "Failed to verify student profile.");
+        setHasProfile(null);
+      } else {
+        setProfileCheckError(null);
+        setHasProfile(!!data);
       }
-    };
+    } catch (err) {
+      console.error("Unexpected error checking profile:", err);
+      setProfileCheckError(err.message || "An unexpected error occurred while checking student profile.");
+      setHasProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setHasProfile(null);
+      setProfileCheckError(null);
+      return;
+    }
 
     checkProfile();
   }, [user]);
@@ -619,6 +633,39 @@ function AppContent() {
         </Suspense>
       );
     }
+  }
+
+  // ================= PROFILE CHECK ERROR GATE =================
+  // If verifying the profile failed due to a network or database error,
+  // show a clean error state with a Retry button. NEVER render the
+  // mandatory onboarding StudentProfilePage or flash the dashboard on error.
+  if (profileCheckError && !profileLoading) {
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${
+          isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+        }`}
+      >
+        <div className="flex max-w-md flex-col items-center gap-4 text-center p-6 rounded-3xl border border-red-500/20 bg-red-500/5 backdrop-blur-xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/15 text-red-500">
+            <AlertTriangle size={24} />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold">Unable to Verify Profile</h2>
+            <p className={`mt-1 text-xs ${isDarkMode ? "text-white/60" : "text-gray-600"}`}>
+              Unable to verify your student profile. Please check your internet connection and try again.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={checkProfile}
+            className="cursor-pointer rounded-xl bg-[#8064C7] px-6 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4]"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // ================= MANDATORY PROFILE GATE =================
