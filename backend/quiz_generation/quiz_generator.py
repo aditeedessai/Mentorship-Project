@@ -2,7 +2,7 @@ import uuid
 import json
 import traceback
 
-from .gemini_client import client
+from .gemini_client import generate_content_with_retry, truncate_text_chunks
 from .prompt_builder import build_quiz_prompt
 from backend.database.quiz_repository import (
     save_questions,
@@ -146,14 +146,8 @@ def generate_quiz(
             limit=15
         )
 
-    # Extract raw text string for prompt builder
-    text_pieces = []
-    for chunk in chunks:
-        if isinstance(chunk, dict):
-            text_pieces.append(chunk.get("text", ""))
-        else:
-            text_pieces.append(str(chunk))
-    text = "\n\n".join(text_pieces)
+    # Extract raw text string for prompt builder with context limit protection
+    text = truncate_text_chunks(chunks)
 
     print("Text length:", len(text))
 
@@ -181,15 +175,13 @@ def generate_quiz(
 
     print("Calling Gemini...")
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt
-        )
-    except Exception:
-        print("===== Gemini API call failed (generate_quiz) =====")
-        traceback.print_exc()
-        raise
+    dedup_key = f"quiz:{study_set_id}:{attempt_id}:{question_type}" if (study_set_id and attempt_id) else None
+
+    response = generate_content_with_retry(
+        prompt=prompt,
+        task_name="quiz_generation",
+        dedup_key=dedup_key
+    )
 
     print("Gemini responded.")
 

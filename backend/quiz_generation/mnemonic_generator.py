@@ -1,6 +1,6 @@
 import json
 
-from .gemini_client import client
+from .gemini_client import generate_content_with_retry, truncate_text_chunks
 from .mnemonic_builder import build_mnemonic_prompt
 from backend.embeddings.retriever import retrieve_chunks
 
@@ -56,14 +56,8 @@ def generate_mnemonic(
             "No study material was found for the uploaded study set / documents."
         )
 
-    # Extract raw text string for prompt builder
-    text_pieces = []
-    for chunk in chunks:
-        if isinstance(chunk, dict):
-            text_pieces.append(chunk.get("text", ""))
-        else:
-            text_pieces.append(str(chunk))
-    text = "\n\n".join(text_pieces)
+    # Extract raw text string for prompt builder with context limit protection
+    text = truncate_text_chunks(chunks)
 
     print("Text length for mnemonic:", len(text))
 
@@ -71,9 +65,12 @@ def generate_mnemonic(
 
     print("Calling Gemini for mnemonic...")
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
+    dedup_key = f"mnemonic:{study_set_id}:{topic.strip().lower()}:{normalized_style}" if study_set_id else None
+
+    response = generate_content_with_retry(
+        prompt=prompt,
+        task_name="mnemonic_generation",
+        dedup_key=dedup_key
     )
 
     print("Gemini responded for mnemonic.")
