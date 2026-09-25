@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { fetchAttemptsForStudySet, fetchStudySet, fetchQuestions } from "../services/api";
+import { formatScore } from "../utils/scoreFormat";
 
 const SECTIONS = [
   { id: "mcq", label: "MCQ", types: ["mcq"] },
@@ -404,7 +405,7 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
                         Score
                       </span>
                       <span className="font-extrabold text-base sm:text-lg">
-                        {marksAwarded} / {totalMarks}
+                        {formatScore(marksAwarded)} / {formatScore(totalMarks)}
                       </span>
                     </div>
 

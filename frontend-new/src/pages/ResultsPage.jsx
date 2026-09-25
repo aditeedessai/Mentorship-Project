@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import jojoEvaluating from '../assets/jojo-evaluating.png';
+import { formatScore } from '../utils/scoreFormat';
 
 const normalizeTypeName = (typeStr) => {
   const s = (typeStr || '').toLowerCase().trim();
@@ -771,9 +772,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
             <div className="px-2 text-center sm:px-3">
               <div className="text-2xl font-black sm:text-3xl">
-                {totalScore}{' '}
+                {formatScore(totalScore)}{' '}
                 <span className="text-xs font-normal text-purple-200">
-                  / {maxScore}
+                  / {formatScore(maxScore)}
                 </span>
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200 sm:text-xs">
@@ -913,10 +914,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                   )}
 
                   {q.isSkipped
-                    ? `Skipped (0/${q.maxMarks} Marks)`
+                    ? `Skipped (${formatScore(0)}/${formatScore(q.maxMarks)} Marks)`
                     : q.isCorrect === true
-                    ? `Correct (+${q.awardedMarks}/${q.maxMarks} Marks)`
-                    : `Incorrect (${q.awardedMarks}/${q.maxMarks} Marks)`}
+                    ? `Correct (+${formatScore(q.awardedMarks)}/${formatScore(q.maxMarks)} Marks)`
+                    : `Incorrect (${formatScore(q.awardedMarks)}/${formatScore(q.maxMarks)} Marks)`}
                 </span>
               </div>
 
