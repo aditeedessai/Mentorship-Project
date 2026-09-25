@@ -11,6 +11,27 @@ import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
 import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import { ArrowLeft, ArrowRight, Lightbulb, PenLine } from 'lucide-react'
+import jojoCelebration from '../assets/jojo-celebration.png'
+
+const confettiPieces = [
+  { left: '8%', top: '12%', rotate: '-18deg', delay: '0ms' },
+  { left: '17%', top: '28%', rotate: '14deg', delay: '120ms' },
+  { left: '28%', top: '8%', rotate: '32deg', delay: '240ms' },
+  { left: '39%', top: '18%', rotate: '-12deg', delay: '80ms' },
+  { left: '51%', top: '6%', rotate: '22deg', delay: '180ms' },
+  { left: '63%', top: '16%', rotate: '-28deg', delay: '300ms' },
+  { left: '75%', top: '10%', rotate: '12deg', delay: '140ms' },
+  { left: '86%', top: '26%', rotate: '-20deg', delay: '260ms' },
+  { left: '5%', top: '46%', rotate: '28deg', delay: '180ms' },
+  { left: '13%', top: '62%', rotate: '-14deg', delay: '320ms' },
+  { left: '84%', top: '48%', rotate: '18deg', delay: '100ms' },
+  { left: '92%', top: '65%', rotate: '-26deg', delay: '220ms' },
+  { left: '22%', top: '80%', rotate: '18deg', delay: '280ms' },
+  { left: '35%', top: '88%', rotate: '-22deg', delay: '160ms' },
+  { left: '49%', top: '82%', rotate: '14deg', delay: '40ms' },
+  { left: '64%', top: '90%', rotate: '-18deg', delay: '240ms' },
+  { left: '78%', top: '78%', rotate: '26deg', delay: '120ms' },
+]
 
 export default function QnAPage({ onNavigate } = {}) {
   const { isDarkMode } = useTheme()
@@ -39,6 +60,12 @@ export default function QnAPage({ onNavigate } = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showNavDrawer, setShowNavDrawer] = useState(false)
   const [showRoughWorkDrawer, setShowRoughWorkDrawer] = useState(false)
+
+  // Celebration screen
+  const [showCelebration, setShowCelebration] = useState(false)
+
+  // Finish Quiz confirmation popup
+  const [showFinishModal, setShowFinishModal] = useState(false)
 
   // Controls the timeout screen
   const [isTimedOut, setIsTimedOut] = useState(false)
@@ -101,12 +128,18 @@ export default function QnAPage({ onNavigate } = {}) {
   }, [])
 
   useEffect(() => {
-    if (remainingSeconds <= 0 || !isFullscreenReady || isViolationActive || quizEndedRef.current) return
+    if (
+      remainingSeconds <= 0 ||
+      !isFullscreenReady ||
+      isViolationActive ||
+      showCelebration ||
+      quizEndedRef.current
+    ) return
     timerIntervalRef.current = setInterval(() => {
       setRemainingSeconds(prev => Math.max(0, prev - 1))
     }, 1000)
     return () => clearQuizTimer()
-  }, [remainingSeconds, isFullscreenReady, isViolationActive, clearQuizTimer])
+  }, [remainingSeconds, isFullscreenReady, isViolationActive, showCelebration, clearQuizTimer])
 
   // Auto-abort the instant the countdown reaches zero — races against a
   // manual submit/abort via quizEndedRef, so only one of the two can win.
@@ -189,11 +222,12 @@ export default function QnAPage({ onNavigate } = {}) {
 
   // Debounced auto-save as user types
   useEffect(() => {
-    if (!attemptId || isPracticeRetake) return
+    if (!attemptId || isPracticeRetake || quizEndedRef.current) return
     const val = answers[currentQuestion]
     if (val === undefined) return
 
     const timer = setTimeout(() => {
+      if (quizEndedRef.current) return
       saveAnswerToBackend(currentQuestion, val)
     }, 1000)
 
@@ -201,7 +235,7 @@ export default function QnAPage({ onNavigate } = {}) {
   }, [answers, currentQuestion, attemptId, isPracticeRetake, saveAnswerToBackend])
 
   const goToQuestion = useCallback((num) => {
-    if (num < 1 || num > questionCount || num === currentQuestion) return
+    if (num < 1 || num > questionCount || num === currentQuestion || quizEndedRef.current || isSubmitting) return
     
     // Save current question before switching
     saveAnswerToBackend(currentQuestion, answers[currentQuestion])
@@ -214,13 +248,15 @@ export default function QnAPage({ onNavigate } = {}) {
       return next
     })
     setCurrentQuestion(num)
-  }, [currentQuestion, questionCount, answers, saveAnswerToBackend])
+  }, [currentQuestion, questionCount, answers, isSubmitting, saveAnswerToBackend])
 
   const handleAnswerChange = useCallback((value) => {
+    if (quizEndedRef.current || isSubmitting) return
     setAnswers(prev => ({ ...prev, [currentQuestion]: value }))
-  }, [currentQuestion])
+  }, [currentQuestion, isSubmitting])
 
   const handleSubmitNext = useCallback(() => {
+    if (quizEndedRef.current || isSubmitting) return
     const currentVal = answers[currentQuestion]
     const hasAnswer = currentVal && currentVal.trim()
 
@@ -234,9 +270,10 @@ export default function QnAPage({ onNavigate } = {}) {
     if (currentQuestion < questionCount) {
       setCurrentQuestion(prev => prev + 1)
     }
-  }, [currentQuestion, questionCount, answers, saveAnswerToBackend])
+  }, [currentQuestion, questionCount, answers, isSubmitting, saveAnswerToBackend])
 
   const handlePrevious = useCallback(() => {
+    if (quizEndedRef.current || isSubmitting) return
     if (currentQuestion > 1) {
       const currentVal = answers[currentQuestion]
       const hasAnswer = currentVal && currentVal.trim()
@@ -251,7 +288,16 @@ export default function QnAPage({ onNavigate } = {}) {
       }))
       setCurrentQuestion(prev => prev - 1)
     }
-  }, [currentQuestion, answers, saveAnswerToBackend])
+  }, [currentQuestion, answers, isSubmitting, saveAnswerToBackend])
+
+  // ── Finish Quiz Confirmation ──────────────────────────────────
+
+  const handleFinishClick = useCallback(() => {
+    if (isSubmitting || isViolationActive || quizEndedRef.current) return
+    setShowFinishModal(true)
+  }, [isSubmitting, isViolationActive])
+
+  // ── Submit Quiz ────────────────────────────────────────────────
 
   const handleFinishQuiz = useCallback(async () => {
     if (quizEndedRef.current || isSubmitting || (!attemptId && !historicalAttemptId)) return
@@ -287,41 +333,47 @@ export default function QnAPage({ onNavigate } = {}) {
         }
 
         antiCheatCleanup()
+        setShowCelebration(true)
 
-        onNavigate?.('results', {
-          studySetId,
-          questionType,
-          isPracticeRetake: true,
-          temporaryResults: tempResults,
-        })
-        navigate('/results', {
-          state: {
+        setTimeout(() => {
+          onNavigate?.('results', {
             studySetId,
             questionType,
             isPracticeRetake: true,
             temporaryResults: tempResults,
-            questions,
-          },
-        })
+          })
+          navigate('/results', {
+            state: {
+              studySetId,
+              questionType,
+              isPracticeRetake: true,
+              temporaryResults: tempResults,
+              questions,
+            },
+          })
+        }, 2500)
       } else {
         if (answersPayload.length > 0) {
           await submitAnswers(attemptId, questionType, answersPayload)
         }
 
         antiCheatCleanup()
+        setShowCelebration(true)
 
-        onNavigate?.('results', {
-          attemptId,
-          studySetId,
-          questionType,
-        })
-        navigate(`/results/${attemptId}`, {
-          state: {
+        setTimeout(() => {
+          onNavigate?.('results', {
             attemptId,
             studySetId,
             questionType,
-          },
-        })
+          })
+          navigate(`/results/${attemptId}`, {
+            state: {
+              attemptId,
+              studySetId,
+              questionType,
+            },
+          })
+        }, 2500)
       }
     } catch (err) {
       console.error('Failed to submit quiz:', err)
@@ -359,7 +411,8 @@ export default function QnAPage({ onNavigate } = {}) {
     if (!isFullscreenReady || quizTerminated || isViolationActive) return
 
     const handleKeyDown = (e) => {
-      if (showInstructionsModal || showShortcutsModal || showAbortModal) return
+      if (showInstructionsModal || showShortcutsModal || showAbortModal || showFinishModal) return
+      if (quizEndedRef.current || isSubmitting) return
 
       const target = e.target
       if (
@@ -377,7 +430,18 @@ export default function QnAPage({ onNavigate } = {}) {
         handlePrevious()
       } else if (key === 'ArrowRight') {
         e.preventDefault()
-        handleSubmitNext()
+        if (currentQuestion === questionCount) {
+          handleFinishClick()
+        } else {
+          handleSubmitNext()
+        }
+      } else if (key === 'Enter') {
+        e.preventDefault()
+        if (currentQuestion === questionCount) {
+          handleFinishClick()
+        } else {
+          handleSubmitNext()
+        }
       }
     }
 
@@ -387,11 +451,16 @@ export default function QnAPage({ onNavigate } = {}) {
     isFullscreenReady,
     quizTerminated,
     isViolationActive,
+    isSubmitting,
     showInstructionsModal,
     showShortcutsModal,
     showAbortModal,
+    showFinishModal,
+    currentQuestion,
+    questionCount,
     handlePrevious,
     handleSubmitNext,
+    handleFinishClick,
   ])
 
   if (questionCount === 0 || quizTerminated) return null
@@ -426,12 +495,140 @@ export default function QnAPage({ onNavigate } = {}) {
             isDarkMode ? 'border-white/10 bg-white/5' : 'border-red-500/10 bg-white/70'
           }`}>
             <p className={`text-sm font-bold ${isDarkMode ? 'text-white/80' : 'text-[#514863]'}`}>
-              Your progress on this attempt was not saved.
+              Your answers have been submitted successfully.
             </p>
 
             <p className={`mt-1 text-xs ${isDarkMode ? 'text-white/35' : 'text-gray-400'}`}>
-              Taking you back to your dashboard...
+              Taking you to your results...
             </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── JOJO CELEBRATION SCREEN ───────────────────────────────────
+
+  if (showCelebration) {
+    return (
+      <div
+        className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${isDarkMode
+            ? 'bg-[#0E0B15] text-white'
+            : 'bg-[#F6F3FC] text-[#292530]'
+          }`}
+      >
+        {/* Celebration glow */}
+        <div
+          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${isDarkMode
+              ? 'bg-[#8064C7]/20'
+              : 'bg-[#8064C7]/15'
+            }`}
+        />
+
+        {/* Confetti */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          {confettiPieces.map((piece, index) => (
+            <span
+              key={index}
+              className="absolute h-3 w-2 rounded-sm bg-[#8064C7] animate-[confettiPop_1.8s_ease-out_infinite]"
+              style={{
+                left: piece.left,
+                top: piece.top,
+                transform: `rotate(${piece.rotate})`,
+                animationDelay: piece.delay,
+              }}
+            />
+          ))}
+
+          {confettiPieces
+            .slice(0, 12)
+            .map((piece, index) => (
+              <span
+                key={`small-${index}`}
+                className="absolute h-2.5 w-2.5 rounded-full bg-purple-300 animate-[confettiPop_1.6s_ease-out_infinite]"
+                style={{
+                  left: piece.left,
+                  top: piece.top,
+                  animationDelay: piece.delay,
+                  transform: 'translateY(8px)',
+                }}
+              />
+            ))}
+        </div>
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
+          {/* Jojo */}
+          <div className="relative mb-7 flex h-64 w-64 items-center justify-center">
+            <div
+              className={`absolute inset-0 rounded-full blur-3xl ${isDarkMode
+                  ? 'bg-[#8064C7]/20'
+                  : 'bg-[#8064C7]/15'
+                }`}
+            />
+
+            <img
+              src={jojoCelebration}
+              alt="Jojo celebrating"
+              className="relative z-10 h-60 w-60 object-contain animate-[jojoCelebrate_1s_ease-in-out_infinite]"
+            />
+          </div>
+
+          {/* Heading */}
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+            Quiz completed! 🎉
+          </h1>
+
+          <p
+            className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode
+                ? 'text-white/55'
+                : 'text-gray-500'
+              }`}
+          >
+            Great job! Jojo is celebrating your progress.
+          </p>
+
+          {/* Progress message */}
+          <div
+            className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${isDarkMode
+                ? 'border-white/10 bg-white/5'
+                : 'border-[#8064C7]/10 bg-white/70'
+              }`}
+          >
+            <p
+              className={`text-sm font-bold ${isDarkMode
+                  ? 'text-white/80'
+                  : 'text-[#514863]'
+                }`}
+            >
+              Your answers have been submitted successfully.
+            </p>
+
+            <p
+              className={`mt-1 text-xs ${isDarkMode
+                  ? 'text-white/35'
+                  : 'text-gray-400'
+                }`}
+            >
+              Taking you to your results...
+            </p>
+          </div>
+
+          {/* Celebration dots */}
+          <div className="mt-6 flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
+              style={{ animationDelay: '0ms' }}
+            />
+
+            <span
+              className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
+              style={{ animationDelay: '150ms' }}
+            />
+
+            <span
+              className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#8064C7]"
+              style={{ animationDelay: '300ms' }}
+            />
           </div>
         </div>
       </div>
@@ -513,7 +710,7 @@ export default function QnAPage({ onNavigate } = {}) {
           onSelectQuestion={goToQuestion}
           isOpen={showNavDrawer}
           onClose={() => setShowNavDrawer(false)}
-          disabled={isViolationActive}
+          disabled={isViolationActive || isSubmitting || quizEndedRef.current}
         />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -572,12 +769,13 @@ export default function QnAPage({ onNavigate } = {}) {
                 </div>
               )}
 
-              <div className={`flex-1 min-h-[160px] sm:min-h-[180px] ${isViolationActive ? 'opacity-50 pointer-events-none' : ''}`} data-ac-editable="true">
+              <div className={`flex-1 min-h-[160px] sm:min-h-[180px] ${(isViolationActive || isSubmitting || quizEndedRef.current) ? 'opacity-50 pointer-events-none' : ''}`} data-ac-editable="true">
                 <textarea
                   value={answers[currentQuestion] || ''}
                   onChange={(e) => handleAnswerChange(e.target.value)}
                   placeholder="Type your answer here..."
-                  disabled={isViolationActive}
+                  disabled={isViolationActive || isSubmitting || quizEndedRef.current}
+                  readOnly={isSubmitting || quizEndedRef.current}
                   className={`w-full h-full min-h-[160px] sm:min-h-[180px] p-4 rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
@@ -609,9 +807,9 @@ export default function QnAPage({ onNavigate } = {}) {
             <button
               type="button"
               onClick={handlePrevious}
-              disabled={isFirstQuestion || isViolationActive}
+              disabled={isFirstQuestion || isViolationActive || isSubmitting || quizEndedRef.current}
               className={`flex items-center gap-1.5 text-xs font-bold transition-opacity
-                ${(isFirstQuestion || isViolationActive) ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'}`}
+                ${(isFirstQuestion || isViolationActive || isSubmitting || quizEndedRef.current) ? 'opacity-30 cursor-not-allowed' : 'text-[#8064C7] dark:text-[#A78BFA] hover:opacity-80 cursor-pointer'}`}
               aria-label="Previous question"
             >
               <ArrowLeft className="w-4 h-4" strokeWidth={2.2} />
@@ -620,10 +818,10 @@ export default function QnAPage({ onNavigate } = {}) {
 
             <button
               type="button"
-              onClick={isLastQuestion ? handleFinishQuiz : handleSubmitNext}
-              disabled={isSubmitting || isViolationActive}
+              onClick={isLastQuestion ? handleFinishClick : handleSubmitNext}
+              disabled={isSubmitting || isViolationActive || quizEndedRef.current}
               className={`flex items-center gap-2 h-10 px-5 sm:px-6 bg-[#8064C7] text-white text-xs font-bold rounded-xl shadow-[0_10px_25px_rgba(128,100,199,0.3)] transition-all ${
-                isViolationActive ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#8B6DD4] cursor-pointer hover:-translate-y-0.5'
+                (isViolationActive || isSubmitting || quizEndedRef.current) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#8B6DD4] cursor-pointer hover:-translate-y-0.5'
               }`}
               aria-label={isLastQuestion ? 'Finish quiz' : 'Submit answer and go to next question'}
             >
@@ -647,6 +845,62 @@ export default function QnAPage({ onNavigate } = {}) {
           onCancel={() => setShowAbortModal(false)}
           onConfirm={handleAbortConfirm}
         />
+      )}
+
+      {/* Finish Quiz Confirmation Modal */}
+      {showFinishModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+          <div
+            className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${isDarkMode
+                ? 'border-white/10 bg-[#171320] text-white'
+                : 'border-[#8064C7]/10 bg-white text-[#292530]'
+              }`}
+          >
+            <h2 className="text-xl font-black tracking-tight">
+              Finish Quiz?
+            </h2>
+
+            <p
+              className={`mt-2 text-sm leading-relaxed ${isDarkMode
+                  ? 'text-white/60'
+                  : 'text-gray-500'
+                }`}
+            >
+              Are you sure you want to finish the quiz? Your
+              answers will be submitted and you won't be able to
+              make any more changes.
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              {/* Cancel */}
+              <button
+                type="button"
+                onClick={() => setShowFinishModal(false)}
+                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${isDarkMode
+                    ? 'bg-white/10 text-white hover:bg-white/15'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                Cancel
+              </button>
+
+              {/* Confirm Finish */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFinishModal(false)
+                  handleFinishQuiz()
+                }}
+                disabled={isSubmitting}
+                className="rounded-xl bg-[#8064C7] px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? 'Submitting...'
+                  : 'Finish Quiz'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <QuizInstructionsModal

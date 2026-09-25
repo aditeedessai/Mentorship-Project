@@ -276,7 +276,22 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     return map;
   }, [passedQuestions]);
 
+  // Map question IDs to their options for MCQ correct answer resolution (Bug 4)
+  const questionOptionsMap = useMemo(() => {
+    const map = new Map();
+    passedQuestions.forEach((q, idx) => {
+      if (q.options && Array.isArray(q.options)) {
+        if (q.question_id) map.set(String(q.question_id), q.options);
+        if (q.id) map.set(String(q.id), q.options);
+        map.set(`index_${idx}`, q.options);
+      }
+    });
+    return map;
+  }, [passedQuestions]);
+
   const processedQuestions = useMemo(() => {
+    const isMcq = toBackendType(rawQuestionType) === 'mcq';
+
     return evaluations.map((item, idx) => {
       const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
       const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
@@ -374,12 +389,50 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         }
       }
 
+      // Resolve correct answer — for MCQ, format as "Letter. OptionText"
+      let resolvedCorrectAnswer = item.correct_answer || item.model_answer || item.expected_answer || 'N/A';
+      if (isMcq && resolvedCorrectAnswer && resolvedCorrectAnswer !== 'N/A') {
+        const correctLetter = String(resolvedCorrectAnswer).trim().toUpperCase();
+        // Try to find options for this question
+        const options =
+          questionOptionsMap.get(String(questionId)) ||
+          questionOptionsMap.get(`index_${idx}`) ||
+          null;
+        if (options && Array.isArray(options)) {
+          const matchedOption = options.find(
+            (opt) => opt.letter && opt.letter.toUpperCase() === correctLetter
+          );
+          if (matchedOption && matchedOption.text) {
+            resolvedCorrectAnswer = `${matchedOption.letter}. ${matchedOption.text}`;
+          }
+          // If no match found, keep the raw correct answer value as fallback
+        }
+      }
+
+      // Resolve user answer — for MCQ, format as "Letter. OptionText"
+      let resolvedUserAnswer = isSkipped ? 'Skipped' : rawAns;
+      if (isMcq && !isSkipped && rawAns) {
+        const userLetter = String(rawAns).trim().toUpperCase();
+        const options =
+          questionOptionsMap.get(String(questionId)) ||
+          questionOptionsMap.get(`index_${idx}`) ||
+          null;
+        if (options && Array.isArray(options)) {
+          const matchedOption = options.find(
+            (opt) => opt.letter && opt.letter.toUpperCase() === userLetter
+          );
+          if (matchedOption && matchedOption.text) {
+            resolvedUserAnswer = `${matchedOption.letter}. ${matchedOption.text}`;
+          }
+        }
+      }
+
       return {
         id: idx + 1,
         question_id: questionId,
         prompt: promptText,
-        userAnswer: isSkipped ? 'Skipped' : rawAns,
-        correctAnswer: item.correct_answer || item.model_answer || item.expected_answer || 'N/A',
+        userAnswer: resolvedUserAnswer,
+        correctAnswer: resolvedCorrectAnswer,
         feedback: computedFeedback,
         awardedMarks: Math.round(awardedMarks * 100) / 100,
         maxMarks: Math.round(maxMarks * 100) / 100,
@@ -389,7 +442,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         rawTopic: rawTopic || associatedTopic,
       };
     });
-  }, [evaluations, questionHintMap, rawQuestionType]);
+  }, [evaluations, questionHintMap, questionOptionsMap, rawQuestionType]);
 
   const correctCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === true).length, [processedQuestions]);
   const skippedCount = useMemo(() => processedQuestions.filter((q) => q.isSkipped).length, [processedQuestions]);

@@ -480,6 +480,7 @@ export default function MCQPage({ onNavigate } = {}) {
               attemptId,
               studySetId,
               questionType: 'mcq',
+              questions,
             },
           })
         }, 2500)
