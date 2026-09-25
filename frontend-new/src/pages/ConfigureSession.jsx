@@ -635,7 +635,7 @@ export default function ConfigureSession({
           </button>
         </header>
 
-        <div>
+        <div data-tour="quiz-area">
           {/* TITLE + MODULE BADGE */}
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-black leading-none tracking-tight sm:text-3xl">

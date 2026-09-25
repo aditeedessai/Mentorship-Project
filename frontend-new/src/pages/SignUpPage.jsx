@@ -8,6 +8,7 @@ import jojoWaving from "../assets/jojo-waving.png";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 import JojoLogo from "../components/JojoLogo";
+import { markPendingFirstTour } from "../components/tour/tourConstants";
 
 function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -119,6 +120,8 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
       }
 
       if (onSignUpSuccess && data?.user) {
+        console.log("[TOUR DEBUG] Signup successful. User ID:", data.user.id, "Email:", normalizedEmail);
+        markPendingFirstTour(data.user.id, normalizedEmail);
         onSignUpSuccess(data.user.email);
       }
     } catch (err) {

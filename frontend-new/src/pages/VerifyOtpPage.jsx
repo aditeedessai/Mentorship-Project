@@ -3,6 +3,7 @@ import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import JojoLogo from "../components/JojoLogo";
+import { markPendingFirstTour } from "../components/tour/tourConstants";
 
 const OTP_LENGTH = 8;
 const OTP_VALIDITY_SECONDS = 120;
@@ -82,6 +83,13 @@ function VerifyOtpPage({ email, type, onVerified, onBack }) {
         setError(verifyError.message || "Invalid or expired code.");
         setLoading(false);
         return;
+      }
+
+      const verifiedUserId = data?.user?.id || data?.session?.user?.id;
+      console.log("[TOUR DEBUG] Verified user ID:", verifiedUserId, "Email:", email, "Type:", type);
+
+      if (type === "signup") {
+        markPendingFirstTour(verifiedUserId, email);
       }
 
       if (onVerified) {

@@ -29,6 +29,12 @@ export default function GoogleCalendarPrompt({ onDismiss }) {
     }
   });
 
+  useEffect(() => {
+    if (dismissed) {
+      onDismiss?.();
+    }
+  }, [dismissed, onDismiss]);
+
   if (dismissed) return null;
 
   const handleDismiss = () => {

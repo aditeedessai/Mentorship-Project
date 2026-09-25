@@ -654,7 +654,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         {/* =====================================================
             1. HEADER
         ===================================================== */}
-        <div className="planner-header-animated">
+        <div data-tour="planner-area" className="planner-header-animated">
           <PlannerHeader
             onAddTask={() => setIsAddModalOpen(true)}
             onAddExam={() => setIsAddExamModalOpen(true)}

@@ -711,6 +711,7 @@ function StudySetsPage({
             HEADER
         ===================================================== */}
         <div
+          data-tour="study-sets-area"
           className={`mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"

@@ -55,12 +55,14 @@ function LoginPage({ onLogin, onSignUp, onForgotPassword, onBack }) {
       }
 
       if (onLogin && data?.user) {
+        console.log("[TOUR DEBUG] Login successful. User ID:", data.user.id, "Email:", normalizedEmail);
         onLogin({
           id: data.user.id,
           name:
             data.user.user_metadata?.full_name ||
             normalizedEmail.split("@")[0],
           email: data.user.email,
+          createdAt: data.user.created_at,
         });
       }
     } catch (err) {

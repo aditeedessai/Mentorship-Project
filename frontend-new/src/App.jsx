@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
@@ -7,6 +7,13 @@ import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
 import GoogleCalendarPrompt from "./components/GoogleCalendarPrompt";
 import JojoLogo from "./components/JojoLogo";
+import ProductTour from "./components/tour/ProductTour";
+import {
+  TOUR_STEP_SESSION_KEY,
+  isPendingFirstTour,
+  isFirstTourHandled,
+  waitForElement,
+} from "./components/tour/tourConstants";
 
 // Every page is loaded on demand (its own network chunk fetched the
 // first time currentPage/authPage actually selects it) instead of all
@@ -30,7 +37,6 @@ const MCQPage = lazy(() => import("./pages/MCQPage"));
 const QnAPage = lazy(() => import("./pages/QnAPage"));
 
 const JotLandingTest = lazy(() => import("./pages/JotLandingTest"));
-const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
@@ -211,6 +217,9 @@ function AppContent() {
   // Shown once after a new user completes the student profile.
   const [showGcalPrompt, setShowGcalPrompt] = useState(false);
 
+  // ================= PRODUCT ONBOARDING TOUR =================
+  const [isTourActive, setIsTourActive] = useState(false);
+
   // ================= SCROLL TO TOP ON PAGE SWITCH =================
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -272,6 +281,7 @@ function AppContent() {
             session.user.user_metadata?.full_name ||
             session.user.email.split("@")[0],
           email: session.user.email,
+          createdAt: session.user.created_at,
         });
         setAuthPage("app");
       }
@@ -287,6 +297,7 @@ function AppContent() {
             session.user.user_metadata?.full_name ||
             session.user.email.split("@")[0],
           email: session.user.email,
+          createdAt: session.user.created_at,
         });
         setAuthPage("app");
       } else {
@@ -358,6 +369,67 @@ function AppContent() {
 
     checkProfile();
   }, [user]);
+
+  // ================= AUTOMATIC FIRST-LOGIN TOUR TRIGGER =================
+  // Starts ONLY for genuinely new accounts that completed signup and are landing
+  // on the Dashboard for the first time. Existing users are never auto-started.
+  useEffect(() => {
+    // 1. Session must be ready and on Dashboard
+    if (!user?.id) return;
+    if (authPage !== "app" || currentPage !== "dashboard") return;
+    if (isTourActive) return;
+
+    if (hasProfile === false) {
+      console.log("[TOUR DEBUG] Waiting: Student profile not completed yet");
+      return;
+    }
+
+    if (showGcalPrompt) {
+      console.log("[TOUR DEBUG] Waiting: Google Calendar prompt is currently open");
+      return;
+    }
+
+    const handled = isFirstTourHandled(user.id);
+    const pending = isPendingFirstTour(user.id, user.email);
+
+    console.log(`[TOUR DEBUG] Current authenticated user: ${user.id} (${user.email})`);
+    console.log(`[TOUR DEBUG] Pending first-tour state: ${pending}`);
+    console.log(`[TOUR DEBUG] First-tour handled state: ${handled}`);
+
+    if (handled || !pending) {
+      return;
+    }
+
+    console.log("[TOUR DEBUG] User is eligible for automatic tour. Checking Dashboard target...");
+
+    let isCancelled = false;
+
+    // 3. Wait for the Dashboard target element ([data-tour="dashboard"]) before starting
+    const startAutomaticTour = async () => {
+      const targetElement = await waitForElement(
+        '[data-tour="dashboard"], [data-tour="dashboard-overview"]',
+        6000
+      );
+
+      if (isCancelled) return;
+
+      console.log("[TOUR DEBUG] Dashboard target found:", !!targetElement);
+
+      if (targetElement) {
+        console.log("[TOUR DEBUG] Starting automatic tour");
+        sessionStorage.setItem(TOUR_STEP_SESSION_KEY, "0");
+        setIsTourActive(true);
+      } else {
+        console.warn("[TOUR DEBUG] Dashboard target element NOT found after timeout");
+      }
+    };
+
+    startAutomaticTour();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user, hasProfile, showGcalPrompt, authPage, currentPage, isTourActive]);
 
   // ================= FETCH STUDY SETS =================
   // Only fetch study sets once we know the profile exists —
@@ -581,7 +653,11 @@ function AppContent() {
           user={user}
           onProfileComplete={() => {
             setHasProfile(true);
-            setShowGcalPrompt(true);
+            const gcalDismissed =
+              localStorage.getItem("jot_gcal_prompt_dismissed") === "true";
+            if (!gcalDismissed) {
+              setShowGcalPrompt(true);
+            }
           }}
         />
       </Suspense>
@@ -767,6 +843,11 @@ function AppContent() {
             notice={settingsNotice}
             onDismissNotice={() => setSettingsNotice("")}
             onDeleteAllStudySets={handleDeleteAllStudySets}
+            onStartTour={() => {
+              sessionStorage.setItem(TOUR_STEP_SESSION_KEY, "0");
+              handleNavigate("dashboard");
+              setIsTourActive(true);
+            }}
           />
         )}
 
@@ -786,12 +867,21 @@ function AppContent() {
     </MainAppLayout>
   );
 
-  // Wrap with optional GCal prompt overlay
+  // Wrap with optional GCal prompt overlay and ProductTour
   return (
     <>
       {mainContent}
       {showGcalPrompt && (
         <GoogleCalendarPrompt onDismiss={() => setShowGcalPrompt(false)} />
+      )}
+      {isTourActive && (
+        <ProductTour
+          isActive={isTourActive}
+          currentPage={currentPage}
+          user={user}
+          onNavigate={handleNavigate}
+          onTourEnd={() => setIsTourActive(false)}
+        />
       )}
     </>
   );
