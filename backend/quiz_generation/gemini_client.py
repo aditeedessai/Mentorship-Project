@@ -22,7 +22,8 @@ if not GEMINI_API_KEY:
     logger.warning("GEMINI_API_KEY not found in environment variables.")
 
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-3.6-flash")
-GEMINI_FALLBACK_MODEL_NAME = os.getenv("GEMINI_FALLBACK_MODEL_NAME", "gemini-2.5-flash")
+GEMINI_FALLBACK_MODEL_NAME = os.getenv("GEMINI_FALLBACK_MODEL_NAME", "gemini-3.5-flash-lite")
+GEMINI_SECONDARY_FALLBACK_MODEL_NAME = os.getenv("GEMINI_SECONDARY_FALLBACK_MODEL_NAME", "gemini-flash-lite-latest")
 GEMINI_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
 GEMINI_MAX_CONCURRENT_REQUESTS = int(os.getenv("GEMINI_MAX_CONCURRENT_REQUESTS", "5"))
 GEMINI_MAX_CONTEXT_CHARS = int(os.getenv("GEMINI_MAX_CONTEXT_CHARS", "100000"))
@@ -285,20 +286,32 @@ def generate_content_with_retry(
     - In-flight duplicate request deduplication (_DEDUPLICATOR)
     - Context size protection (truncate_text_chunks)
     - Exponential backoff retry with jitter on transient failures (429/503)
-    - Automatic transition to configured fallback model on quota exhaustion / model overload
-    - Clean exception mapping (GeminiRateLimitError, GeminiServiceUnavailableError)
+    - Production-safe multi-model fallback chain (Primary -> Fallback 1 -> Fallback 2)
+    - Preservation of primary error context (GeminiRateLimitError / GeminiServiceUnavailableError)
+    - Dynamic model chain construction with deduplication & order preservation
     - Backward compatible response object (.text)
     """
     def _execute():
-        # Enforce context length protection
         safe_prompt = truncate_text_chunks(prompt, max_chars=GEMINI_MAX_CONTEXT_CHARS)
         retries_limit = max_retries if max_retries is not None else GEMINI_MAX_RETRIES
         primary_model = model_name or os.getenv("GEMINI_MODEL_NAME", GEMINI_MODEL_NAME)
-        fallback_model = os.getenv("GEMINI_FALLBACK_MODEL_NAME", GEMINI_FALLBACK_MODEL_NAME)
+        fallback1_model = os.getenv("GEMINI_FALLBACK_MODEL_NAME", GEMINI_FALLBACK_MODEL_NAME)
+        fallback2_model = os.getenv("GEMINI_SECONDARY_FALLBACK_MODEL_NAME", GEMINI_SECONDARY_FALLBACK_MODEL_NAME)
+
+        # Construct dynamic fallback chain, removing empty values & duplicates while preserving order
+        model_chain: List[str] = []
+        for m in [primary_model, fallback1_model, fallback2_model]:
+            if m and isinstance(m, str):
+                cleaned = m.strip()
+                if cleaned and cleaned not in model_chain:
+                    model_chain.append(cleaned)
+
+        if not model_chain:
+            model_chain = ["gemini-3.6-flash"]
 
         logger.info(
-            "Starting Gemini request [task=%s, model=%s, prompt_chars=%d]",
-            task_name, primary_model, len(safe_prompt)
+            "Starting Gemini request [task=%s, primary_model=%s, chain_length=%d, prompt_chars=%d]",
+            task_name, model_chain[0], len(model_chain), len(safe_prompt)
         )
 
         acq_start = time.perf_counter()
@@ -312,7 +325,18 @@ def generate_content_with_retry(
             logger.info("Throttled by concurrency limit for %.2fs [task=%s]", acq_duration, task_name)
 
         try:
-            def _run_model_attempts(target_model: str, is_fallback: bool = False):
+            primary_exc: Optional[Exception] = None
+            primary_category: Optional[str] = None
+            primary_status: Optional[int] = None
+
+            for i, target_model in enumerate(model_chain):
+                is_fallback = (i > 0)
+                if is_fallback:
+                    logger.warning(
+                        "Switching from Gemini model '%s' to fallback model '%s'.",
+                        model_chain[i - 1], target_model
+                    )
+
                 attempt = 0
                 while attempt <= retries_limit:
                     attempt += 1
@@ -325,15 +349,71 @@ def generate_content_with_retry(
                             max_output_tokens=max_output_tokens
                         )
                         elapsed = time.perf_counter() - start_time
-                        logger.info(
-                            "Gemini request succeeded [task=%s, model=%s, duration=%.2fs, attempt=%d/%d, is_fallback=%s]",
-                            task_name, target_model, elapsed, attempt, retries_limit + 1, is_fallback
-                        )
-                        return GeminiResponseWrapper(text=raw_text), None, None
+                        if is_fallback:
+                            logger.info(
+                                "Gemini fallback model '%s' succeeded.",
+                                target_model
+                            )
+                        else:
+                            logger.info(
+                                "Gemini request succeeded [task=%s, model=%s, duration=%.2fs, attempt=%d/%d]",
+                                task_name, target_model, elapsed, attempt, retries_limit + 1
+                            )
+                        return GeminiResponseWrapper(text=raw_text)
+
                     except Exception as exc:
                         is_transient, category, status_code = is_transient_error(exc)
-                        if not is_transient or attempt > retries_limit:
-                            return None, exc, category
+
+                        if not is_fallback:
+                            primary_exc = exc
+                            primary_category = category
+                            primary_status = status_code
+                            if not is_transient:
+                                logger.warning(
+                                    "Primary Gemini model '%s' failed due to permanent error (%s/%s). Retrying not eligible.",
+                                    target_model, category, status_code
+                                )
+                                break
+                            else:
+                                logger.warning(
+                                    "Primary Gemini model '%s' failed due to %s. Retrying according to configured retry policy.",
+                                    target_model, category
+                                )
+                        else:
+                            is_404 = (
+                                status_code == 404
+                                or "404" in str(exc).lower()
+                                or "not_found" in str(exc).lower()
+                                or "not found" in str(exc).lower()
+                            )
+                            if not is_transient and not is_404:
+                                logger.warning(
+                                    "Gemini fallback model '%s' failed with permanent non-404 error %s/%s.",
+                                    target_model, category, status_code
+                                )
+                                break
+
+                        is_fallback_404 = is_fallback and (
+                            status_code == 404
+                            or "404" in str(exc).lower()
+                            or "not_found" in str(exc).lower()
+                            or "not found" in str(exc).lower()
+                        )
+
+                        if is_fallback_404:
+                            logger.warning(
+                                "Gemini fallback model '%s' failed with %s/%s. Trying next fallback if available.",
+                                target_model, category, status_code
+                            )
+                            break
+
+                        if attempt > retries_limit:
+                            if is_fallback:
+                                logger.warning(
+                                    "Gemini fallback model '%s' failed with %s/%s. Trying next fallback if available.",
+                                    target_model, category, status_code
+                                )
+                            break
 
                         # Calculate retry backoff delay
                         suggested_delay = parse_retry_after(exc)
@@ -350,44 +430,20 @@ def generate_content_with_retry(
                         )
                         time.sleep(delay)
 
-            # 1. Attempt Primary Model
-            res, last_exc, category = _run_model_attempts(primary_model, is_fallback=False)
-            if res is not None:
-                return res
+                if not is_fallback and primary_category == "permanent":
+                    break
 
-            # Determine if fallback is eligible
-            can_fallback = (
-                category in ("rate_limit", "service_unavailable")
-                and bool(fallback_model)
-                and (fallback_model != primary_model)
-            )
+            logger.error("All configured Gemini models failed after bounded retries.")
 
-            if can_fallback:
-                logger.warning(
-                    "Primary Gemini model '%s' failed due to %s [task=%s]. Switching to configured fallback model '%s'.",
-                    primary_model, category, task_name, fallback_model
-                )
-                res_fb, last_exc_fb, category_fb = _run_model_attempts(fallback_model, is_fallback=True)
-                if res_fb is not None:
-                    logger.info(
-                        "Fallback Gemini model '%s' succeeded for task '%s' after primary model '%s' failed.",
-                        fallback_model, task_name, primary_model
-                    )
-                    return res_fb
-                last_exc = last_exc_fb
-                category = category_fb
-
-            # Final failure handling after primary and fallback attempts
-            logger.error(
-                "Gemini call failed (all attempts & fallbacks exhausted) [task=%s, category=%s, status=%s]: %s",
-                task_name, category, getattr(last_exc, "code", getattr(last_exc, "status_code", "N/A")), str(last_exc)
-            )
-            if category == "rate_limit":
-                raise GeminiRateLimitError(raw_error=last_exc) from last_exc
-            elif category == "service_unavailable":
-                raise GeminiServiceUnavailableError(raw_error=last_exc) from last_exc
+            if primary_category == "rate_limit":
+                raise GeminiRateLimitError(raw_error=primary_exc) from primary_exc
+            elif primary_category == "service_unavailable":
+                raise GeminiServiceUnavailableError(raw_error=primary_exc) from primary_exc
             else:
-                raise GeminiConfigurationError(f"Gemini API configuration or request error: {str(last_exc)}", raw_error=last_exc) from last_exc
+                raise GeminiConfigurationError(
+                    f"Gemini API configuration or request error: {str(primary_exc)}",
+                    raw_error=primary_exc
+                ) from primary_exc
 
         finally:
             _CONCURRENCY_SEMAPHORE.release()
