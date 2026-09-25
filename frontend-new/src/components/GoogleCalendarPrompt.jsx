@@ -29,12 +29,6 @@ export default function GoogleCalendarPrompt({ onDismiss }) {
     }
   });
 
-  useEffect(() => {
-    if (dismissed) {
-      onDismiss?.();
-    }
-  }, [dismissed, onDismiss]);
-
   if (dismissed) return null;
 
   const handleDismiss = () => {
@@ -63,9 +57,9 @@ export default function GoogleCalendarPrompt({ onDismiss }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/40 backdrop-blur-sm">
       <div
-        className={`relative mx-4 w-full max-w-md overflow-hidden rounded-3xl border p-6 shadow-2xl transition-all sm:p-8 ${
+        className={`relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl border p-5 sm:p-8 shadow-2xl transition-all ${
           isDarkMode
             ? "border-white/10 bg-[#17131F] text-[#F3F0F8]"
             : "border-gray-200 bg-white text-[#231B33]"
@@ -86,18 +80,19 @@ export default function GoogleCalendarPrompt({ onDismiss }) {
         </button>
 
         {/* Icon */}
-        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7]">
-          <Calendar size={28} />
+        <div className="mb-4 sm:mb-5 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7]">
+          <Calendar size={24} className="sm:hidden" />
+          <Calendar size={28} className="hidden sm:block" />
         </div>
 
         {/* Heading */}
-        <h2 className="mb-2 text-xl font-black tracking-tight">
+        <h2 className="mb-1.5 sm:mb-2 text-lg sm:text-xl font-black tracking-tight">
           Connect your Google Calendar?
         </h2>
 
         {/* Description */}
         <p
-          className={`mb-6 text-sm leading-relaxed ${
+          className={`mb-5 sm:mb-6 text-xs sm:text-sm leading-relaxed ${
             isDarkMode ? "text-white/60" : "text-gray-500"
           }`}
         >
@@ -106,12 +101,12 @@ export default function GoogleCalendarPrompt({ onDismiss }) {
         </p>
 
         {/* Actions */}
-        <div className="flex flex-col gap-3 sm:flex-row-reverse">
+        <div className="flex flex-col gap-2.5 sm:gap-3 sm:flex-row-reverse">
           <button
             type="button"
             onClick={handleConnect}
             disabled={loading}
-            className="flex-1 cursor-pointer rounded-xl bg-[#8064C7] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#8B6DD4] disabled:opacity-50"
+            className="flex-1 cursor-pointer rounded-xl bg-[#8064C7] py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-md transition hover:bg-[#8B6DD4] disabled:opacity-50"
           >
             {loading ? "Connecting..." : "Connect Google Calendar"}
           </button>
@@ -119,7 +114,7 @@ export default function GoogleCalendarPrompt({ onDismiss }) {
           <button
             type="button"
             onClick={handleDismiss}
-            className={`flex-1 cursor-pointer rounded-xl py-3 text-sm font-bold transition ${
+            className={`flex-1 cursor-pointer rounded-xl py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition ${
               isDarkMode
                 ? "bg-white/10 text-white/80 hover:bg-white/20"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"

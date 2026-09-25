@@ -603,7 +603,7 @@ function DashboardPage({ user, onNavigate }) {
 
         <div
           data-tour="dashboard"
-          className={`dashboard-card-reveal is-visible dashboard-delay-1 dashboard-interactive-card relative mb-8 flex flex-col items-start justify-between gap-6 overflow-hidden rounded-3xl border p-5 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
+          className={`dashboard-card-reveal is-visible dashboard-delay-1 dashboard-interactive-card relative mb-4 sm:mb-8 flex flex-col items-start justify-between gap-4 sm:gap-6 overflow-hidden rounded-2xl sm:rounded-3xl border p-4 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
@@ -634,11 +634,11 @@ function DashboardPage({ user, onNavigate }) {
           {/* LEFT SIDE */}
 
           <div className="relative z-10">
-            <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
+            <h1 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-3xl">
               Hi {user?.name || "Alex"}!
 
               <Sparkles
-                size={24}
+                size={22}
                 className="text-[#8064C7]"
                 style={{
                   animation: "sparkleDance 2.8s ease-in-out infinite",
@@ -647,7 +647,7 @@ function DashboardPage({ user, onNavigate }) {
             </h1>
 
             <p
-              className={`mt-2 text-xs sm:text-sm font-medium ${
+              className={`mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium ${
                 isDarkMode ? "text-white/50" : "text-[#706A78]"
               }`}
             >
@@ -657,9 +657,9 @@ function DashboardPage({ user, onNavigate }) {
             <button
               data-tour="create-study-set-btn"
               onClick={() => onNavigate?.("upload")}
-              className="dashboard-main-button mt-6 flex items-center gap-2 rounded-xl bg-[#8064C7] px-5 sm:px-6 py-3 text-xs font-bold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] hover:bg-[#7357B9]"
+              className="dashboard-main-button mt-4 sm:mt-6 flex items-center gap-2 rounded-xl bg-[#8064C7] px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-bold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] hover:bg-[#7357B9]"
             >
-              <BookOpen size={17} />
+              <BookOpen size={16} />
               Create Study Set
             </button>
           </div>
@@ -668,7 +668,7 @@ function DashboardPage({ user, onNavigate }) {
               JOJO + ROTATING ELEMENTS
           ================================================= */}
 
-          <div className="relative z-10 flex h-40 w-40 sm:h-48 sm:w-48 shrink-0 items-center justify-center self-center sm:self-auto">
+          <div className="relative z-10 flex h-32 w-32 sm:h-48 sm:w-48 shrink-0 items-center justify-center self-center sm:self-auto scale-[0.80] sm:scale-100 origin-center">
 
             {/* Outer soft orbit glow */}
 
@@ -805,29 +805,29 @@ function DashboardPage({ user, onNavigate }) {
             DASHBOARD CARDS
         ================================================= */}
 
-        <div className="flex flex-col gap-6 lg:flex-row">
+        <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row">
 
           {/* LEFT COLUMN */}
-          <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <div className="dashboard-card-reveal dashboard-delay-1 dashboard-interactive-card rounded-3xl">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-6">
+            <div className="dashboard-card-reveal dashboard-delay-1 dashboard-interactive-card rounded-2xl sm:rounded-3xl">
               <TodaysTasksCard onNavigate={onNavigate} />
             </div>
 
-            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
+            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-2xl sm:rounded-3xl">
               <PerformanceGraphCard onNavigate={onNavigate} />
             </div>
           </div>
 
           {/* RIGHT COLUMN */}
-          <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-3xl">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-6">
+            <div className="dashboard-card-reveal dashboard-delay-2 dashboard-interactive-card rounded-2xl sm:rounded-3xl">
               <UpcomingExamsCard
                 onNavigate={onNavigate}
                 onSeeAll={() => onNavigate("planner")}
               />
             </div>
 
-            <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-3xl">
+            <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card rounded-2xl sm:rounded-3xl">
               <ActivityCalendarCard />
             </div>
           </div>
@@ -837,7 +837,7 @@ function DashboardPage({ user, onNavigate }) {
             MOTIVATIONAL QUOTE CARD
         ================================================= */}
 
-        <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card mt-6 sm:mt-8 rounded-3xl">
+        <div className="dashboard-card-reveal dashboard-delay-3 dashboard-interactive-card mt-4 sm:mt-8 rounded-2xl sm:rounded-3xl">
           <MotivationalTaglineCard />
         </div>
       </div>

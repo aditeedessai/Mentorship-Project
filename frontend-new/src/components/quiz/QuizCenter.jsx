@@ -44,21 +44,21 @@ export default function QuizCenter({
       </div>
 
       {/* Question Card - scrollable area */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-5 min-h-0">
-        <div className={`rounded-3xl border p-5 sm:p-7 backdrop-blur-2xl transition-all duration-300 ${
+      <div className="flex-1 overflow-y-auto px-3 sm:px-8 py-3 sm:py-5 min-h-0">
+        <div className={`rounded-2xl sm:rounded-3xl border p-4 sm:p-7 backdrop-blur-2xl transition-all duration-300 ${
           isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
         }`}>
           {/* Question Text */}
-          <h2 className="text-lg sm:text-xl font-extrabold leading-snug mb-5 tracking-tight overflow-wrap-anywhere">
+          <h2 className="text-base sm:text-xl font-extrabold leading-snug mb-4 sm:mb-5 tracking-tight overflow-wrap-anywhere">
             {question.question}
           </h2>
 
           {/* AI Hint */}
           {question?.hint && (
             <div
-              className={`mb-5 flex gap-3 rounded-2xl border p-3.5 sm:p-4 ${
+              className={`mb-4 sm:mb-5 flex gap-2.5 sm:gap-3 rounded-xl sm:rounded-2xl border p-3 sm:p-4 ${
                 isDarkMode
                   ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200"
                   : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
@@ -73,7 +73,7 @@ export default function QuizCenter({
           )}
 
           {/* Answer Options */}
-          <div className={`space-y-3 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className={`space-y-2.5 sm:space-y-3 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
             {question.options.map((option, idx) => {
               const isSelected = selectedAnswer === idx
               return (
@@ -82,7 +82,7 @@ export default function QuizCenter({
                   type="button"
                   onClick={() => onSelectAnswer(idx)}
                   disabled={disabled}
-                  className={`w-full flex items-start gap-3 py-3.5 px-4 sm:px-5 rounded-2xl border transition-all duration-200 text-left ${
+                  className={`w-full flex items-start gap-2.5 sm:gap-3 py-3 sm:py-3.5 px-3.5 sm:px-5 rounded-xl sm:rounded-2xl border transition-all duration-200 text-left ${
                     disabled ? 'cursor-not-allowed' :
                     isSelected
                       ? 'border-[#8064C7] bg-[#8064C7]/15 shadow-md scale-[1.005] cursor-pointer'

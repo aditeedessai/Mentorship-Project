@@ -197,18 +197,18 @@ function PerformanceGraphCard({ onNavigate }) {
 
   return (
     <div
-      className={`flex flex-col rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+      className={`flex flex-col rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 ${
         isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
           : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
       {/* Header */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3.5 sm:mb-4 flex flex-col gap-2.5 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <TrendingUp size={22} className="text-[#8064C7]" />
+          <TrendingUp size={20} className="text-[#8064C7] shrink-0" />
 
-          <h2 className="text-xl font-bold tracking-tight">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">
             Attempt Performance
           </h2>
         </div>
@@ -227,7 +227,7 @@ function PerformanceGraphCard({ onNavigate }) {
               id="study-set-select"
               value={selectedStudySetId}
               onChange={(e) => setSelectedStudySetId(e.target.value)}
-              className={`max-w-[200px] truncate rounded-xl border px-3 py-1.5 text-xs font-bold transition outline-none cursor-pointer ${
+              className={`max-w-[150px] sm:max-w-[200px] truncate rounded-xl border px-3 py-1.5 text-xs font-bold transition outline-none cursor-pointer ${
                 isDarkMode
                   ? "border-white/10 bg-[#1F192C] text-white focus:border-[#8064C7]"
                   : "border-gray-200 bg-white text-[#231B33] shadow-xs focus:border-[#8064C7]"

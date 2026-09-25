@@ -105,14 +105,14 @@ function TodaysTasksCard({ onNavigate }) {
 
   return (
     <div
-      className={`rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 ${
+      className={`rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 ${
         isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
           : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-xl font-bold tracking-tight">
+      <div className="mb-3.5 sm:mb-5 flex items-center justify-between">
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight">
           Today's Tasks
         </h2>
 

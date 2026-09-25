@@ -134,7 +134,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />
-        <main className="lg:ml-64 flex-1 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 min-w-0">{children}</main>
+        <main className="lg:ml-64 flex-1 px-3.5 py-4 sm:p-6 lg:p-8 pt-18 sm:pt-20 lg:pt-8 min-w-0">{children}</main>
       </div>
     </div>
   );

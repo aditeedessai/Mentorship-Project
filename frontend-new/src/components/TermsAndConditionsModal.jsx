@@ -24,7 +24,7 @@ export default function TermsAndConditionsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
@@ -34,7 +34,7 @@ export default function TermsAndConditionsModal({ isOpen, onClose }) {
 
       {/* Modal Surface */}
       <div
-        className={`relative w-[92vw] sm:w-[540px] max-h-[85vh] flex flex-col rounded-3xl p-5 sm:p-7 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
+        className={`relative w-full max-w-[540px] max-h-[85vh] flex flex-col rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
           isDarkMode
             ? "border-white/10 bg-[#17131F] text-[#F3F0F8]"
             : "border-white/80 bg-white text-[#231B33]"
@@ -44,7 +44,7 @@ export default function TermsAndConditionsModal({ isOpen, onClose }) {
         aria-labelledby="terms-modal-title"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-inherit shrink-0">
+        <div className="flex items-center justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-inherit shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
               <FileText size={20} />

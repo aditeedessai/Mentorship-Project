@@ -649,7 +649,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         }
       `}</style>
 
-      <div className="planner-page max-w-7xl mx-auto space-y-6 pb-12 transition-all duration-300">
+      <div className="planner-page max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-8 sm:pb-12 transition-all duration-300">
 
         {/* =====================================================
             1. HEADER
@@ -675,7 +675,7 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         {/* =====================================================
             3. CALENDAR + DAILY SCHEDULE
         ===================================================== */}
-        <div className="planner-main-grid grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="planner-main-grid grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
 
           {/* CALENDAR */}
           <div className="planner-calendar-animated lg:col-span-7 w-full planner-interactive">
