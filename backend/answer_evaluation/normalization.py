@@ -103,7 +103,8 @@ try:
     _dictionary_loaded = False
     try:
         # symspellpy ships a bundled frequency dictionary inside its own package.
-        with _pkg_resources.path("symspellpy", "frequency_dictionary_en_82_765.txt") as _dict_path:
+        _dict_file = _pkg_resources.files("symspellpy") / "frequency_dictionary_en_82_765.txt"
+        with _pkg_resources.as_file(_dict_file) as _dict_path:
             _dictionary_loaded = _sym_spell.load_dictionary(str(_dict_path), term_index=0, count_index=1)
     except Exception as e:  # pragma: no cover
         logger.warning("normalization.py: could not load symspellpy bundled dictionary (%s).", e)

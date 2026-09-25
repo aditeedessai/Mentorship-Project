@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useParams, matchPath } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import jojoEvaluating from '../assets/jojo-evaluating.png';
+import { formatScore } from '../utils/scoreFormat';
 
 const normalizeTypeName = (typeStr) => {
   const s = (typeStr || '').toLowerCase().trim();
@@ -87,9 +88,11 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
   const [evaluations, setEvaluations] = useState([]);
   const [revisionStatuses, setRevisionStatuses] = useState([]);
   const [error, setError] = useState(null);
+  const [reviewFilter, setReviewFilter] = useState('all');
 
   const isPracticeRetake = location.state?.isPracticeRetake || false;
   const temporaryResults = location.state?.temporaryResults;
+  const finishedAttemptIdsRef = useRef(new Set());
 
   useEffect(() => {
     if (!passedAttemptId && !isPracticeRetake) {
@@ -138,20 +141,35 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         setLoading(true);
         setError(null);
 
+        let resError = null;
+        let perfError = null;
+
         const [resData, perfData, evalsData, revStatus] = await Promise.all([
-          fetchResults(passedAttemptId).catch(() => null),
-          fetchPerformance(passedAttemptId).catch(() => null),
-          fetchEvaluations(passedAttemptId).catch(() => []),
+          fetchResults(passedAttemptId).catch((err) => {
+            resError = err;
+            return null;
+          }),
+          fetchPerformance(passedAttemptId).catch((err) => {
+            perfError = err;
+            return null;
+          }),
+          fetchEvaluations(passedAttemptId),
           studySetId ? fetchRevisionStatus(studySetId).catch(() => null) : Promise.resolve(null),
         ]);
 
-        if (!isMounted) return;
+        const targetData = perfData || resData;
 
-        if (!perfData && !resData) {
-          throw new Error(`Attempt with ID '${passedAttemptId}' not found`);
+        if (!targetData) {
+          throw perfError || resError || new Error(`Attempt with ID '${passedAttemptId}' not found`);
         }
 
-        setPerformanceData(perfData || resData);
+        if (targetData.status === 'in_progress' && !targetData.is_attempt_complete) {
+          setError('This attempt is currently in progress. Please complete the quiz before viewing its results.');
+          setEvaluations([]);
+          return;
+        }
+
+        setPerformanceData(targetData);
 
         let rawList = [];
         if (Array.isArray(evalsData)) {
@@ -171,7 +189,15 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
           setRevisionStatuses(revStatus.statuses);
         }
 
-        finishAttempt(passedAttemptId).catch(() => {});
+        if (
+          targetData.status === 'in_progress' &&
+          targetData.is_attempt_complete &&
+          passedAttemptId &&
+          !finishedAttemptIdsRef.current.has(passedAttemptId)
+        ) {
+          finishedAttemptIdsRef.current.add(passedAttemptId);
+          finishAttempt(passedAttemptId).catch(() => {});
+        }
       } catch (err) {
         console.error('Error loading attempt results:', err);
         if (isMounted) {
@@ -251,7 +277,22 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
     return map;
   }, [passedQuestions]);
 
+  // Map question IDs to their options for MCQ correct answer resolution (Bug 4)
+  const questionOptionsMap = useMemo(() => {
+    const map = new Map();
+    passedQuestions.forEach((q, idx) => {
+      if (q.options && Array.isArray(q.options)) {
+        if (q.question_id) map.set(String(q.question_id), q.options);
+        if (q.id) map.set(String(q.id), q.options);
+        map.set(`index_${idx}`, q.options);
+      }
+    });
+    return map;
+  }, [passedQuestions]);
+
   const processedQuestions = useMemo(() => {
+    const isMcq = toBackendType(rawQuestionType) === 'mcq';
+
     return evaluations.map((item, idx) => {
       const rawAns = item.student_answer ?? item.user_answer ?? item.answer;
       const isSkipped = rawAns === null || rawAns === undefined || String(rawAns).trim() === '';
@@ -280,13 +321,120 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
       const associatedTopic = formatTopicName(rawTopic);
 
+      const rawMissedList = Array.isArray(item.missed_concepts)
+        ? item.missed_concepts
+        : Array.isArray(item.missed)
+        ? item.missed
+        : [];
+
+      const cleanedMissedConcepts = rawMissedList.filter(
+        (concept) =>
+          typeof concept === 'string' &&
+          concept.trim() !== '' &&
+          !concept.toLowerCase().includes('skipped')
+      );
+
+      const uniqueConceptMap = new Map();
+      cleanedMissedConcepts.forEach((c) => {
+        const key = c.trim().toLowerCase();
+        if (!uniqueConceptMap.has(key)) {
+          uniqueConceptMap.set(key, c.trim());
+        }
+      });
+      const uniqueConcepts = Array.from(uniqueConceptMap.values());
+
+      const multiWordConcepts = uniqueConcepts.filter((c) => c.split(/\s+/).length > 1);
+      const singleWordConcepts = uniqueConcepts.filter((c) => c.split(/\s+/).length === 1);
+
+      const multiWordTokensSet = new Set();
+      multiWordConcepts.forEach((m) => {
+        const tokens = m.toLowerCase().match(/[a-z0-9\-]+/gi) || [];
+        tokens.forEach((t) => multiWordTokensSet.add(t));
+      });
+
+      const filteredSingleWord = singleWordConcepts.filter(
+        (s) => !multiWordTokensSet.has(s.toLowerCase())
+      );
+
+      const filteredMultiWord = multiWordConcepts.filter((p) => {
+        const pTokens = p.toLowerCase().match(/[a-z0-9\-]+/gi) || [];
+        return !multiWordConcepts.some((other) => {
+          if (other.toLowerCase() === p.toLowerCase()) return false;
+          const otherTokens = other.toLowerCase().match(/[a-z0-9\-]+/gi) || [];
+          if (pTokens.length >= otherTokens.length) return false;
+          for (let i = 0; i <= otherTokens.length - pTokens.length; i++) {
+            let match = true;
+            for (let j = 0; j < pTokens.length; j++) {
+              if (otherTokens[i + j] !== pTokens[j]) {
+                match = false;
+                break;
+              }
+            }
+            if (match) return true;
+          }
+          return false;
+        });
+      });
+
+      const validMissedConcepts = [...filteredMultiWord, ...filteredSingleWord].slice(0, 5);
+
+      let computedFeedback = '';
+      if (isSkipped) {
+        computedFeedback = 'Question skipped. Review this topic in your study material to reinforce the concept.';
+      } else if (isCorrect) {
+        computedFeedback = 'Great job! Your answer is correct.';
+      } else {
+        computedFeedback = 'Your answer is incorrect. Review this topic in your study material and compare it with the expected solution.';
+        if (validMissedConcepts.length > 0) {
+          computedFeedback += `\nMissed key concepts: ${validMissedConcepts.join(', ')}`;
+        }
+      }
+
+      // Resolve correct answer — for MCQ, format as "Letter. OptionText"
+      let resolvedCorrectAnswer = item.correct_answer || item.model_answer || item.expected_answer || 'N/A';
+      if (isMcq && resolvedCorrectAnswer && resolvedCorrectAnswer !== 'N/A') {
+        const correctLetter = String(resolvedCorrectAnswer).trim().toUpperCase();
+        // Try to find options for this question
+        const options =
+          questionOptionsMap.get(String(questionId)) ||
+          questionOptionsMap.get(`index_${idx}`) ||
+          null;
+        if (options && Array.isArray(options)) {
+          const matchedOption = options.find(
+            (opt) => opt.letter && opt.letter.toUpperCase() === correctLetter
+          );
+          if (matchedOption && matchedOption.text) {
+            resolvedCorrectAnswer = `${matchedOption.letter}. ${matchedOption.text}`;
+          }
+          // If no match found, keep the raw correct answer value as fallback
+        }
+      }
+
+      // Resolve user answer — for MCQ, format as "Letter. OptionText"
+      let resolvedUserAnswer = isSkipped ? 'Skipped' : rawAns;
+      if (isMcq && !isSkipped && rawAns) {
+        const userLetter = String(rawAns).trim().toUpperCase();
+        const options =
+          questionOptionsMap.get(String(questionId)) ||
+          questionOptionsMap.get(`index_${idx}`) ||
+          null;
+        if (options && Array.isArray(options)) {
+          const matchedOption = options.find(
+            (opt) => opt.letter && opt.letter.toUpperCase() === userLetter
+          );
+          if (matchedOption && matchedOption.text) {
+            resolvedUserAnswer = `${matchedOption.letter}. ${matchedOption.text}`;
+          }
+        }
+      }
+
       return {
         id: idx + 1,
         question_id: questionId,
         prompt: promptText,
-        userAnswer: isSkipped ? 'Skipped' : rawAns,
-        correctAnswer: item.correct_answer || item.model_answer || item.expected_answer || 'N/A',
-        feedback: item.feedback && String(item.feedback).trim() !== '' ? item.feedback : 'No feedback available.',
+        userAnswer: resolvedUserAnswer,
+        correctAnswer: resolvedCorrectAnswer,
+        feedback: computedFeedback,
         awardedMarks: Math.round(awardedMarks * 100) / 100,
         maxMarks: Math.round(maxMarks * 100) / 100,
         isCorrect,
@@ -295,11 +443,33 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
         rawTopic: rawTopic || associatedTopic,
       };
     });
-  }, [evaluations, questionHintMap, rawQuestionType]);
+  }, [evaluations, questionHintMap, questionOptionsMap, rawQuestionType]);
 
   const correctCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === true).length, [processedQuestions]);
   const skippedCount = useMemo(() => processedQuestions.filter((q) => q.isSkipped).length, [processedQuestions]);
   const wrongCount = useMemo(() => processedQuestions.filter((q) => q.isCorrect === false && !q.isSkipped).length, [processedQuestions]);
+
+  const filteredQuestions = useMemo(() => {
+    if (reviewFilter === 'right') {
+      return processedQuestions.filter(
+        (q) => q.isCorrect === true && !q.isSkipped
+      );
+    }
+
+    if (reviewFilter === 'wrong') {
+      return processedQuestions.filter(
+        (q) => q.isCorrect === false && !q.isSkipped
+      );
+    }
+
+    if (reviewFilter === 'skipped') {
+      return processedQuestions.filter(
+        (q) => q.isSkipped === true
+      );
+    }
+
+    return processedQuestions;
+  }, [processedQuestions, reviewFilter]);
 
   const weakTopics = useMemo(() => {
     const perfTopics = performanceData?.topics || [];
@@ -519,30 +689,30 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
       </div>
 
       {/* 2. Hero Performance Summary Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-6 text-white shadow-xl sm:p-8">
-        <div className="relative z-10 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-[#8064C7] p-4 sm:p-8 text-white shadow-xl">
+        <div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:gap-6 lg:flex-row lg:items-center">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 font-mono text-xs font-black uppercase tracking-wider text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-0.5 sm:px-3.5 sm:py-1 font-mono text-[11px] sm:text-xs font-black uppercase tracking-wider text-white">
                 <Sparkles size={14} />
                 {questionTypeName} RESULTS
               </span>
 
               {isPracticeRetake && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/30 px-3.5 py-1 font-mono text-xs font-black uppercase tracking-wider text-amber-100 shadow-xs">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/30 px-3 py-0.5 sm:px-3.5 sm:py-1 font-mono text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-100 shadow-xs">
                   <RotateCcw size={13} />
                   Practice Retake
                 </span>
               )}
 
               {overallRemark && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/30 px-3.5 py-1 text-xs font-bold text-white">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/30 px-3 py-0.5 sm:px-3.5 sm:py-1 text-[11px] sm:text-xs font-bold text-white">
                   Remark: {overallRemark}
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
+            <h1 className="text-xl font-black tracking-tight sm:text-3xl lg:text-4xl">
               {questionTypeName} Quiz Evaluation
             </h1>
 
@@ -551,9 +721,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             </p>
           </div>
 
-          <div className="flex w-full flex-wrap items-center justify-around gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md sm:justify-center sm:gap-5 sm:p-5 lg:w-auto">
+          <div className="flex w-full flex-wrap items-center justify-around gap-2.5 sm:gap-5 rounded-xl sm:rounded-2xl border border-white/20 bg-white/10 p-3 sm:p-5 backdrop-blur-md sm:justify-center lg:w-auto">
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black text-white sm:text-3xl">
+              <div className="text-xl font-black text-white sm:text-3xl">
                 {percentage}%
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200 sm:text-xs">
@@ -564,7 +734,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black text-emerald-300 sm:text-3xl">
+              <div className="text-xl font-black text-emerald-300 sm:text-3xl">
                 {correctCount}
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 sm:text-xs">
@@ -575,7 +745,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black text-rose-300 sm:text-3xl">
+              <div className="text-xl font-black text-rose-300 sm:text-3xl">
                 {wrongCount}
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-200 sm:text-xs">
@@ -588,7 +758,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                 <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
                 <div className="px-2 text-center sm:px-3">
-                  <div className="text-2xl font-black text-amber-300 sm:text-3xl">
+                  <div className="text-xl font-black text-amber-300 sm:text-3xl">
                     {skippedCount}
                   </div>
                   <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200 sm:text-xs">
@@ -601,10 +771,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black sm:text-3xl">
-                {totalScore}{' '}
+              <div className="text-xl font-black sm:text-3xl">
+                {formatScore(totalScore)}{' '}
                 <span className="text-xs font-normal text-purple-200">
-                  / {maxScore}
+                  / {formatScore(maxScore)}
                 </span>
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200 sm:text-xs">
@@ -633,29 +803,78 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setReviewFilter('all')}
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                reviewFilter === 'all'
+                  ? isDarkMode
+                    ? 'border-[#8064C7] bg-[#8064C7]/30 text-white shadow-xs'
+                    : 'border-[#8064C7] bg-[#8064C7] text-white shadow-xs'
+                  : isDarkMode
+                  ? 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                  : 'border-gray-200 bg-white/80 text-gray-700 hover:bg-white hover:text-gray-900'
+              }`}
+            >
+              All
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter('right')}
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                reviewFilter === 'right'
+                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs'
+                  : isDarkMode
+                  ? 'border-emerald-500/30 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
               {correctCount} Right
-            </span>
-            <span
-              className={`rounded-lg border px-2.5 py-1 text-xs font-bold ${
-                isDarkMode
-                  ? "border-rose-500/30 bg-rose-500/20 text-rose-400"
-                  : "border-red-200 bg-red-50 text-red-600"
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReviewFilter('wrong')}
+              className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                reviewFilter === 'wrong'
+                  ? 'border-rose-500 bg-rose-500 text-white shadow-xs'
+                  : isDarkMode
+                  ? 'border-rose-500/30 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30'
+                  : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
               }`}
             >
               {wrongCount} Wrong
-            </span>
+            </button>
+
             {skippedCount > 0 && (
-              <span className="rounded-lg border border-amber-500/30 bg-amber-500/20 px-2.5 py-1 text-xs font-bold text-amber-400">
+              <button
+                type="button"
+                onClick={() => setReviewFilter('skipped')}
+                className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-bold transition-all ${
+                  reviewFilter === 'skipped'
+                    ? 'border-amber-500 bg-amber-500 text-white shadow-xs'
+                    : 'border-amber-500/30 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                }`}
+              >
                 {skippedCount} Skipped
-              </span>
+              </button>
             )}
           </div>
         </div>
 
         <div className="space-y-4">
-          {processedQuestions.map((q) => (
+          {processedQuestions.length === 0 ? (
+            <div
+              className={`rounded-2xl border p-8 text-center text-xs font-semibold ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-white/60' : 'border-gray-200 bg-gray-50 text-gray-500'
+              }`}
+            >
+              No detailed question evaluations available.
+            </div>
+          ) : filteredQuestions.length > 0 ? (
+            filteredQuestions.map((q) => (
             <div
               key={q.id}
               className={`space-y-3 rounded-2xl border p-5 backdrop-blur-xl transition-all ${
@@ -695,10 +914,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                   )}
 
                   {q.isSkipped
-                    ? `Skipped (0/${q.maxMarks} Marks)`
+                    ? `Skipped (${formatScore(0)}/${formatScore(q.maxMarks)} Marks)`
                     : q.isCorrect === true
-                    ? `Correct (+${q.awardedMarks}/${q.maxMarks} Marks)`
-                    : `Incorrect (${q.awardedMarks}/${q.maxMarks} Marks)`}
+                    ? `Correct (+${formatScore(q.awardedMarks)}/${formatScore(q.maxMarks)} Marks)`
+                    : `Incorrect (${formatScore(q.awardedMarks)}/${formatScore(q.maxMarks)} Marks)`}
                 </span>
               </div>
 
@@ -706,7 +925,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
 
               <div className="grid grid-cols-1 gap-3 pt-1 text-xs font-medium sm:grid-cols-2">
                 <div
-                  className={`rounded-xl border p-3 ${
+                  className={`min-w-0 rounded-xl border p-3 ${
                     isDarkMode ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-gray-50'
                   }`}
                 >
@@ -714,7 +933,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                     Your Submitted Answer
                   </span>
                   <span
-                    className={
+                    className={`block break-words ${
                       q.isSkipped
                         ? 'font-bold italic text-amber-400'
                         : q.isCorrect === true
@@ -722,14 +941,14 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                         : isDarkMode
                         ? 'font-bold text-rose-400'
                         : 'font-bold text-red-600'
-                    }
+                    }`}
                   >
                     {q.userAnswer}
                   </span>
                 </div>
 
                 <div
-                  className={`rounded-xl border p-3 ${
+                  className={`min-w-0 rounded-xl border p-3 ${
                     isDarkMode
                       ? 'border-[#8064C7]/30 bg-[#8064C7]/15'
                       : 'border-[#8064C7]/20 bg-purple-50'
@@ -738,22 +957,31 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                   <span className="mb-1 block text-[10px] font-bold uppercase text-[#8064C7] dark:text-[#A78BFA]">
                     Correct / Expected Solution
                   </span>
-                  <span className="font-bold">{q.correctAnswer}</span>
+                  <span className="block break-words font-bold">{q.correctAnswer}</span>
                 </div>
               </div>
 
               <div
-                className={`rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs ${
+                className={`min-w-0 rounded-xl border-l-4 border-l-[#8064C7] p-3 text-xs break-words whitespace-pre-line ${
                   isDarkMode ? 'bg-white/5' : 'bg-purple-50/50'
                 }`}
               >
                 <span className="font-bold text-[#8064C7] dark:text-[#A78BFA]">
-                  Explanation & Feedback:{' '}
+                  Feedback:{' '}
                 </span>
                 {q.feedback}
               </div>
             </div>
-          ))}
+          ))
+          ) : (
+            <div
+              className={`rounded-2xl border p-8 text-center text-xs font-semibold ${
+                isDarkMode ? 'border-white/10 bg-white/5 text-white/60' : 'border-gray-200 bg-gray-50 text-gray-500'
+              }`}
+            >
+              No questions match this filter.
+            </div>
+          )}
         </div>
       </div>
 

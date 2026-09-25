@@ -3,6 +3,9 @@ import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
+import { validatePasswordStrength } from "../utils/passwordValidation";
+import { createAuditLog } from "../services/api";
+import JojoLogo from "../components/JojoLogo";
 
 function ResetPasswordPage({ onComplete }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -19,6 +22,17 @@ function ResetPasswordPage({ onComplete }) {
     e.preventDefault();
     setError("");
 
+    // Validate password strength BEFORE hashing
+    const validation = validatePasswordStrength(password);
+    if (!validation.isValid) {
+      setError(
+        "Password does not meet the requirements: " +
+          validation.errors.join(", ") +
+          "."
+      );
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -28,10 +42,15 @@ function ResetPasswordPage({ onComplete }) {
 
     try {
       // 1. Get the authenticated user from the active recovery session
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
       if (userError || !user?.email) {
-        setError("Password reset session is invalid or has expired. Please request a new link.");
+        setError(
+          "Password reset session is invalid or has expired. Please request a new link."
+        );
         setLoading(false);
         return;
       }
@@ -39,7 +58,10 @@ function ResetPasswordPage({ onComplete }) {
       const normalizedEmail = user.email.trim().toLowerCase();
 
       // 2. Pre-hash the new password with the user's normalized email salt
-      const clientHashedPassword = await hashPasswordClient(password, normalizedEmail);
+      const clientHashedPassword = await hashPasswordClient(
+        password,
+        normalizedEmail
+      );
 
       // 3. Update the password on Supabase
       const { data, error: updateError } = await supabase.auth.updateUser({
@@ -50,6 +72,16 @@ function ResetPasswordPage({ onComplete }) {
         setError(updateError.message || "Failed to update password.");
         setLoading(false);
         return;
+      }
+
+      // 4. Create an audit record after the password is successfully changed
+      try {
+        await createAuditLog("PASSWORD_CHANGED");
+      } catch (auditError) {
+        console.error(
+          "Failed to create password-change audit log:",
+          auditError
+        );
       }
 
       if (onComplete) {
@@ -65,7 +97,9 @@ function ResetPasswordPage({ onComplete }) {
   return (
     <div
       className={`relative flex min-h-screen items-center justify-center p-4 sm:p-6 transition-colors duration-500 font-sans ${
-        isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+        isDarkMode
+          ? "bg-[#0E0B15] text-[#F5F2FA]"
+          : "bg-[#F6F3FC] text-[#292530]"
       }`}
     >
       {/* Background Glows */}
@@ -98,13 +132,12 @@ function ResetPasswordPage({ onComplete }) {
 
       {/* Glass Card Container */}
       <div
-        className={`grid w-full max-w-5xl overflow-hidden rounded-[24px] sm:rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 mt-12 sm:mt-0 ${
+        className={`grid w-full max-w-5xl overflow-hidden rounded-2xl sm:rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 mt-4 sm:mt-0 ${
           isDarkMode
             ? "border-white/10 bg-[#17131F]/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
             : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
         }`}
       >
-
         {/* ================= LEFT SECTION ================= */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#8064C7] via-[#7455B8] to-[#5D4298] p-12 text-white lg:flex">
           <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
@@ -112,6 +145,7 @@ function ResetPasswordPage({ onComplete }) {
 
           <div className="relative z-10">
             <div className="mb-10 flex items-center gap-3">
+              <JojoLogo className="h-9 w-auto" />
               <div className="text-4xl font-black tracking-[-0.08em] text-white">
                 Jot<span className="text-purple-200">.</span>
               </div>
@@ -127,7 +161,8 @@ function ResetPasswordPage({ onComplete }) {
             </h1>
 
             <p className="mt-6 max-w-md text-sm leading-6 text-purple-100/90">
-              Choose a strong, memorable password to secure your JOT account and continue studying.
+              Choose a strong, memorable password to secure your JOT account
+              and continue studying.
             </p>
           </div>
 
@@ -138,24 +173,36 @@ function ResetPasswordPage({ onComplete }) {
         </div>
 
         {/* ================= RIGHT SECTION ================= */}
-        <div className="p-8 sm:p-12 lg:p-14">
-          <div className="mb-7 flex items-center gap-2 lg:hidden">
-            <div className="text-3xl font-black tracking-[-0.08em]">
+        <div className="p-4 sm:p-12 lg:p-14">
+          <div className="mb-4 sm:mb-7 flex items-center gap-2 lg:hidden">
+            <JojoLogo className="h-7 w-auto" />
+            <div className="text-2xl sm:text-3xl font-black tracking-[-0.08em]">
               Jot<span className="text-[#8064C7]">.</span>
             </div>
           </div>
 
-          <div className="mb-7">
-            <h2 className="text-3xl font-black tracking-tight">Create a new password</h2>
-            <p className={`mt-2 text-sm ${isDarkMode ? "text-white/55" : "text-[#706A78]"}`}>
-              Your identity is verified. Enter a new password for your account.
+          <div className="mb-4 sm:mb-7">
+            <h2 className="text-xl sm:text-3xl font-black tracking-tight">
+              Create a new password
+            </h2>
+            <p
+              className={`mt-1 sm:mt-2 text-xs sm:text-sm ${
+                isDarkMode ? "text-white/55" : "text-[#706A78]"
+              }`}
+            >
+              Your identity is verified. Enter a new password for your
+              account.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {/* New Password */}
             <div>
-              <label className={`mb-2 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
+              <label
+                className={`mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider ${
+                  isDarkMode ? "text-white/70" : "text-[#292530]"
+                }`}
+              >
                 New Password
               </label>
               <div className="relative">
@@ -165,7 +212,7 @@ function ResetPasswordPage({ onComplete }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition-all ${
+                  className={`w-full rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 pr-11 text-sm outline-none transition-all ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
                       : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
@@ -175,17 +222,62 @@ function ResetPasswordPage({ onComplete }) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
-                    isDarkMode ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-[#292530]"
+                    isDarkMode
+                      ? "text-white/40 hover:text-white"
+                      : "text-gray-400 hover:text-[#292530]"
                   }`}
                 >
-                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                  {showPassword ? (
+                    <EyeOff size={19} />
+                  ) : (
+                    <Eye size={19} />
+                  )}
                 </button>
               </div>
+
+              {/* Password Requirements Checklist */}
+              {password.length > 0 && (() => {
+                const v = validatePasswordStrength(password);
+                return (
+                  <div
+                    className={`mt-2 space-y-1 rounded-lg px-3 py-2 text-[11px] font-medium ${
+                      isDarkMode
+                        ? "bg-white/5 text-white/60"
+                        : "bg-gray-50 text-gray-500"
+                    }`}
+                  >
+                    <div className={v.requirements.minLength ? "text-green-400" : ""}>
+                      {v.requirements.minLength ? "✓" : "○"} At least 8 characters
+                    </div>
+                    <div className={v.requirements.uppercase ? "text-green-400" : ""}>
+                      {v.requirements.uppercase ? "✓" : "○"} Uppercase letter
+                    </div>
+                    <div className={v.requirements.lowercase ? "text-green-400" : ""}>
+                      {v.requirements.lowercase ? "✓" : "○"} Lowercase letter
+                    </div>
+                    <div className={v.requirements.number ? "text-green-400" : ""}>
+                      {v.requirements.number ? "✓" : "○"} Number
+                    </div>
+                    <div className={v.requirements.specialChar ? "text-green-400" : ""}>
+                      {v.requirements.specialChar ? "✓" : "○"} Special character (!@#$%...)
+                    </div>
+                    {!v.requirements.notCommon && (
+                      <div className="text-red-400">
+                        ✗ Password is too common
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className={`mb-2 block text-xs font-bold uppercase tracking-wider ${isDarkMode ? "text-white/70" : "text-[#292530]"}`}>
+              <label
+                className={`mb-2 block text-xs font-bold uppercase tracking-wider ${
+                  isDarkMode ? "text-white/70" : "text-[#292530]"
+                }`}
+              >
                 Confirm New Password
               </label>
               <div className="relative">
@@ -195,7 +287,7 @@ function ResetPasswordPage({ onComplete }) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition-all ${
+                  className={`w-full rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 pr-11 text-sm outline-none transition-all ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
                       : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
@@ -203,12 +295,20 @@ function ResetPasswordPage({ onComplete }) {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onClick={() =>
+                    setShowConfirmPassword(!showConfirmPassword)
+                  }
                   className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
-                    isDarkMode ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-[#292530]"
+                    isDarkMode
+                      ? "text-white/40 hover:text-white"
+                      : "text-gray-400 hover:text-[#292530]"
                   }`}
                 >
-                  {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                  {showConfirmPassword ? (
+                    <EyeOff size={19} />
+                  ) : (
+                    <Eye size={19} />
+                  )}
                 </button>
               </div>
             </div>
@@ -222,7 +322,7 @@ function ResetPasswordPage({ onComplete }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#8064C7] py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] shadow-[0_15px_35px_rgba(128,100,199,0.35)] disabled:opacity-50"
+              className="w-full rounded-xl bg-[#8064C7] py-2.5 sm:py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] shadow-[0_15px_35px_rgba(128,100,199,0.35)] disabled:opacity-50"
             >
               {loading ? "Updating..." : "Update Password →"}
             </button>
@@ -233,4 +333,4 @@ function ResetPasswordPage({ onComplete }) {
   );
 }
 
-export default ResetPasswordPage;
+export default ResetPasswordPage;

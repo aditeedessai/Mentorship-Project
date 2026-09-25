@@ -69,6 +69,26 @@ _STOPWORDS = {
     "who", "how", "into", "before", "after", "during", "while",
 }
 
+_CONCEPT_FILLER_WORDS = {
+    "used", "use", "using", "uses", "make", "makes", "made", "making",
+    "provides", "providing", "provide", "provided", "hides", "hide", "hiding",
+    "convert", "converts", "converting", "converted", "way", "ways", "main",
+    "different", "system", "systems", "process", "processes", "keeping", "keeps",
+    "kept", "allows", "allow", "allowing", "gives", "give", "giving", "shows",
+    "show", "showing", "type", "types", "form", "forms", "based", "base",
+    "case", "cases", "example", "examples", "means", "meaning", "called",
+    "known", "help", "helps", "helping", "work", "works", "working",
+    "involves", "involve", "involving", "defined", "define", "defines",
+    "includes", "include", "including", "included", "holds", "hold", "holding",
+    "takes", "take", "taking", "taken", "getting", "get", "gets",
+    "many", "some", "few", "several", "various", "multiple", "single",
+    "all", "every", "each", "other", "another", "such", "same", "particular",
+    "specific", "general", "overall", "certain", "important", "key",
+    "across", "through", "between", "among", "within", "under", "over",
+    "against", "along", "around", "beyond", "without", "throughout",
+}
+_ALL_CONCEPT_STOPWORDS = _STOPWORDS | _CONCEPT_FILLER_WORDS
+
 # Requires a materially closer embedding match before crediting a concept
 # as "covered" - topically-related-but-wrong words ("velocity" vs
 # "acceleration") should NOT count as a covered concept just because they
@@ -136,19 +156,114 @@ def has_causal_connector(text: str) -> bool:
     return any(c in lower for c in _EXPLANATORY_CONNECTORS)
 
 
-def extract_key_concepts(reference_answer: str, max_bigrams: int = 6) -> list:
-    """Extracts key terms and bigram phrases from the reference answer."""
-    words = re.findall(r"[a-zA-Z][a-zA-Z\-]*", reference_answer.lower())
-    unigrams = {w for w in words if w not in _STOPWORDS and len(w) > 2}
+def extract_key_concepts(reference_answer: str, max_concepts: int = 5) -> list:
+    """
+    Extracts concise, meaningful key terms and multi-word concepts from a reference answer.
 
-    bigrams = set()
-    for i in range(len(words) - 1):
-        w1, w2 = words[i], words[i + 1]
-        if w1 not in _STOPWORDS and w2 not in _STOPWORDS and len(w1) > 2 and len(w2) > 2:
-            bigrams.add(f"{w1} {w2}")
+    Rules enforced:
+    1. Multi-word phrases (bigrams/trigrams/n-grams) take precedence over individual constituent words.
+    2. Single-word unigrams that are already part of an extracted multi-word concept are suppressed.
+    3. Generic/filler words (e.g., 'provides', 'hides', 'using', 'system') are filtered out.
+    4. Meaningful standalone technical/domain unigrams (e.g., 'encapsulation', 'polymorphism') are retained.
+    5. Duplicate concepts are deduplicated case-insensitively.
+    6. Final result is capped at `max_concepts` (default 5).
+    """
+    if not reference_answer or not reference_answer.strip():
+        return []
 
-    top_bigrams = sorted(bigrams, key=len, reverse=True)[:max_bigrams]
-    return top_bigrams + sorted(unigrams)
+    # Split reference answer into clauses by punctuation (commas, semicolons, periods, colons, etc.)
+    clauses = re.split(r"[,;:\.\?\!\n]+", reference_answer)
+
+    candidate_phrases = []
+
+    for clause in clauses:
+        words = re.findall(r"[a-zA-Z][a-zA-Z\-]*", clause.lower())
+        if not words:
+            continue
+
+        # Pure non-stopword contiguous n-grams (lengths 4, 3, 2)
+        for length in range(4, 1, -1):
+            for i in range(len(words) - length + 1):
+                w_seq = words[i:i+length]
+                if all(w not in _ALL_CONCEPT_STOPWORDS and len(w) > 2 for w in w_seq):
+                    candidate_phrases.append(" ".join(w_seq))
+
+        # Conjunction-joined 4-grams (e.g. getter AND setter methods)
+        for i in range(len(words) - 3):
+            w1, w2, w3, w4 = words[i], words[i+1], words[i+2], words[i+3]
+            if (w1 not in _ALL_CONCEPT_STOPWORDS and w3 not in _ALL_CONCEPT_STOPWORDS and w4 not in _ALL_CONCEPT_STOPWORDS
+                    and len(w1) > 2 and len(w3) > 2 and len(w4) > 2 and w2 in {"and", "or"}):
+                is_prev_non_stop = i > 0 and words[i-1] not in _ALL_CONCEPT_STOPWORDS
+                if not is_prev_non_stop:
+                    candidate_phrases.append(f"{w1} {w2} {w3} {w4}")
+
+        # Conjunction-joined 3-grams (e.g. getter AND setter)
+        for i in range(len(words) - 2):
+            w1, w2, w3 = words[i], words[i+1], words[i+2]
+            if (w1 not in _ALL_CONCEPT_STOPWORDS and w3 not in _ALL_CONCEPT_STOPWORDS
+                    and len(w1) > 2 and len(w3) > 2 and w2 in {"and", "or", "of"}):
+                is_prev_non_stop = i > 0 and words[i-1] not in _ALL_CONCEPT_STOPWORDS
+                is_next_non_stop = i < len(words) - 3 and words[i+3] not in _ALL_CONCEPT_STOPWORDS
+                if not is_prev_non_stop and not is_next_non_stop:
+                    candidate_phrases.append(f"{w1} {w2} {w3}")
+
+    seen_phrases = set()
+    unique_phrases = []
+    for phrase in candidate_phrases:
+        p_lower = phrase.lower()
+        if p_lower not in seen_phrases:
+            seen_phrases.add(p_lower)
+            unique_phrases.append(phrase)
+
+    # Sort unique phrases by word length descending so longer complete phrases take precedence
+    unique_phrases.sort(key=lambda p: len(p.split()), reverse=True)
+
+    filtered_multi_word = []
+    for p in unique_phrases:
+        p_tokens = p.lower().split()
+        is_subphrase = False
+        for kept in filtered_multi_word:
+            kept_tokens = kept.lower().split()
+            if len(p_tokens) <= len(kept_tokens):
+                for k in range(len(kept_tokens) - len(p_tokens) + 1):
+                    if kept_tokens[k:k+len(p_tokens)] == p_tokens:
+                        is_subphrase = True
+                        break
+            if is_subphrase:
+                break
+        if not is_subphrase:
+            filtered_multi_word.append(p)
+
+    multi_word_tokens = set()
+    for p in filtered_multi_word:
+        for token in p.lower().split():
+            multi_word_tokens.add(token)
+
+    all_words = re.findall(r"[a-zA-Z][a-zA-Z\-]*", reference_answer.lower())
+    raw_unigrams = []
+    for w in all_words:
+        if (w not in _ALL_CONCEPT_STOPWORDS and len(w) > 2 
+                and w not in multi_word_tokens):
+            raw_unigrams.append(w)
+
+    seen_unigrams = set()
+    standalone_unigrams = []
+    for u in raw_unigrams:
+        if u not in seen_unigrams:
+            seen_unigrams.add(u)
+            standalone_unigrams.append(u)
+
+    all_concepts = filtered_multi_word + standalone_unigrams
+
+    final_concepts = []
+    final_seen = set()
+    for c in all_concepts:
+        c_lower = c.lower()
+        if c_lower not in final_seen:
+            final_seen.add(c_lower)
+            final_concepts.append(c)
+
+    return final_concepts[:max_concepts]
 
 
 def concept_coverage_score(student_answer: str, reference_answer: str) -> dict:
@@ -193,6 +308,70 @@ def concept_coverage_score(student_answer: str, reference_answer: str) -> dict:
         "coverage_score": round(coverage_score, 3),
         "matched": matched,
         "missed": missed,
+    }
+
+
+# An absolute bi-encoder similarity threshold alone does NOT work here:
+# real production testing (100 brand-new short "X is Y" definitional
+# answers, judge disabled) showed a 20% false-positive rate - a
+# genuinely correct answer like "kinetic energy is the energy something
+# has because its moving" against "What is kinetic energy?" scores 0.896
+# similarity to the QUESTION, comfortably above any reasonable absolute
+# bar, simply because a definitional answer necessarily restates the
+# term being asked about. That's expected and correct, not cheating.
+#
+# The reliable signal turned out to be RELATIVE: compare similarity-to-
+# question against similarity-to-REFERENCE. Confirmed on real cases:
+#   - Genuine short answers: MORE similar to the reference than the
+#     question (gap is negative, e.g. -0.04 to -0.11), since they
+#     actually contain real answer content that overlaps with the
+#     reference.
+#   - Actual question echoes: MORE similar to the question than the
+#     reference (gap is positive, e.g. +0.11 to +0.13), since they
+#     contain none of the reference's actual content.
+# QUESTION_ECHO_MIN_GAP sits with margin on both sides of that split.
+QUESTION_ECHO_MIN_GAP = 0.05
+
+
+def question_echo_signal(
+    student_answer: str, question_text: str, reference_answer: str
+) -> dict | None:
+    """
+    Bi-encoder comparison of the student's answer against BOTH the
+    question and the reference answer - a cheap, free, local signal for
+    "the student typed the question back instead of answering it,"
+    using the relative gap between the two similarities (see
+    QUESTION_ECHO_MIN_GAP's comment for why an absolute threshold alone
+    produces false positives). Uses the same already-loaded bi-encoder
+    concept_coverage_score() uses - the student embedding is computed
+    once and reused for both comparisons, so this adds two cheap cosine
+    similarities, not two separate model loads, dwarfed by the LLM-judge
+    cost it's specifically designed to help avoid paying for on these
+    cases (they're flagged before ever reaching escalation - see
+    evaluator.py's is_question_echo short-circuit).
+
+    Returns None (rather than raising) if question_text is empty/missing,
+    so callers that don't have it (or don't pass it) see no behavior
+    change at all - this check is purely additive/opt-in.
+    """
+    if not question_text or not question_text.strip():
+        return None
+    if not student_answer or not student_answer.strip():
+        return None
+    if not reference_answer or not reference_answer.strip():
+        return None
+
+    student_embedding = get_embedding(student_answer)
+    question_embedding = get_embedding(question_text)
+    reference_embedding = get_embedding(reference_answer)
+
+    sim_to_question = util.cos_sim(student_embedding, question_embedding).item()
+    sim_to_reference = util.cos_sim(student_embedding, reference_embedding).item()
+
+    return {
+        "sim_to_question": round(sim_to_question, 3),
+        "sim_to_reference": round(sim_to_reference, 3),
+        "gap": round(sim_to_question - sim_to_reference, 3),
     }
 
 

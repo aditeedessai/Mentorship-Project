@@ -35,7 +35,7 @@ export default function DeleteConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={() => {
@@ -45,7 +45,7 @@ export default function DeleteConfirmModal({
       />
 
       <div
-        className={`relative w-[92vw] sm:w-[440px] max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-6 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
+        className={`relative w-full max-w-[440px] max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border z-10 transition-all backdrop-blur-2xl ${
           isDarkMode
             ? "border-white/10 bg-[#17131F] text-white"
             : "border-white/80 bg-white text-[#231B33]"

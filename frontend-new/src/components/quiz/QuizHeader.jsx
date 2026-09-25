@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Clock, MoreVertical, Sparkles, LayoutGrid, PenLine } from 'lucide-react'
+import { Clock, MoreVertical, LayoutGrid, PenLine } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
+import JojoLogo from '../JojoLogo'
 
 export default function QuizHeader({
   remainingSeconds,
@@ -52,9 +53,7 @@ export default function QuizHeader({
         )}
 
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#8064C7] flex items-center justify-center shadow-md">
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" strokeWidth={2.2} />
-          </div>
+          <JojoLogo className="h-7 sm:h-8 w-auto" />
           <span className="text-sm sm:text-base font-black tracking-tight">Jot<span className="text-[#8064C7]">.</span></span>
         </div>
       </div>

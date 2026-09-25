@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import QuizHeader from '../components/quiz/QuizHeader'
@@ -9,7 +9,7 @@ import AbortQuizModal from '../components/quiz/AbortQuizModal'
 import AntiCheatingWarning from '../components/quiz/AntiCheatingWarning'
 import QuizInstructionsModal from '../components/quiz/QuizInstructionsModal'
 import KeyboardShortcutsModal from '../components/quiz/KeyboardShortcutsModal'
-import { submitAnswers, evaluatePracticeAnswers } from '../services/api'
+import { submitAnswers, evaluatePracticeAnswers, fetchEvaluations } from '../services/api'
 import useQuizAntiCheating from '../hooks/useQuizAntiCheating'
 import jojoCelebration from '../assets/jojo-celebration.png'
 
@@ -83,6 +83,29 @@ export default function MCQPage({ onNavigate } = {}) {
   // Finish Quiz confirmation popup
   const [showFinishModal, setShowFinishModal] = useState(false)
 
+  // Controls the timeout screen
+  const [isTimedOut, setIsTimedOut] = useState(false)
+
+  // Holds the live countdown interval so it can be cleared imperatively
+  // (from a click handler, not just effect cleanup) the instant the quiz ends.
+  const timerIntervalRef = useRef(null)
+
+  // Guards manual submission, abort, and timer-expiry from all firing —
+  // whichever reaches this first "wins" and the others become no-ops.
+  const quizEndedRef = useRef(false)
+
+  // Always holds the latest handleFinishQuiz closure so handleTimeExpired
+  // (defined above it) can auto-submit on timeout instead of discarding
+  // progress - see the effect right after handleFinishQuiz's definition.
+  const handleFinishQuizRef = useRef(null)
+
+  const clearQuizTimer = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+  }, [])
+
   // ── Anti-Cheating ──────────────────────────────────────────────
   const {
     isFullscreenReady,
@@ -118,6 +141,18 @@ export default function MCQPage({ onNavigate } = {}) {
     location.state?.studySetId,
   ])
 
+  // Auto-submit triggered when the countdown reaches zero, instead of
+  // discarding progress - whatever's answered so far (skipped questions
+  // included as empty answers, same as a manual finish) is submitted via
+  // the same path as clicking "Finish Quiz". Guarded by quizEndedRef
+  // (set inside handleFinishQuiz itself) so a manual submit/abort that
+  // lands in the same tick wins instead of both handlers running.
+  const handleTimeExpired = useCallback(() => {
+    if (quizEndedRef.current) return
+    setIsTimedOut(true)
+    handleFinishQuizRef.current?.()
+  }, [])
+
   // Timer — only ticks when fullscreen is established
   // and no active violation
   useEffect(() => {
@@ -125,24 +160,119 @@ export default function MCQPage({ onNavigate } = {}) {
       remainingSeconds <= 0 ||
       !isFullscreenReady ||
       isViolationActive ||
-      showCelebration
+      showCelebration ||
+      quizEndedRef.current
     ) {
       return
     }
 
-    const interval = setInterval(() => {
+    timerIntervalRef.current = setInterval(() => {
       setRemainingSeconds((prev) =>
         Math.max(0, prev - 1)
       )
     }, 1000)
 
-    return () => clearInterval(interval)
+    return () => clearQuizTimer()
   }, [
     remainingSeconds,
     isFullscreenReady,
     isViolationActive,
     showCelebration,
+    clearQuizTimer,
   ])
+
+  // Auto-abort the instant the countdown reaches zero — races against a
+  // manual submit/abort via quizEndedRef, so only one of the two can win.
+  useEffect(() => {
+    if (questionCount > 0 && remainingSeconds === 0) {
+      handleTimeExpired()
+    }
+  }, [questionCount, remainingSeconds, handleTimeExpired])
+
+  const isPracticeRetake = location.state?.isPracticeRetake || false
+  const historicalAttemptId = location.state?.historicalAttemptId
+
+  // Restore previously saved answers for this attempt on mount
+  useEffect(() => {
+    let isMounted = true
+
+    async function restoreSavedAnswers() {
+      if (!attemptId || isPracticeRetake || questions.length === 0) {
+        return
+      }
+
+      try {
+        const evalData = await fetchEvaluations(attemptId)
+        const results = evalData?.results || []
+
+        if (!isMounted || results.length === 0) {
+          return
+        }
+
+        const restoredAnswers = {}
+        const restoredStatuses = {}
+
+        for (let i = 1; i <= questionCount; i++) {
+          restoredStatuses[i] = 'unvisited'
+        }
+
+        results.forEach((rec) => {
+          const qIdx = questions.findIndex(
+            (q) => q.question_id === rec.question_id
+          )
+          if (qIdx !== -1) {
+            const questionNum = qIdx + 1
+            const q = questions[qIdx]
+            const studentAns = rec.student_answer
+
+            if (
+              studentAns !== null &&
+              studentAns !== undefined &&
+              String(studentAns).trim() !== ''
+            ) {
+              const cleanAns = String(studentAns).trim().toUpperCase()
+              let optionIndex = -1
+
+              if (q.options && Array.isArray(q.options)) {
+                optionIndex = q.options.findIndex(
+                  (opt) =>
+                    opt.letter?.toUpperCase() === cleanAns ||
+                    opt.text?.toUpperCase() === cleanAns
+                )
+              }
+
+              if (optionIndex === -1) {
+                const charCode = cleanAns.charCodeAt(0) - 65
+                if (charCode >= 0 && charCode <= 10) {
+                  optionIndex = charCode
+                }
+              }
+
+              if (optionIndex !== -1) {
+                restoredAnswers[questionNum] = optionIndex
+                restoredStatuses[questionNum] = 'attempted'
+              }
+            } else if (studentAns === '') {
+              restoredStatuses[questionNum] = 'skipped'
+            }
+          }
+        })
+
+        if (isMounted) {
+          setSelectedAnswers((prev) => ({ ...prev, ...restoredAnswers }))
+          setQuestionStatuses((prev) => ({ ...prev, ...restoredStatuses }))
+        }
+      } catch (err) {
+        console.warn('Could not restore saved evaluations for attempt:', err)
+      }
+    }
+
+    restoreSavedAnswers()
+
+    return () => {
+      isMounted = false
+    }
+  }, [attemptId, isPracticeRetake, questions, questionCount])
 
   // ── Question Navigation ────────────────────────────────────────
 
@@ -189,8 +319,24 @@ export default function MCQPage({ onNavigate } = {}) {
         ...prev,
         [currentQuestion]: 'attempted',
       }))
+
+      // Persist answer immediately to backend if normal active attempt
+      if (attemptId && !isPracticeRetake) {
+        const q = questions[currentQuestion - 1]
+        if (q && q.options && q.options[optionIndex]) {
+          const letter = q.options[optionIndex].letter
+          submitAnswers(attemptId, 'mcq', [
+            {
+              question_id: q.question_id,
+              student_answer: letter,
+            },
+          ]).catch((err) => {
+            console.warn('Failed to save MCQ answer:', err)
+          })
+        }
+      }
     },
-    [currentQuestion]
+    [currentQuestion, attemptId, isPracticeRetake, questions]
   )
 
   const handleConfirmNext = useCallback(() => {
@@ -219,8 +365,8 @@ export default function MCQPage({ onNavigate } = {}) {
           selectedAnswers[currentQuestion] !== undefined
             ? 'attempted'
             : prev[currentQuestion] === 'attempted'
-            ? 'attempted'
-            : 'skipped',
+              ? 'attempted'
+              : 'skipped',
       }))
 
       setCurrentQuestion((prev) => prev - 1)
@@ -239,14 +385,14 @@ export default function MCQPage({ onNavigate } = {}) {
 
   // ── Submit Quiz ────────────────────────────────────────────────
 
-  const isPracticeRetake = location.state?.isPracticeRetake || false
-  const historicalAttemptId = location.state?.historicalAttemptId
 
   const handleFinishQuiz = useCallback(async () => {
-    if (isSubmitting || (!attemptId && !historicalAttemptId)) {
+    if (quizEndedRef.current || isSubmitting || (!attemptId && !historicalAttemptId)) {
       return
     }
 
+    quizEndedRef.current = true
+    clearQuizTimer()
     setIsSubmitting(true)
 
     try {
@@ -334,12 +480,14 @@ export default function MCQPage({ onNavigate } = {}) {
               attemptId,
               studySetId,
               questionType: 'mcq',
+              questions,
             },
           })
         }, 2500)
       }
     } catch (err) {
       console.error('Failed to submit quiz:', err)
+      quizEndedRef.current = false
     } finally {
       setIsSubmitting(false)
     }
@@ -355,11 +503,20 @@ export default function MCQPage({ onNavigate } = {}) {
     onNavigate,
     location.state,
     antiCheatCleanup,
+    clearQuizTimer,
   ])
+
+  useEffect(() => {
+    handleFinishQuizRef.current = handleFinishQuiz
+  }, [handleFinishQuiz])
 
   // ── Abort Quiz ─────────────────────────────────────────────────
 
   const handleAbortConfirm = useCallback(() => {
+    if (quizEndedRef.current) return
+    quizEndedRef.current = true
+    clearQuizTimer()
+
     antiCheatCleanup()
     onNavigate?.('dashboard')
     navigate('/')
@@ -367,6 +524,7 @@ export default function MCQPage({ onNavigate } = {}) {
     navigate,
     onNavigate,
     antiCheatCleanup,
+    clearQuizTimer,
   ])
 
   // ── Scratchpad ────────────────────────────────────────────────
@@ -462,24 +620,66 @@ export default function MCQPage({ onNavigate } = {}) {
     return null
   }
 
+  // ── TIME'S UP SCREEN ───────────────────────────────────────────
+
+  if (isTimedOut) {
+    return (
+      <div className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${
+        isDarkMode ? 'bg-[#0E0B15] text-white' : 'bg-[#F6F3FC] text-[#292530]'
+      }`}>
+        <div className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
+          isDarkMode ? 'bg-red-500/15' : 'bg-red-500/10'
+        }`} />
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-6 text-center">
+          <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-3xl bg-red-500/15 text-red-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+            Time&apos;s up!
+          </h1>
+
+          <p className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode ? 'text-white/55' : 'text-gray-500'}`}>
+            The countdown reached 00:00. Your answers are being submitted
+            automatically - you'll be taken to your results in a moment.
+          </p>
+
+          <div className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
+            isDarkMode ? 'border-white/10 bg-white/5' : 'border-red-500/10 bg-white/70'
+          }`}>
+            <p className={`text-sm font-bold ${isDarkMode ? 'text-white/80' : 'text-[#514863]'}`}>
+              Your answers have been submitted successfully.
+            </p>
+
+            <p className={`mt-1 text-xs ${isDarkMode ? 'text-white/35' : 'text-gray-400'}`}>
+              Taking you to your results...
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ── JOJO CELEBRATION SCREEN ───────────────────────────────────
 
   if (showCelebration) {
     return (
       <div
-        className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${
-          isDarkMode
+        className={`relative flex h-screen w-screen items-center justify-center overflow-hidden font-sans ${isDarkMode
             ? 'bg-[#0E0B15] text-white'
             : 'bg-[#F6F3FC] text-[#292530]'
-        }`}
+          }`}
       >
         {/* Celebration glow */}
         <div
-          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${
-            isDarkMode
+          className={`absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${isDarkMode
               ? 'bg-[#8064C7]/20'
               : 'bg-[#8064C7]/15'
-          }`}
+            }`}
         />
 
         {/* Confetti */}
@@ -517,11 +717,10 @@ export default function MCQPage({ onNavigate } = {}) {
           {/* Jojo */}
           <div className="relative mb-7 flex h-64 w-64 items-center justify-center">
             <div
-              className={`absolute inset-0 rounded-full blur-3xl ${
-                isDarkMode
+              className={`absolute inset-0 rounded-full blur-3xl ${isDarkMode
                   ? 'bg-[#8064C7]/20'
                   : 'bg-[#8064C7]/15'
-              }`}
+                }`}
             />
 
             <img
@@ -537,39 +736,35 @@ export default function MCQPage({ onNavigate } = {}) {
           </h1>
 
           <p
-            className={`mt-3 max-w-md text-sm leading-relaxed ${
-              isDarkMode
+            className={`mt-3 max-w-md text-sm leading-relaxed ${isDarkMode
                 ? 'text-white/55'
                 : 'text-gray-500'
-            }`}
+              }`}
           >
             Great job! Jojo is celebrating your progress.
           </p>
 
           {/* Progress message */}
           <div
-            className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${
-              isDarkMode
+            className={`mt-7 rounded-2xl border px-6 py-4 backdrop-blur-xl ${isDarkMode
                 ? 'border-white/10 bg-white/5'
                 : 'border-[#8064C7]/10 bg-white/70'
-            }`}
+              }`}
           >
             <p
-              className={`text-sm font-bold ${
-                isDarkMode
+              className={`text-sm font-bold ${isDarkMode
                   ? 'text-white/80'
                   : 'text-[#514863]'
-              }`}
+                }`}
             >
               Your answers have been submitted successfully.
             </p>
 
             <p
-              className={`mt-1 text-xs ${
-                isDarkMode
+              className={`mt-1 text-xs ${isDarkMode
                   ? 'text-white/35'
                   : 'text-gray-400'
-              }`}
+                }`}
             >
               Taking you to your results...
             </p>
@@ -602,20 +797,18 @@ export default function MCQPage({ onNavigate } = {}) {
 
   return (
     <div
-      className={`flex h-screen w-screen select-none flex-col overflow-hidden font-sans ${
-        isDarkMode
+      className={`flex h-screen w-screen select-none flex-col overflow-hidden font-sans ${isDarkMode
           ? 'bg-[#0E0B15] text-white'
           : 'bg-[#F6F3FC] text-[#292530]'
-      }`}
+        }`}
     >
       {/* Fullscreen gate */}
       {!isFullscreenReady && (
         <div
-          className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${
-            isDarkMode
+          className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-2xl ${isDarkMode
               ? 'bg-[#0E0B15]/90 text-white'
               : 'bg-white/90 text-[#292530]'
-          }`}
+            }`}
         >
           <div className="max-w-sm px-6 text-center">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#8064C7]/20 text-[#8064C7]">
@@ -642,11 +835,10 @@ export default function MCQPage({ onNavigate } = {}) {
             </h2>
 
             <p
-              className={`text-xs leading-relaxed ${
-                isDarkMode
+              className={`text-xs leading-relaxed ${isDarkMode
                   ? 'text-white/60'
                   : 'text-gray-500'
-              }`}
+                }`}
             >
               This quiz requires fullscreen mode for a secure
               exam environment. Click anywhere or press any
@@ -730,22 +922,20 @@ export default function MCQPage({ onNavigate } = {}) {
       {showFinishModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
           <div
-            className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${
-              isDarkMode
+            className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl ${isDarkMode
                 ? 'border-white/10 bg-[#171320] text-white'
                 : 'border-[#8064C7]/10 bg-white text-[#292530]'
-            }`}
+              }`}
           >
             <h2 className="text-xl font-black tracking-tight">
               Finish Quiz?
             </h2>
 
             <p
-              className={`mt-2 text-sm leading-relaxed ${
-                isDarkMode
+              className={`mt-2 text-sm leading-relaxed ${isDarkMode
                   ? 'text-white/60'
                   : 'text-gray-500'
-              }`}
+                }`}
             >
               Are you sure you want to finish the quiz? Your
               answers will be submitted and you won't be able to
@@ -757,11 +947,10 @@ export default function MCQPage({ onNavigate } = {}) {
               <button
                 type="button"
                 onClick={() => setShowFinishModal(false)}
-                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
-                  isDarkMode
+                className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${isDarkMode
                     ? 'bg-white/10 text-white hover:bg-white/15'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Cancel
               </button>

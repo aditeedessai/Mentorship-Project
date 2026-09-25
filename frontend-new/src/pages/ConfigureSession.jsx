@@ -5,7 +5,7 @@ import ModuleBadge from '../components/ModuleBadge'
 import QuestionTypeCard from '../components/QuestionTypeCard'
 import SessionActionBar from '../components/SessionActionBar'
 import QuestionGenerationErrorCard from '../components/QuestionGenerationErrorCard'
-import { ListChecks, FileText, Lightbulb, BookOpen, Sparkles } from 'lucide-react'
+import { ListChecks, FileText, Lightbulb, BookOpen, Sparkles, ArrowLeft } from 'lucide-react'
 
 import {
   fetchQuestions,
@@ -13,6 +13,8 @@ import {
   generateQuestions,
   fetchStudySets,
   fetchRevisionStatus,
+  fetchActiveAttempt,
+  fromBackendType,
 } from '../services/api'
 
 import { classifyQuestionGenerationError } from '../utils/errorClassification'
@@ -34,7 +36,7 @@ const questionTypes = [
     id: 'short-answer',
     title: 'Short Answer',
     description:
-      'Practice articulating concepts. AI Study Engine will evaluate your responses for key terminology and conceptual accuracy.',
+      'Practice articulating concepts. Your responses will be evaluated for key terminology and conceptual accuracy.',
     badge: 'Active Recall Focus',
     icon: FileText,
     route: '/quiz/qna',
@@ -60,8 +62,20 @@ const questionTypes = [
 ]
 
 
-const toFrontendTypeId = (bType) =>
-  bType === 'short' ? 'short-answer' : bType
+const toFrontendTypeId = (bType) => {
+  if (!bType) return 'mcq'
+  const s = String(bType).toLowerCase().trim().replace(/_/g, '-')
+  if (s === 'short' || s === 'short-ans' || s.startsWith('short')) {
+    return 'short-answer'
+  }
+  if (s === 'long' || s === 'long-ans' || s.startsWith('long')) {
+    return 'long'
+  }
+  if (s === 'application' || s === 'applicative' || s.startsWith('app')) {
+    return 'application'
+  }
+  return 'mcq'
+}
 
 
 const formatDueDate = (isoDate) => {
@@ -81,11 +95,13 @@ const formatDueDate = (isoDate) => {
 export default function ConfigureSession({
   studySetId: propStudySetId,
   studySetName: propStudySetName,
-  preselectType,
+  preselectType: propPreselectType,
+  onNavigate,
 }) {
   const { isDarkMode } = useTheme()
 
   const [statusByType, setStatusByType] = useState({})
+  const [activeAttemptsByType, setActiveAttemptsByType] = useState({})
   const [selectedType, setSelectedType] = useState(null)
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -93,6 +109,9 @@ export default function ConfigureSession({
 
   const navigate = useNavigate()
   const location = useLocation()
+
+  const preselectType =
+    propPreselectType || location.state?.preselectType
 
   const studySetId =
     propStudySetId || location.state?.studySetId
@@ -130,7 +149,7 @@ export default function ConfigureSession({
 
 
   /* =========================================================
-     LOAD REVISION STATUS
+     LOAD REVISION STATUS & ACTIVE ATTEMPTS
   ========================================================= */
 
   useEffect(() => {
@@ -145,7 +164,13 @@ export default function ConfigureSession({
       try {
         setLoadingStatus(true)
 
-        const result = await fetchRevisionStatus(studySetId)
+        const [result, ...activeAttempts] = await Promise.all([
+          fetchRevisionStatus(studySetId),
+          ...questionTypes.map((t) =>
+            fetchActiveAttempt(studySetId, t.id).catch(() => null)
+          ),
+        ])
+
         const statuses = result?.statuses || []
 
         if (!isMounted) return
@@ -158,11 +183,25 @@ export default function ConfigureSession({
 
         setStatusByType(byType)
 
+        const activeByType = {}
+        questionTypes.forEach((t, index) => {
+          const attempt = activeAttempts[index]
+          if (attempt && attempt.status === 'in_progress') {
+            activeByType[t.id] = attempt
+          }
+        })
+
+        setActiveAttemptsByType(activeByType)
+
+        const normalizedPreselect = preselectType
+          ? toFrontendTypeId(preselectType)
+          : null
+
         const preselected =
-          preselectType &&
-          byType[preselectType]?.available &&
-          !byType[preselectType]?.needs_attention
-            ? preselectType
+          normalizedPreselect &&
+          byType[normalizedPreselect]?.available &&
+          !byType[normalizedPreselect]?.needs_attention
+            ? normalizedPreselect
             : null
 
         if (preselected) {
@@ -223,14 +262,16 @@ export default function ConfigureSession({
       return
     }
 
+    const resolvedTypeId = toFrontendTypeId(selectedType)
+
     const selected = questionTypes.find(
-      (t) => t.id === selectedType
+      (t) => t.id === resolvedTypeId
     )
 
     if (!selected) return
 
     const selectedStatus =
-      statusByType[selectedType]
+      statusByType[resolvedTypeId]
 
     if (
       !selectedStatus?.available ||
@@ -258,7 +299,7 @@ export default function ConfigureSession({
       const currentAttempt =
         await getOrCreateAttempt(
           studySetId,
-          selectedType
+          resolvedTypeId
         )
 
       if (!currentAttempt?.attempt_id) {
@@ -270,7 +311,7 @@ export default function ConfigureSession({
       let questions =
         await fetchQuestions(
           studySetId,
-          selectedType,
+          resolvedTypeId,
           currentAttempt.attempt_id
         )
 
@@ -278,9 +319,9 @@ export default function ConfigureSession({
         !questions ||
         questions.length === 0
       ) {
-        await generateQuestions(
+        const genResult = await generateQuestions(
           studySetId,
-          selectedType,
+          resolvedTypeId,
           documentId,
           currentAttempt.attempt_id
         )
@@ -288,9 +329,25 @@ export default function ConfigureSession({
         questions =
           await fetchQuestions(
             studySetId,
-            selectedType,
+            resolvedTypeId,
             currentAttempt.attempt_id
           )
+
+        if (
+          (!questions || questions.length === 0) &&
+          genResult?.questions?.length > 0
+        ) {
+          questions = genResult.questions.map((q, idx) => ({
+            id: idx + 1,
+            question_id: q.question_id,
+            question: q.question,
+            hint: q.topic
+              ? `Think about the key concepts related to ${q.topic.replace(/\_/g, ' ')}.`
+              : 'Consider the fundamental principles involved.',
+            question_type: fromBackendType(q.question_type),
+            marks: q.marks,
+          }))
+        }
       }
 
       if (
@@ -305,7 +362,7 @@ export default function ConfigureSession({
       navigate(selected.route, {
         state: {
           questionCount: questions.length,
-          questionType: selectedType,
+          questionType: resolvedTypeId,
           questions: questions,
           attemptId:
             currentAttempt.attempt_id,
@@ -554,27 +611,49 @@ export default function ConfigureSession({
           SCROLLABLE CONTENT
       ===================================================== */}
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 pb-8">
 
-        <div className="px-4 pb-6 pt-4 sm:px-8 sm:pb-6 sm:pt-8">
+        {/* Top Back Navigation Bar */}
+        <header className="mb-4 sm:mb-8 lg:mb-12 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              if (studySetId) {
+                onNavigate?.('study-set', { studySetId })
+              } else {
+                onNavigate?.('study-sets')
+              }
+            }}
+            className={`group inline-flex items-center gap-2 rounded-full border px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition-all backdrop-blur-xl ${
+              isDarkMode
+                ? 'border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10'
+                : 'border-white/80 bg-white/70 text-[#8064C7] hover:bg-white shadow-sm'
+            }`}
+          >
+            <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+            <span>Back to Study Set</span>
+          </button>
+        </header>
 
-          {/* MODULE BADGE */}
-          <ModuleBadge
-            text={
-              studySetName
-                ? `Study Set: ${studySetName}`
-                : 'Study Set'
-            }
-          />
+        <div data-tour="quiz-area">
+          {/* TITLE + MODULE BADGE */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <h1 className="text-xl sm:text-3xl font-black leading-none tracking-tight">
+              Configure Session
+            </h1>
 
-          {/* TITLE */}
-          <h1 className="mt-4 text-2xl font-black leading-none tracking-tight sm:text-3xl">
-            Configure Session
-          </h1>
+            <ModuleBadge
+              text={
+                studySetName
+                  ? `Study Set: ${studySetName}`
+                  : 'Study Set'
+              }
+            />
+          </div>
 
           {/* DESCRIPTION */}
           <p
-            className={`mt-3 max-w-[600px] text-sm leading-relaxed ${
+            className={`mt-2 sm:mt-3 max-w-[600px] text-xs sm:text-sm leading-relaxed ${
               isDarkMode
                 ? 'text-white/60'
                 : 'text-[#706A78]'
@@ -582,7 +661,7 @@ export default function ConfigureSession({
           >
             Select the question format you'd like to tackle
             next. Each type keeps its own independent schedule -
-            AI Study Engine will generate a tailored set based
+            Jot's Study Engine will generate a tailored set based
             on your recent mastery level for that type.
           </p>
 
@@ -734,6 +813,12 @@ export default function ConfigureSession({
                 const s =
                   statusByType[type.id]
 
+                const activeAttempt =
+                  activeAttemptsByType[type.id]
+
+                const isInProgress =
+                  Boolean(activeAttempt && activeAttempt.status === 'in_progress')
+
                 const needsAttention =
                   Boolean(s?.needs_attention)
 
@@ -760,6 +845,10 @@ export default function ConfigureSession({
                     dueText
                       ? `Due ${dueText}`
                       : 'Not yet due'
+
+                } else if (isInProgress) {
+
+                  statusLabel = 'Attempt in progress'
 
                 } else if (
                   s &&
@@ -796,6 +885,7 @@ export default function ConfigureSession({
                     needsAttention={
                       needsAttention
                     }
+                    isInProgress={isInProgress}
                     statusLabel={statusLabel}
                     explanation={explanation}
                     onSelect={() =>

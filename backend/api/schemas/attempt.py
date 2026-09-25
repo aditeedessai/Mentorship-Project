@@ -20,9 +20,9 @@ class StartAttemptRequest(BaseModel):
         description="Optional document ID if starting an attempt for a specific document"
     )
     question_type: Literal["mcq", "application", "long", "short"] = Field(
-        ...,
+        "mcq",
         description=(
-            "Which question type to start (or resume) an attempt for - required. "
+            "Which question type to start (or resume) an attempt for - defaults to 'mcq'. "
             "Every attempt is locked to exactly one question type from creation; "
             "there is no study-set-wide attempt spanning all 4. Subject to the "
             "attempt gate (the pair is actually due, and it isn't flagged "

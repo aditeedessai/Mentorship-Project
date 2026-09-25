@@ -31,7 +31,7 @@ from backend.database.quiz_repository import (
     get_question_by_id
 )
 
-from backend.database import study_set_repository
+from backend.database import study_set_repository, quiz_repository, activity_log_repository
 
 from backend.answer_evaluation.grading import grade_for_percentage
 
@@ -477,10 +477,6 @@ def evaluate_and_save_attempt_answers(
 
     attempt_study_set_id = attempt.get("study_set_id")
 
-    # Get section completion status to enforce section locking for already completed sections
-    completion_info = get_attempt_section_completion_status(attempt_id)
-    completed_sections = set(completion_info["completed_sections"])
-
     # Pre-validate all submitted answers BEFORE evaluating or saving any answer
     for item in answers:
         q_id = item["question_id"]
@@ -500,28 +496,14 @@ def evaluate_and_save_attempt_answers(
         raw_type = str(question.get("question_type", "short")).lower().strip()
         q_type = raw_type if raw_type in ["mcq", "application", "long", "short"] else "short"
 
-        # 2. Section locking validation
-        if q_type in completed_sections:
-            raise ValueError(
-                f"Section '{q_type}' has already been submitted and is locked for this attempt."
-            )
-
-        # 3. Word limit validation
+        # 2. Word limit validation
         is_valid, word_count, max_limit = validate_answer_word_limit(q_type, student_ans)
         if not is_valid:
             raise ValueError(
                 f"Answer exceeds the maximum allowed word limit of {max_limit} words."
             )
 
-        # 4. Question-type lock validation - every attempt is locked to
-        # exactly ONE question_type from creation (quiz_attempts.
-        # question_type is NOT NULL - see the 20260902150000 migration),
-        # so every submitted answer must match it. This applies to every
-        # attempt uniformly now, not just a "revision" subset - there is
-        # no other kind left. Section locking above already prevents a
-        # SECOND submission to an attempt's one section, but nothing
-        # above stops a mismatched question_type from being submitted to
-        # it in the first place.
+        # 3. Question-type lock validation
         if q_type != attempt.get("question_type"):
             raise ValueError(
                 f"Question type '{q_type}' does not match this attempt's "
@@ -588,6 +570,7 @@ def evaluate_and_save_attempt_answers(
             batch_items.append({
                 "student": student_ans,
                 "reference": question.get("reference_answer", ""),
+                "question": question.get("question", ""),
             })
 
     if batch_items:
@@ -621,28 +604,23 @@ def evaluate_and_save_attempt_answers(
             attempt_id=attempt_id
         )
 
+    # Record today as a studied day in the independent activity log, not
+    # just implicitly via the evaluations rows just saved above - those
+    # get cascade-deleted if the student later deletes this study set
+    # (evaluations -> questions -> study_sets), which used to silently
+    # erase this day from the activity calendar. activity_log has no FK
+    # to any of that, so it survives.
+    if answers:
+        activity_log_repository.record_activity(attempt.get("user_id"))
+
     eval_records = get_evaluations_with_question_details(attempt_id)
 
     total_marks = sum(float(rec.get("max_marks", 0.0)) for rec in eval_records)
     earned_marks = sum(float(rec.get("marks_awarded", 0.0)) for rec in eval_records)
     percentage = round((earned_marks / total_marks * 100.0), 2) if total_marks > 0 else 0.0
 
-    # status="completed" (not attempt.get("status", ...), which just
-    # re-saved whatever it already was and left it stuck on
-    # 'in_progress' forever): every attempt is scoped to exactly one
-    # question_type/section now, so THIS call finishing IS the whole
-    # attempt finishing - there is no later "all sections done" event
-    # to wait for. Marking it completed here, synchronously, is also
-    # what makes the lockout below actually take effect immediately:
-    # attempt_repository.get_active_attempt_by_study_set() (the
-    # "resume an in-progress attempt" check inside start_attempt) only
-    # matches status='in_progress' rows - leaving this attempt
-    # in_progress meant a student revisiting this (study_set,
-    # question_type) pair before finish_attempt happened to run (it's
-    # only ever called from ResultsPage's useEffect, best-effort, and
-    # was never guaranteed to run at all) would silently resume THIS
-    # already-answered/locked attempt instead of the revision gate
-    # (is_attempt_allowed_now, below) ever being consulted for a new one.
+    # Preserve current attempt status (do NOT force "completed" on partial answer saves):
+    current_status = attempt.get("status", "in_progress")
     save_attempt(
         attempt_id=attempt_id,
         question_type=attempt.get("question_type"),
@@ -650,20 +628,8 @@ def evaluate_and_save_attempt_answers(
         document_id=attempt.get("document_id"),
         total_marks=total_marks,
         marks_awarded=earned_marks,
-        status="completed"
+        status=current_status
     )
-
-    # Write-time revision_schedules update - runs unconditionally for
-    # every attempt now (there's no other kind left). Every attempt has
-    # exactly one section, so this single
-    # evaluate_and_save_attempt_answers() call IS the completion of that
-    # attempt's only section - no separate "is this attempt done yet"
-    # check is needed. This is also what CREATES the schedule row the
-    # first time this (study_set, question_type) pair is ever completed
-    # (see revision_repository.record_attempt_result()) - there's no
-    # separate "initial attempt finishes" event that pre-creates it
-    # anymore.
-    revision_service.record_attempt_result(attempt | {"attempt_id": attempt_id})
 
     eval_responses = []
     for rec in eval_records:
@@ -705,12 +671,8 @@ QUESTION_TYPES = ["mcq", "short", "application", "long"]
 
 def get_attempt_section_completion_status(attempt_id: str) -> dict:
     """
-    Derives section completion status for an attempt based on evaluations
-    recorded. Every attempt is locked to exactly one question_type from
-    creation, so "complete" always means just that one section - as soon
-    as it has evaluations, the attempt is complete, full stop. There is
-    no other kind of attempt to branch on anymore.
-
+    Derives section completion status for an attempt based on evaluations recorded
+    and target question count for the attempt.
     Returns dict:
       {
         "completed_sections": ["mcq"],
@@ -722,25 +684,54 @@ def get_attempt_section_completion_status(attempt_id: str) -> dict:
     if not attempt:
         raise ValueError(f"Attempt with ID '{attempt_id}' not found")
 
-    sections_to_check = [attempt["question_type"]]
+    raw_q_type = str(attempt.get("question_type") or "short").lower().strip()
+    q_type = raw_q_type if raw_q_type in QUESTION_TYPES else "short"
+
+    if attempt.get("status") == "completed":
+        return {
+            "completed_sections": [q_type],
+            "remaining_sections": [],
+            "is_attempt_complete": True,
+        }
 
     eval_records = get_evaluations_with_question_details(attempt_id)
+    if not eval_records:
+        return {
+            "completed_sections": [],
+            "remaining_sections": [q_type],
+            "is_attempt_complete": False,
+        }
 
-    completed_set = set()
-    for rec in eval_records:
-        raw_type = str(rec.get("question_type") or "short").lower().strip()
-        q_type = raw_type if raw_type in QUESTION_TYPES else "short"
-        completed_set.add(q_type)
+    study_set_id = attempt.get("study_set_id")
+    target_questions = []
+    if study_set_id:
+        target_questions = quiz_repository.get_questions_by_study_set(study_set_id, attempt_id=attempt_id)
+        if not target_questions:
+            target_questions = quiz_repository.get_questions_by_study_set(study_set_id)
+        target_questions = [
+            q for q in target_questions
+            if str(q.get("question_type") or "short").lower().strip() == q_type
+        ]
 
-    completed_sections = [s for s in sections_to_check if s in completed_set]
-    remaining_sections = [s for s in sections_to_check if s not in completed_set]
-    is_attempt_complete = len(remaining_sections) == 0
+    evaluated_q_ids = {rec["question_id"] for rec in eval_records}
 
-    return {
-        "completed_sections": completed_sections,
-        "remaining_sections": remaining_sections,
-        "is_attempt_complete": is_attempt_complete,
-    }
+    if target_questions:
+        is_complete = all(q["question_id"] in evaluated_q_ids for q in target_questions)
+    else:
+        is_complete = len(eval_records) > 0
+
+    if is_complete:
+        return {
+            "completed_sections": [q_type],
+            "remaining_sections": [],
+            "is_attempt_complete": True,
+        }
+    else:
+        return {
+            "completed_sections": [],
+            "remaining_sections": [q_type],
+            "is_attempt_complete": False,
+        }
 
 
 def get_study_set_progress(user_id: str) -> list[dict]:

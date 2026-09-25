@@ -4,7 +4,6 @@ import { useTheme } from "../context/ThemeContext";
 import {
   fetchStudySet,
   fetchStudySetDocuments,
-  fetchRevisionStatus,
   fetchStudySetSummary,
   fetchStudySetFlashcards,
   generateStudySetSummary,
@@ -18,13 +17,11 @@ import StudySetSummaryCard from "../components/study-set/StudySetSummaryCard";
 import StudySetFlashcardsCard from "../components/study-set/StudySetFlashcardsCard";
 import StudySetMnemonicsCard from "../components/study-set/StudySetMnemonicsCard";
 import StudySetDocumentsCard from "../components/study-set/StudySetDocumentsCard";
-import StudySetQuestionProgressCard from "../components/study-set/StudySetQuestionProgressCard";
 
 function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
   const { isDarkMode } = useTheme();
   const [studySet, setStudySet] = useState(null);
   const [documents, setDocuments] = useState([]);
-  const [revisionStatus, setRevisionStatus] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -72,9 +69,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
       setMnemonic(result);
     } catch (err) {
       console.error("Failed to generate mnemonic:", err);
-      setMnemonicError(
-        err.message || "Failed to generate mnemonic for this topic."
-      );
+      setMnemonicError("Unable to generate mnemonics. Please try again.");
     } finally {
       setMnemonicLoading(false);
     }
@@ -106,7 +101,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
     setPracticeMode(false);
     setMnemonic(null);
     setMnemonicError("");
-    setRevisionStatus([]);
 
     if (!studySetId) {
       setLoading(false);
@@ -135,20 +129,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
         const docsList = await fetchStudySetDocuments(studySetId);
         if (isMounted) {
           setDocuments(docsList || []);
-        }
-
-        try {
-          // Every question type is independently scoped/scheduled now -
-          // there is no single study-set-wide "active attempt" to read
-          // completed_sections off of anymore. revision-status gives the
-          // real per-type picture (attempts_taken/needs_attention/etc)
-          // directly, without creating or mutating any attempt.
-          const status = await fetchRevisionStatus(studySetId);
-          if (isMounted && status) {
-            setRevisionStatus(status.statuses || []);
-          }
-        } catch (err) {
-          console.warn("Could not fetch revision status for progress card:", err);
         }
       } catch (err) {
         console.error("Failed to load study set details/documents:", err);
@@ -211,9 +191,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
       setSummary(result);
     } catch (err) {
       console.error("Failed to generate summary:", err);
-      setSummaryError(
-        err.message || "Failed to generate summary for this study set."
-      );
+      setSummaryError("Unable to generate the summary. Please try again.");
     } finally {
       setSummaryLoading(false);
     }
@@ -232,9 +210,7 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
       setIsFlipped(false);
     } catch (err) {
       console.error("Failed to generate flashcards:", err);
-      setFlashcardsError(
-        err.message || "Failed to generate flashcards for this study set."
-      );
+      setFlashcardsError("Unable to generate flashcards. Please try again.");
     } finally {
       setFlashcardsLoading(false);
     }
@@ -365,11 +341,6 @@ function IndivisualStudySetPage({ studySetId, studySets = [], onNavigate }) {
           <div className="lg:col-span-4 flex flex-col gap-6">
             <StudySetDocumentsCard
               documents={documents}
-              loading={loading}
-            />
-
-            <StudySetQuestionProgressCard
-              revisionStatus={revisionStatus}
               loading={loading}
             />
           </div>

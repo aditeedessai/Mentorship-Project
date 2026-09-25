@@ -1,11 +1,19 @@
-import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, AlertTriangle } from "lucide-react";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 
 import Sidebar from "./components/Sidebar";
 import BackToTop from "./components/BackToTop";
 import GoogleCalendarPrompt from "./components/GoogleCalendarPrompt";
+import JojoLogo from "./components/JojoLogo";
+import ProductTour from "./components/tour/ProductTour";
+import {
+  TOUR_STEP_SESSION_KEY,
+  isPendingFirstTour,
+  isFirstTourHandled,
+  waitForElement,
+} from "./components/tour/tourConstants";
 
 // Every page is loaded on demand (its own network chunk fetched the
 // first time currentPage/authPage actually selects it) instead of all
@@ -29,7 +37,6 @@ const MCQPage = lazy(() => import("./pages/MCQPage"));
 const QnAPage = lazy(() => import("./pages/QnAPage"));
 
 const JotLandingTest = lazy(() => import("./pages/JotLandingTest"));
-const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
@@ -63,7 +70,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
 
   return (
     <div
-      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-hidden relative ${isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
+      className={`min-h-screen font-sans transition-colors duration-500 overflow-x-clip relative ${isDarkMode ? "bg-[#0B0910] text-[#F3F0F8]" : "bg-[#F2F1F6] text-[#231B33]"
         }`}
     >
       {/* Subtle Background Ambient Glow Orbs */}
@@ -101,6 +108,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
         </button>
 
         <div className="flex items-center gap-1.5 font-black text-xl tracking-tight">
+          <JojoLogo className="h-7 w-auto" />
           <span>Jot</span>
           <span className="text-[#8064C7]">.</span>
           <span
@@ -126,7 +134,7 @@ function MainAppLayout({ children, onNavigate, currentPage, user }) {
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />
-        <main className="lg:ml-64 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 min-w-0">{children}</main>
+        <main className="lg:ml-64 flex-1 px-3.5 py-4 sm:p-6 lg:p-8 pt-18 sm:pt-20 lg:pt-8 min-w-0">{children}</main>
       </div>
     </div>
   );
@@ -159,6 +167,7 @@ function AppContent() {
   // false = no profile → must show mandatory form
   const [hasProfile, setHasProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileCheckError, setProfileCheckError] = useState(null);
 
   // ================= USER STATE =================
   const [user, setUser] = useState(null);
@@ -208,6 +217,9 @@ function AppContent() {
   // ================= GOOGLE CALENDAR PROMPT =================
   // Shown once after a new user completes the student profile.
   const [showGcalPrompt, setShowGcalPrompt] = useState(false);
+
+  // ================= PRODUCT ONBOARDING TOUR =================
+  const [isTourActive, setIsTourActive] = useState(false);
 
   // ================= SCROLL TO TOP ON PAGE SWITCH =================
   useEffect(() => {
@@ -270,6 +282,7 @@ function AppContent() {
             session.user.user_metadata?.full_name ||
             session.user.email.split("@")[0],
           email: session.user.email,
+          createdAt: session.user.created_at,
         });
         setAuthPage("app");
       }
@@ -285,16 +298,36 @@ function AppContent() {
             session.user.user_metadata?.full_name ||
             session.user.email.split("@")[0],
           email: session.user.email,
+          createdAt: session.user.created_at,
         });
         setAuthPage("app");
       } else {
-        setUser(null);
-        setHasProfile(null);
-        setStudySets([]);
-        setSelectedStudySetId(null);
-        sessionStorage.removeItem("jot_current_page");
-        sessionStorage.removeItem("jot_selected_study_set_id");
-        setAuthPage("landing");
+        // A null session here isn't necessarily a real sign-out: the
+        // browser's setTimeout-scheduled token auto-refresh doesn't run
+        // while the OS is actually asleep, so a device sleep/wake can
+        // leave the access token stale, and the refresh attempt right
+        // after waking can transiently fail (e.g. Wi-Fi not yet back)
+        // before ever confirming a genuine logout. Reading
+        // window.location.pathname directly (not the `location` from
+        // useLocation() above, which would be stale-captured from mount
+        // since this listener is registered once) so it's a live check
+        // of the URL at the moment this event actually fires. Tearing
+        // the whole app down and forcing this user to the landing page
+        // while they're mid-quiz used to silently evict them with none
+        // of the quiz's own anti-cheat warning UI ever shown (DF044).
+        const path = window.location.pathname;
+        const isActiveQuiz = path === "/quiz/mcq" || path === "/quiz/qna";
+
+        if (!isActiveQuiz) {
+          setUser(null);
+          setHasProfile(null);
+          setProfileCheckError(null);
+          setStudySets([]);
+          setSelectedStudySetId(null);
+          sessionStorage.removeItem("jot_current_page");
+          sessionStorage.removeItem("jot_selected_study_set_id");
+          setAuthPage("landing");
+        }
       }
     });
 
@@ -305,39 +338,112 @@ function AppContent() {
   // Runs whenever the user object changes (login / logout / refresh).
   // Sets `hasProfile` so the rendering gate knows whether to show
   // the mandatory profile form or the main application.
-  useEffect(() => {
+  const checkProfile = async () => {
     if (!user) {
       setHasProfile(null);
+      setProfileCheckError(null);
+      setProfileLoading(false);
       return;
     }
 
-    const checkProfile = async () => {
-      setProfileLoading(true);
-      try {
-        const { data, error: fetchErr } = await supabase
-          .from("student_profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .maybeSingle();
+    setProfileLoading(true);
+    setProfileCheckError(null);
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from("student_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-        if (fetchErr) {
-          console.error("Failed to check student profile:", fetchErr);
-          // On error, assume no profile so the form stays visible
-          // (safe default — never silently grant access).
-          setHasProfile(false);
-        } else {
-          setHasProfile(!!data);
-        }
-      } catch (err) {
-        console.error("Unexpected error checking profile:", err);
-        setHasProfile(false);
-      } finally {
-        setProfileLoading(false);
+      if (fetchErr) {
+        console.error("Failed to check student profile:", fetchErr);
+        // On error, do NOT set hasProfile(false). Set profileCheckError instead
+        // so we never falsely redirect an existing user to mandatory onboarding.
+        setProfileCheckError(fetchErr.message || "Failed to verify student profile.");
+        setHasProfile(null);
+      } else {
+        setProfileCheckError(null);
+        setHasProfile(!!data);
       }
-    };
+    } catch (err) {
+      console.error("Unexpected error checking profile:", err);
+      setProfileCheckError(err.message || "An unexpected error occurred while checking student profile.");
+      setHasProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setHasProfile(null);
+      setProfileCheckError(null);
+      return;
+    }
 
     checkProfile();
   }, [user]);
+
+  // ================= AUTOMATIC FIRST-LOGIN TOUR TRIGGER =================
+  // Starts ONLY for genuinely new accounts that completed signup and are landing
+  // on the Dashboard for the first time. Existing users are never auto-started.
+  useEffect(() => {
+    // 1. Session must be ready and on Dashboard
+    if (!user?.id) return;
+    if (authPage !== "app" || currentPage !== "dashboard") return;
+    if (isTourActive) return;
+
+    if (hasProfile === false) {
+      console.log("[TOUR DEBUG] Waiting: Student profile not completed yet");
+      return;
+    }
+
+    if (showGcalPrompt) {
+      console.log("[TOUR DEBUG] Waiting: Google Calendar prompt is currently open");
+      return;
+    }
+
+    const handled = isFirstTourHandled(user.id);
+    const pending = isPendingFirstTour(user.id, user.email);
+
+    console.log(`[TOUR DEBUG] Current authenticated user: ${user.id} (${user.email})`);
+    console.log(`[TOUR DEBUG] Pending first-tour state: ${pending}`);
+    console.log(`[TOUR DEBUG] First-tour handled state: ${handled}`);
+
+    if (handled || !pending) {
+      return;
+    }
+
+    console.log("[TOUR DEBUG] User is eligible for automatic tour. Checking Dashboard target...");
+
+    let isCancelled = false;
+
+    // 3. Wait for the Dashboard target element ([data-tour="dashboard"]) before starting
+    const startAutomaticTour = async () => {
+      const targetElement = await waitForElement(
+        '[data-tour="dashboard"], [data-tour="dashboard-overview"]',
+        6000
+      );
+
+      if (isCancelled) return;
+
+      console.log("[TOUR DEBUG] Dashboard target found:", !!targetElement);
+
+      if (targetElement) {
+        console.log("[TOUR DEBUG] Starting automatic tour");
+        sessionStorage.setItem(TOUR_STEP_SESSION_KEY, "0");
+        setIsTourActive(true);
+      } else {
+        console.warn("[TOUR DEBUG] Dashboard target element NOT found after timeout");
+      }
+    };
+
+    startAutomaticTour();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user, hasProfile, showGcalPrompt, authPage, currentPage, isTourActive]);
 
   // ================= FETCH STUDY SETS =================
   // Only fetch study sets once we know the profile exists —
@@ -529,6 +635,39 @@ function AppContent() {
     }
   }
 
+  // ================= PROFILE CHECK ERROR GATE =================
+  // If verifying the profile failed due to a network or database error,
+  // show a clean error state with a Retry button. NEVER render the
+  // mandatory onboarding StudentProfilePage or flash the dashboard on error.
+  if (profileCheckError && !profileLoading) {
+    return (
+      <div
+        className={`flex min-h-screen items-center justify-center font-sans transition-colors duration-500 ${
+          isDarkMode ? "bg-[#0E0B15] text-[#F5F2FA]" : "bg-[#F6F3FC] text-[#292530]"
+        }`}
+      >
+        <div className="flex max-w-md flex-col items-center gap-4 text-center p-6 rounded-3xl border border-red-500/20 bg-red-500/5 backdrop-blur-xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/15 text-red-500">
+            <AlertTriangle size={24} />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold">Unable to Verify Profile</h2>
+            <p className={`mt-1 text-xs ${isDarkMode ? "text-white/60" : "text-gray-600"}`}>
+              Unable to verify your student profile. Please check your internet connection and try again.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={checkProfile}
+            className="cursor-pointer rounded-xl bg-[#8064C7] px-6 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#8B6DD4]"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ================= MANDATORY PROFILE GATE =================
   // If the user is authenticated but we haven't finished checking
   // whether their profile exists, show a loading state — never
@@ -561,7 +700,11 @@ function AppContent() {
           user={user}
           onProfileComplete={() => {
             setHasProfile(true);
-            setShowGcalPrompt(true);
+            const gcalDismissed =
+              localStorage.getItem("jot_gcal_prompt_dismissed") === "true";
+            if (!gcalDismissed) {
+              setShowGcalPrompt(true);
+            }
           }}
         />
       </Suspense>
@@ -727,6 +870,7 @@ function AppContent() {
         {/* ================= QUIZ CONFIGURATION ================= */}
         {currentPage === "quiz" && (
           <ConfigureSession
+            onNavigate={handleNavigate}
             studySetId={selectedStudySetId}
             studySetName={
               studySets.find(
@@ -746,6 +890,11 @@ function AppContent() {
             notice={settingsNotice}
             onDismissNotice={() => setSettingsNotice("")}
             onDeleteAllStudySets={handleDeleteAllStudySets}
+            onStartTour={() => {
+              sessionStorage.setItem(TOUR_STEP_SESSION_KEY, "0");
+              handleNavigate("dashboard");
+              setIsTourActive(true);
+            }}
           />
         )}
 
@@ -765,12 +914,21 @@ function AppContent() {
     </MainAppLayout>
   );
 
-  // Wrap with optional GCal prompt overlay
+  // Wrap with optional GCal prompt overlay and ProductTour
   return (
     <>
       {mainContent}
       {showGcalPrompt && (
         <GoogleCalendarPrompt onDismiss={() => setShowGcalPrompt(false)} />
+      )}
+      {isTourActive && (
+        <ProductTour
+          isActive={isTourActive}
+          currentPage={currentPage}
+          user={user}
+          onNavigate={handleNavigate}
+          onTourEnd={() => setIsTourActive(false)}
+        />
       )}
     </>
   );

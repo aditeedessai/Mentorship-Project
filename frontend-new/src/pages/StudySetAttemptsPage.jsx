@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { fetchAttemptsForStudySet, fetchStudySet, fetchQuestions } from "../services/api";
+import { formatScore } from "../utils/scoreFormat";
 
 const SECTIONS = [
   { id: "mcq", label: "MCQ", types: ["mcq"] },
@@ -98,7 +99,10 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
         // Fetch attempts
         const attemptsData = await fetchAttemptsForStudySet(studySetId);
         if (isMounted) {
-          setAttempts(attemptsData || []);
+          const completedOnly = (attemptsData || []).filter(
+            (att) => att.status === "completed"
+          );
+          setAttempts(completedOnly);
         }
       } catch (err) {
         console.error("Failed to load attempt history:", err);
@@ -401,7 +405,7 @@ function StudySetAttemptsPage({ studySetId, studySets = [], onNavigate }) {
                         Score
                       </span>
                       <span className="font-extrabold text-base sm:text-lg">
-                        {marksAwarded} / {totalMarks}
+                        {formatScore(marksAwarded)} / {formatScore(totalMarks)}
                       </span>
                     </div>
 

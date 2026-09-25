@@ -19,6 +19,24 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 SUPPORTED_EXTENSIONS = DOCUMENT_EXTENSIONS | IMAGE_EXTENSIONS
 
+
+def validate_pdf_file(file_path: str) -> None:
+    """
+    Validate that a file with a .pdf extension is actually a PDF
+    by checking its file signature (magic bytes).
+    """
+    try:
+        with open(file_path, "rb") as f:
+            header = f.read(5)
+    except OSError:
+        raise ValueError("The uploaded file could not be read.")
+
+    if header != b"%PDF-":
+        raise ValueError(
+            "The uploaded file is invalid. Please upload a valid file and try again."
+        )
+
+
 # Threshold set to 0.68 to eliminate low-scoring noise and guarantee 85%+ overall score
 MIN_CONFIDENCE_THRESHOLD = 0.68
 
@@ -37,8 +55,8 @@ def get_ocr_engine():
             enable_mkldnn=False,
             ocr_version="PP-OCRv4",
             cpu_threads=4,
-            det_limit_side_len=960,  # Fast detection bounds
-            rec_batch_num=30         # Batches line recognition for 3x faster speed
+            det_limit_side_len=960,
+            rec_batch_num=30
         )
     return _ocr_engine
 
@@ -60,30 +78,67 @@ def preprocess_image_to_grayscale(img_bytes: bytes) -> np.ndarray:
     max_dim = max(h, w)
     if max_dim > 1800:
         scale = 1800.0 / max_dim
-        gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        gray = cv2.resize(
+            gray,
+            None,
+            fx=scale,
+            fy=scale,
+            interpolation=cv2.INTER_AREA
+        )
 
     # Rapid CLAHE local equalization
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe = cv2.createCLAHE(
+        clipLimit=2.0,
+        tileGridSize=(8, 8)
+    )
     enhanced = clahe.apply(gray)
 
     # Fast unsharp sharpen
-    blurred = cv2.GaussianBlur(enhanced, (0, 0), sigmaX=1.5)
-    sharpened = cv2.addWeighted(enhanced, 1.3, blurred, -0.3, 0)
+    blurred = cv2.GaussianBlur(
+        enhanced,
+        (0, 0),
+        sigmaX=1.5
+    )
+    sharpened = cv2.addWeighted(
+        enhanced,
+        1.3,
+        blurred,
+        -0.3,
+        0
+    )
 
     # Safety border padding
     padded = cv2.copyMakeBorder(
-        sharpened, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=255
+        sharpened,
+        20,
+        20,
+        20,
+        20,
+        cv2.BORDER_CONSTANT,
+        value=255
     )
 
-    return cv2.cvtColor(padded, cv2.COLOR_GRAY2BGR)
+    return cv2.cvtColor(
+        padded,
+        cv2.COLOR_GRAY2BGR
+    )
 
 
-def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD, return_boxes: bool = False):
+def extract_text_safely(
+    result,
+    min_conf: float = MIN_CONFIDENCE_THRESHOLD,
+    return_boxes: bool = False
+):
     lines = []
     confidences = []
     boxes = []
+
     if not result:
-        return (lines, confidences, boxes) if return_boxes else (lines, confidences)
+        return (
+            (lines, confidences, boxes)
+            if return_boxes
+            else (lines, confidences)
+        )
 
     def parse_node(node):
         if node is None:
@@ -94,110 +149,300 @@ def extract_text_safely(result, min_conf: float = MIN_CONFIDENCE_THRESHOLD, retu
             return
 
         if isinstance(node, dict):
-            if "rec_texts" in node and isinstance(node["rec_texts"], list):
-                rec_scores = node.get("rec_scores", [1.0] * len(node["rec_texts"]))
-                for t, score in zip(node["rec_texts"], rec_scores):
+            if "rec_texts" in node and isinstance(
+                node["rec_texts"],
+                list
+            ):
+                rec_scores = node.get(
+                    "rec_scores",
+                    [1.0] * len(node["rec_texts"])
+                )
+
+                for t, score in zip(
+                    node["rec_texts"],
+                    rec_scores
+                ):
                     val = str(t).strip()
                     conf = float(score)
-                    if val and conf >= min_conf and val not in lines:
+
+                    if (
+                        val
+                        and conf >= min_conf
+                        and val not in lines
+                    ):
                         lines.append(val)
                         confidences.append(conf)
-                        boxes.append((0.0, 0.0, 0.0, 0.0))
+                        boxes.append(
+                            (0.0, 0.0, 0.0, 0.0)
+                        )
+
                 return
 
-            for key in ["rec_text", "text", "transcription"]:
+            for key in [
+                "rec_text",
+                "text",
+                "transcription"
+            ]:
                 if key in node and node[key]:
                     val = str(node[key]).strip()
-                    score = float(node.get("score", node.get("confidence", 1.0)))
-                    if val and score >= min_conf and val not in lines:
+
+                    score = float(
+                        node.get(
+                            "score",
+                            node.get(
+                                "confidence",
+                                1.0
+                            )
+                        )
+                    )
+
+                    if (
+                        val
+                        and score >= min_conf
+                        and val not in lines
+                    ):
                         lines.append(val)
                         confidences.append(score)
-                        boxes.append((0.0, 0.0, 0.0, 0.0))
+                        boxes.append(
+                            (0.0, 0.0, 0.0, 0.0)
+                        )
 
             for v in node.values():
-                if isinstance(v, (list, tuple, dict)):
+                if isinstance(
+                    v,
+                    (list, tuple, dict)
+                ):
                     parse_node(v)
+
             return
 
         if isinstance(node, (list, tuple)):
             if (
                 len(node) == 2
-                and isinstance(node[1], (list, tuple))
+                and isinstance(
+                    node[1],
+                    (list, tuple)
+                )
                 and len(node[1]) >= 1
-                and isinstance(node[1][0], str)
+                and isinstance(
+                    node[1][0],
+                    str
+                )
             ):
                 val = node[1][0].strip()
-                score = float(node[1][1]) if len(node[1]) > 1 and isinstance(node[1][1], (int, float)) else 1.0
-                if val and score >= min_conf and val not in lines:
+
+                score = (
+                    float(node[1][1])
+                    if (
+                        len(node[1]) > 1
+                        and isinstance(
+                            node[1][1],
+                            (int, float)
+                        )
+                    )
+                    else 1.0
+                )
+
+                if (
+                    val
+                    and score >= min_conf
+                    and val not in lines
+                ):
                     lines.append(val)
                     confidences.append(score)
 
-                    # Extract bounding box rectangle if available (node[0] is list of 4 points)
-                    if isinstance(node[0], (list, tuple)) and len(node[0]) >= 4:
+                    # Extract bounding box rectangle
+                    # if available
+                    if (
+                        isinstance(
+                            node[0],
+                            (list, tuple)
+                        )
+                        and len(node[0]) >= 4
+                    ):
                         try:
-                            xs = [float(pt[0]) for pt in node[0] if isinstance(pt, (list, tuple)) and len(pt) >= 2]
-                            ys = [float(pt[1]) for pt in node[0] if isinstance(pt, (list, tuple)) and len(pt) >= 2]
+                            xs = [
+                                float(pt[0])
+                                for pt in node[0]
+                                if (
+                                    isinstance(
+                                        pt,
+                                        (list, tuple)
+                                    )
+                                    and len(pt) >= 2
+                                )
+                            ]
+
+                            ys = [
+                                float(pt[1])
+                                for pt in node[0]
+                                if (
+                                    isinstance(
+                                        pt,
+                                        (list, tuple)
+                                    )
+                                    and len(pt) >= 2
+                                )
+                            ]
+
                             if xs and ys:
-                                boxes.append((min(xs), min(ys), max(xs), max(ys)))
+                                boxes.append(
+                                    (
+                                        min(xs),
+                                        min(ys),
+                                        max(xs),
+                                        max(ys)
+                                    )
+                                )
                             else:
-                                boxes.append((0.0, 0.0, 0.0, 0.0))
+                                boxes.append(
+                                    (
+                                        0.0,
+                                        0.0,
+                                        0.0,
+                                        0.0
+                                    )
+                                )
+
                         except Exception:
-                            boxes.append((0.0, 0.0, 0.0, 0.0))
+                            boxes.append(
+                                (
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                )
+                            )
                     else:
-                        boxes.append((0.0, 0.0, 0.0, 0.0))
+                        boxes.append(
+                            (
+                                0.0,
+                                0.0,
+                                0.0,
+                                0.0
+                            )
+                        )
+
                 return
 
             for sub in node:
                 parse_node(sub)
 
     parse_node(result)
-    return (lines, confidences, boxes) if return_boxes else (lines, confidences)
+
+    return (
+        (lines, confidences, boxes)
+        if return_boxes
+        else (lines, confidences)
+    )
 
 
 @overload
-def run_ocr_on_bytes(img_bytes: bytes, return_stats: Literal[False] = False, return_details: Literal[False] = False) -> str: ...
+def run_ocr_on_bytes(
+    img_bytes: bytes,
+    return_stats: Literal[False] = False,
+    return_details: Literal[False] = False
+) -> str:
+    ...
+
 
 @overload
-def run_ocr_on_bytes(img_bytes: bytes, return_stats: Literal[True], return_details: Literal[False] = False) -> tuple[list[str], list[float]]: ...
+def run_ocr_on_bytes(
+    img_bytes: bytes,
+    return_stats: Literal[True],
+    return_details: Literal[False] = False
+) -> tuple[list[str], list[float]]:
+    ...
+
 
 @overload
-def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False, return_details: Literal[True] = True) -> dict[str, Any]: ...
+def run_ocr_on_bytes(
+    img_bytes: bytes,
+    return_stats: bool = False,
+    return_details: Literal[True] = True
+) -> dict[str, Any]:
+    ...
 
-def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False, return_details: bool = False):
-    processed_img = preprocess_image_to_grayscale(img_bytes)
+
+def run_ocr_on_bytes(
+    img_bytes: bytes,
+    return_stats: bool = False,
+    return_details: bool = False
+):
+    processed_img = preprocess_image_to_grayscale(
+        img_bytes
+    )
+
     ocr = get_ocr_engine()
 
     try:
-        result = ocr.ocr(processed_img, cls=False)
+        result = ocr.ocr(
+            processed_img,
+            cls=False
+        )
     except Exception:
         try:
             result = ocr.ocr(processed_img)
         except Exception as err:
-            print(f"[OCR Warning] Primary OCR call error: {err}")
+            print(
+                f"[OCR Warning] Primary OCR call error: {err}"
+            )
             result = None
 
     if return_details:
-        lines, confidences, boxes = extract_text_safely(result, min_conf=MIN_CONFIDENCE_THRESHOLD, return_boxes=True)
+        lines, confidences, boxes = extract_text_safely(
+            result,
+            min_conf=MIN_CONFIDENCE_THRESHOLD,
+            return_boxes=True
+        )
     else:
-        lines, confidences = extract_text_safely(result, min_conf=MIN_CONFIDENCE_THRESHOLD)
+        lines, confidences = extract_text_safely(
+            result,
+            min_conf=MIN_CONFIDENCE_THRESHOLD
+        )
         boxes = []
 
     # Fallback to raw original if needed
     if not lines:
-        nparr = np.frombuffer(img_bytes, np.uint8)
-        raw_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        nparr = np.frombuffer(
+            img_bytes,
+            np.uint8
+        )
+
+        raw_bgr = cv2.imdecode(
+            nparr,
+            cv2.IMREAD_COLOR
+        )
+
         if raw_bgr is not None:
             try:
-                result = ocr.ocr(raw_bgr, cls=False)
+                result = ocr.ocr(
+                    raw_bgr,
+                    cls=False
+                )
+
                 if return_details:
-                    lines, confidences, boxes = extract_text_safely(result, min_conf=0.40, return_boxes=True)
+                    lines, confidences, boxes = extract_text_safely(
+                        result,
+                        min_conf=0.40,
+                        return_boxes=True
+                    )
                 else:
-                    lines, confidences = extract_text_safely(result, min_conf=0.40)
+                    lines, confidences = extract_text_safely(
+                        result,
+                        min_conf=0.40
+                    )
+
             except Exception:
                 pass
 
     if return_details:
-        h, w = processed_img.shape[:2] if processed_img is not None else (0, 0)
+        h, w = (
+            processed_img.shape[:2]
+            if processed_img is not None
+            else (0, 0)
+        )
+
         return {
             "lines": lines,
             "confidences": confidences,
@@ -211,109 +456,222 @@ def run_ocr_on_bytes(img_bytes: bytes, return_stats: bool = False, return_detail
         return lines, confidences
 
     if lines and confidences:
-        avg_confidence = (sum(confidences) / len(confidences)) * 100
-        print(f"\n--- PaddleOCR Extraction Report ---")
-        print(f"Lines Extracted: {len(lines)}")
-        print(f"Average Accuracy Score: {avg_confidence:.2f}%")
-        print("-----------------------------------\n")
+        avg_confidence = (
+            sum(confidences)
+            / len(confidences)
+        ) * 100
+
+        print(
+            "\n--- PaddleOCR Extraction Report ---"
+        )
+        print(
+            f"Lines Extracted: {len(lines)}"
+        )
+        print(
+            f"Average Accuracy Score: "
+            f"{avg_confidence:.2f}%"
+        )
+        print(
+            "-----------------------------------\n"
+        )
 
     return "\n".join(lines)
 
 
 class DocumentExtractor(ABC):
+
     @abstractmethod
-    def extract_text(self, file_path: str) -> str:
+    def extract_text(
+        self,
+        file_path: str
+    ) -> str:
         pass
 
 
 class ImageExtractor(DocumentExtractor):
-    def extract_text(self, file_path: str) -> str:
+
+    def extract_text(
+        self,
+        file_path: str
+    ) -> str:
+
         with open(file_path, "rb") as f:
             img_bytes = f.read()
+
         return run_ocr_on_bytes(img_bytes)
 
 
 class PDFExtractor(DocumentExtractor):
-    def extract_text(self, file_path: str) -> str:
+
+    def extract_text(
+        self,
+        file_path: str
+    ) -> str:
+
+        # Validate actual PDF file content
+        # before opening it with PyMuPDF.
+        validate_pdf_file(file_path)
+
         text = ""
         all_lines = []
         all_confidences = []
+
         doc = fitz.open(file_path)
 
         try:
             for page in doc:
+
                 page_text = page.get_text().strip()
 
                 # Native digital text bypass
                 if len(page_text) > 40:
                     text += page_text + "\n\n"
+
                 else:
-                    # 130 DPI: 2x faster page rendering and OCR inference
-                    pix = page.get_pixmap(dpi=130)
-                    img_bytes = pix.tobytes("png")
-                    lines, confs = run_ocr_on_bytes(img_bytes, return_stats=True)
+                    # 130 DPI: 2x faster page rendering
+                    # and OCR inference
+                    pix = page.get_pixmap(
+                        dpi=130
+                    )
+
+                    img_bytes = pix.tobytes(
+                        "png"
+                    )
+
+                    lines, confs = run_ocr_on_bytes(
+                        img_bytes,
+                        return_stats=True
+                    )
+
                     if lines:
                         all_lines.extend(lines)
                         all_confidences.extend(confs)
-                        text += "\n".join(lines) + "\n\n"
+                        text += (
+                            "\n".join(lines)
+                            + "\n\n"
+                        )
+
         finally:
             doc.close()
 
-        # Single consolidated report for the complete document
-        if all_lines and all_confidences:
-            overall_avg = (sum(all_confidences) / len(all_confidences)) * 100
-            print(f"\n--- PaddleOCR Extraction Report (Overall Document) ---")
-            print(f"Total Lines Extracted: {len(all_lines)}")
-            print(f"Overall Accuracy Score: {overall_avg:.2f}%")
-            print("------------------------------------------------------\n")
+        # Single consolidated report
+        # for the complete document
+        if (
+            all_lines
+            and all_confidences
+        ):
+            overall_avg = (
+                sum(all_confidences)
+                / len(all_confidences)
+            ) * 100
+
+            print(
+                "\n--- PaddleOCR Extraction Report "
+                "(Overall Document) ---"
+            )
+
+            print(
+                f"Total Lines Extracted: "
+                f"{len(all_lines)}"
+            )
+
+            print(
+                f"Overall Accuracy Score: "
+                f"{overall_avg:.2f}%"
+            )
+
+            print(
+                "------------------------------------------------------\n"
+            )
 
         return text
 
 
 class DOCXExtractor(DocumentExtractor):
-    def extract_text(self, file_path: str) -> str:
+
+    def extract_text(
+        self,
+        file_path: str
+    ) -> str:
+
         text = ""
         doc = Document(file_path)
+
         for paragraph in doc.paragraphs:
+
             if paragraph.text:
                 text += paragraph.text + "\n"
+
         return text
 
 
 class PPTXExtractor(DocumentExtractor):
-    def extract_text(self, file_path: str) -> str:
+
+    def extract_text(
+        self,
+        file_path: str
+    ) -> str:
+
         text = ""
         prs = Presentation(file_path)
+
         for slide in prs.slides:
+
             for shape in slide.shapes:
-                if hasattr(shape, "text") and shape.text:
+
+                if (
+                    hasattr(shape, "text")
+                    and shape.text
+                ):
                     text += shape.text + "\n"
+
         return text
 
 
-def get_extractor(file_path: str) -> DocumentExtractor:
-    ext = os.path.splitext(file_path)[1].lower()
+def get_extractor(
+    file_path: str
+) -> DocumentExtractor:
+
+    ext = os.path.splitext(
+        file_path
+    )[1].lower()
 
     if ext in IMAGE_EXTENSIONS:
         return ImageExtractor()
+
     elif ext == ".pdf":
         return PDFExtractor()
+
     elif ext == ".docx":
         return DOCXExtractor()
+
     elif ext == ".pptx":
         return PPTXExtractor()
 
-    allowed_list = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+    allowed_list = ", ".join(
+        sorted(SUPPORTED_EXTENSIONS)
+    )
+
     raise ValueError(
-        f"Unsupported file type '{ext}'. Allowed formats: {allowed_list}"
+        f"Unsupported file type '{ext}'. "
+        f"Allowed formats: {allowed_list}"
     )
 
 
-def extract_text(file_path: str) -> str:
+def extract_text(
+    file_path: str
+) -> str:
+
     extractor = get_extractor(file_path)
-    text = extractor.extract_text(file_path)
+
+    text = extractor.extract_text(
+        file_path
+    )
 
     if not text.strip():
-        raise ValueError("No text could be extracted from the uploaded file.")
+        raise ValueError(
+            "No text could be extracted "
+            "from the uploaded file."
+        )
 
     return text

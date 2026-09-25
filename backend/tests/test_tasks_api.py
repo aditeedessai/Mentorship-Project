@@ -79,7 +79,7 @@ def test_task_creation_with_all_fields_and_study_set():
         req = CreateTaskRequest(
             name="Solve Ch 4 Exercises",
             priority="high",
-            due_date=date(2026, 9, 15),
+            due_date=date(2026, 10, 15),
             due_time=time(14, 30),
             study_set_id=uuid.UUID(set_id_a),
             task_type="assignment",
@@ -90,7 +90,7 @@ def test_task_creation_with_all_fields_and_study_set():
         assert res.name == "Solve Ch 4 Exercises"
         assert str(res.user_id) == user_a_id
         assert res.priority == "high"
-        assert res.due_date == date(2026, 9, 15)
+        assert res.due_date == date(2026, 10, 15)
         assert res.due_time == time(14, 30)
         assert res.task_type == "assignment"
         assert str(res.study_set_id) == set_id_a
@@ -101,6 +101,34 @@ def test_task_creation_with_all_fields_and_study_set():
         tasks.delete_task(task_id=res.id, current_user=user_a)
     finally:
         study_set_repository.delete_study_set(set_id_a, user_id=user_a_id)
+
+
+def test_task_creation_past_date_rejected():
+    """Test that creating a task with a due_date in the past is rejected."""
+    from datetime import timedelta
+
+    past_date = date.today() - timedelta(days=1)
+
+    # 1. Pydantic validation error when due_date is in the past
+    with pytest.raises(ValueError, match="due_date cannot be in the past"):
+        CreateTaskRequest(
+            name="Past Task",
+            due_date=past_date,
+        )
+
+    # 2. Today's date is accepted
+    req_today = CreateTaskRequest(
+        name="Today Task",
+        due_date=date.today(),
+    )
+    assert req_today.due_date == date.today()
+
+    # 3. Future date is accepted
+    req_future = CreateTaskRequest(
+        name="Future Task",
+        due_date=date.today() + timedelta(days=7),
+    )
+    assert req_future.due_date == date.today() + timedelta(days=7)
 
 
 def test_task_study_set_ownership_enforcement():
@@ -321,6 +349,8 @@ if __name__ == "__main__":
     init_db()
     print("Running test_task_creation_with_all_fields_and_study_set()...")
     test_task_creation_with_all_fields_and_study_set()
+    print("Running test_task_creation_past_date_rejected()...")
+    test_task_creation_past_date_rejected()
     print("Running test_task_study_set_ownership_enforcement()...")
     test_task_study_set_ownership_enforcement()
     print("Running test_task_listing_and_date_filtering()...")

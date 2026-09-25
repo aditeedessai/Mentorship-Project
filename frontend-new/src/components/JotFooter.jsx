@@ -1,6 +1,6 @@
 import React from "react";
 import { useTheme } from "../context/ThemeContext";
-import jojoWaving from "../assets/jojo-waving.png";
+import JojoLogo from "./JojoLogo";
 
 /* =========================================================
    GITHUB ICON
@@ -66,21 +66,7 @@ export default function JotFooter() {
           ================================================= */}
 
           <div className="flex items-center gap-3">
-
-            {/* Jojo waving */}
-            <div
-              className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl ${
-                isDarkMode
-                  ? "bg-purple-500/10"
-                  : "bg-purple-100"
-              }`}
-            >
-              <img
-                src={jojoWaving}
-                alt="Jojo"
-                className="h-10 w-10 object-contain"
-              />
-            </div>
+            <JojoLogo className="h-10 w-auto" />
 
             {/* JOT text */}
             <div>

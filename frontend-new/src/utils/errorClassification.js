@@ -19,19 +19,23 @@ export function classifyQuestionGenerationError(err) {
   const rawMsg = typeof err === "string" ? err : (err?.message || err?.detail || String(err));
   const rawLower = rawMsg.toLowerCase();
 
-  // CATEGORY 1 — Gemini / API Quota or Rate Limit Error (429 / RESOURCE_EXHAUSTED)
+  // CATEGORY 1 — Gemini / API Quota, Rate Limit, or Transient 503 Overload Error
   if (
     rawLower.includes("429") ||
+    rawLower.includes("503") ||
     rawLower.includes("resource_exhausted") ||
     rawLower.includes("quota") ||
     rawLower.includes("rate limit") ||
+    rawLower.includes("temporarily busy") ||
+    rawLower.includes("service unavailable") ||
+    rawLower.includes("overloaded") ||
     rawLower.includes("generaterequestsperdayperprojectpermodel")
   ) {
     return {
       type: "quota",
-      title: "Question Generation Temporarily Unavailable",
+      title: "AI Generation Temporarily Busy",
       message:
-        "We couldn't generate your questions right now because the AI generation limit has been reached. Please try again later.",
+        "The AI generation service is temporarily busy right now. Please try again in a moment.",
       secondaryMessage: "Your study set and selected options are still saved.",
       showRetry: true,
     };

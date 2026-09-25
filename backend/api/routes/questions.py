@@ -14,6 +14,13 @@ from backend.database import quiz_repository, study_set_repository
 from backend.database.attempt_repository import get_attempt as get_attempt_from_db
 from backend.services import quiz_service
 
+from backend.quiz_generation.gemini_client import (
+    GeminiRateLimitError,
+    GeminiServiceUnavailableError,
+    GeminiConfigurationError,
+    GeminiError,
+)
+
 router = APIRouter(tags=["Questions"])
 
 
@@ -95,22 +102,37 @@ def generate_questions(
             attempt_id=payload.attempt_id,
             user_id=current_user.user_id
         )
+    except GeminiRateLimitError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=e.message
+        )
+    except GeminiServiceUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
+    except GeminiConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service configuration error. Please contact system administrator."
+        )
+    except GeminiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
-        # quiz_service.run_quiz -> generate_quiz can fail deep inside the
-        # Gemini call or the JSON parse of its response - str(e) alone
-        # (still included below, in the HTTP response) is often too thin
-        # to diagnose which one it was, so the full traceback goes to the
-        # server log here too.
         print("===== /questions/generate failed =====")
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate questions: {str(e)}"
+            detail="Failed to generate questions. Please try again."
         )
 
     # 4. Format generated questions into QuestionResponse list

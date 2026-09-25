@@ -5,11 +5,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from backend.answer_evaluation.sbert_model import preload_models
 from backend.database.database import close_pool, init_db, init_pool
 from backend.api.routes import (
     account,
+    audit,
     activity,
     attempts,
     auth,
@@ -45,50 +49,68 @@ async def _preload_models_in_background() -> None:
         await asyncio.to_thread(preload_models)
         elapsed = time.monotonic() - start
         print(f"main.py: background model preloading complete in {elapsed:.1f}s.")
-    except Exception as e:  # pragma: no cover - preload_models() already
-        # isolates and logs each model's own load failure individually;
-        # this is just a last-resort guard so a background task
-        # exception never surfaces as an unhandled asyncio error with no
-        # context instead.
+    except Exception as e:
         logger.warning("main.py: background model preloading failed (%s).", e)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Connection pool first: creates (and pre-warms, per
-    # DB_POOL_MIN_CONN) the process-wide pool every repository call leases
-    # from via get_connection(). Doing this before init_db()'s reachability
-    # check means a bad DATABASE_URL / unreachable database still fails
-    # fast at startup, exactly as it did before pooling existed.
+    # 1. Connection pool first
     print("main.py: creating database connection pool...")
     start = time.monotonic()
     init_pool()
     elapsed = time.monotonic() - start
     print(f"main.py: connection pool created in {elapsed:.2f}s.")
 
-    # 2. Reachability check (SELECT 1 - see init_db()) so every DB-backed
-    # endpoint is usable the instant the server starts accepting requests,
-    # instead of waiting behind model loading below.
+    # 2. Database reachability check
     print("main.py: checking database connection...")
     start = time.monotonic()
     init_db()
     elapsed = time.monotonic() - start
     print(f"main.py: database connection established in {elapsed:.2f}s.")
 
-    # 3. Model loading happens afterward, in the background - kicked off
-    # here but not awaited, so `yield` (and uvicorn accepting requests)
-    # isn't delayed by it. See _preload_models_in_background().
+    # 3. Background model loading
     preload_task = asyncio.create_task(_preload_models_in_background())
 
     yield
 
     preload_task.cancel()
 
-    # Release every pooled connection back to Postgres on shutdown rather
-    # than leaving them open until the OS reaps the process.
     print("main.py: closing database connection pool...")
     close_pool()
     print("main.py: connection pool closed.")
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security-related HTTP response headers to every response."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+
+        # Prevent MIME-type sniffing.
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # Prevent the API from being embedded in frames.
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # Restrict framing through CSP as an additional protection.
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
+
+        # Prevent browsers from sending the full URL as the referrer.
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Restrict browser capabilities that are not required by the API.
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=()"
+        )
+
+        # HSTS should only be sent when the API is served over HTTPS.
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+
+        return response
 
 
 app = FastAPI(
@@ -97,6 +119,9 @@ app = FastAPI(
     description="FastAPI API layer for the study engine.",
     lifespan=lifespan,
 )
+
+# ── Security Headers ────────────────────────────────────────────────
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ── CORS Configuration ───────────────────────────────────────────────
 # Allow the React/Vite frontend to communicate with the FastAPI backend.
@@ -128,6 +153,7 @@ api_router.include_router(tasks.router)
 api_router.include_router(exams.router)
 api_router.include_router(activity.router)
 api_router.include_router(account.router)
+api_router.include_router(audit.router)
 api_router.include_router(google_calendar.router)
 api_router.include_router(progress.router)
 

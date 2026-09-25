@@ -31,8 +31,11 @@ import {
 
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 
 import jojoThinking from "../assets/jojo-thinking.png";
+import jojoLogo from "../assets/jojo-logo.png";
+import { TOUR_STEP_SESSION_KEY } from "../components/tour/tourConstants";
 
 
 const SettingsPage = ({
@@ -41,6 +44,7 @@ const SettingsPage = ({
   notice,
   onDismissNotice,
   onDeleteAllStudySets,
+  onStartTour,
 }) => {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
@@ -55,6 +59,9 @@ const SettingsPage = ({
     useState("");
 
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] =
+    useState(false);
+
+  const [isTermsModalOpen, setIsTermsModalOpen] =
     useState(false);
 
   const [confirmAction, setConfirmAction] =
@@ -229,6 +236,20 @@ const SettingsPage = ({
 
 
   /* =====================================================
+     PRODUCT TOUR
+  ===================================================== */
+
+  const handleStartTour = () => {
+    sessionStorage.setItem(TOUR_STEP_SESSION_KEY, "0");
+    if (onStartTour) {
+      onStartTour();
+    } else if (onNavigate) {
+      onNavigate("dashboard");
+    }
+  };
+
+
+  /* =====================================================
      CHANGE PASSWORD
   ===================================================== */
 
@@ -356,16 +377,17 @@ const SettingsPage = ({
       setGoogleCalendarSuccess("");
       setGoogleCalendarLoading(true);
 
-      const url =
-        await getGoogleCalendarConnectUrl();
+      const data = await getGoogleCalendarConnectUrl();
 
-      if (!url) {
+      const authUrl = data?.auth_url;
+
+      if (!authUrl || typeof authUrl !== "string") {
         throw new Error(
           "Could not generate Google Calendar connection URL."
         );
       }
 
-      window.location.href = url;
+      window.location.href = authUrl;
     } catch (error) {
       console.error(
         "Google Calendar connection failed:",
@@ -373,7 +395,7 @@ const SettingsPage = ({
       );
 
       setGoogleCalendarError(
-        error.message ||
+        error?.message ||
           "Could not connect Google Calendar."
       );
 
@@ -944,8 +966,9 @@ const SettingsPage = ({
         @media (max-width: 640px) {
 
           .settings-jojo-area {
-            width: 270px !important;
-            height: 145px !important;
+            width: 175px !important;
+            height: 155px !important;
+            margin: 0 auto;
           }
 
           .settings-jojo-wrapper {
@@ -958,7 +981,7 @@ const SettingsPage = ({
           }
 
           .settings-speech {
-            right: 115px !important;
+            display: none !important;
           }
 
         }
@@ -1073,22 +1096,11 @@ const SettingsPage = ({
               className="settings-orbit-center settings-orbit-clockwise pointer-events-none absolute right-[10px] top-1/2 h-[175px] w-[175px] -translate-y-1/2"
             >
 
-              {/* TOP */}
-
               <span className="settings-orbit-pulse absolute left-1/2 top-[-5px] h-3 w-3 -translate-x-1/2 rounded-full bg-[#45A9A9]" />
-
-
-              {/* RIGHT */}
 
               <span className="settings-orbit-bubble absolute right-[-5px] top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#8064C7]" />
 
-
-              {/* BOTTOM */}
-
               <span className="settings-orbit-pulse absolute bottom-[-5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#45A9A9]" />
-
-
-              {/* LEFT */}
 
               <span className="absolute left-[-5px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[#A58CDD]" />
 
@@ -1605,6 +1617,97 @@ const SettingsPage = ({
 
 
       {/* =====================================================
+          PRODUCT TOUR
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-6 flex items-center gap-3">
+
+          <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+            <Sparkles size={20} />
+          </div>
+
+          <div>
+
+            <h2 className="font-black tracking-tight">
+              Product Tour
+            </h2>
+
+            <p
+              className={`text-xs ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Revisit the guided walkthrough of Jot with Jojo
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div
+          className={`flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+            isDarkMode
+              ? "border-white/5 bg-white/5"
+              : "border-gray-200/80 bg-white"
+          }`}
+        >
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 p-1.5">
+              <img
+                src={jojoLogo}
+                alt="Jojo"
+                className="h-full w-auto object-contain"
+              />
+            </div>
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Guided Onboarding Tour
+              </p>
+
+              <p
+                className={`text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Let Jojo guide you through Dashboard, Study Sets, Quizzes, and Planner.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            onClick={handleStartTour}
+            className="settings-shimmer cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#8B6DD4] shrink-0"
+          >
+            Take a Tour
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
           GOOGLE CALENDAR
       ===================================================== */}
 
@@ -1887,6 +1990,42 @@ const SettingsPage = ({
           </button>
 
 
+          {/* TERMS & CONDITIONS */}
+
+          <button
+            type="button"
+            onClick={() =>
+              setIsTermsModalOpen(true)
+            }
+            className="settings-action flex w-full cursor-pointer items-center justify-between py-4 text-left"
+          >
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Terms & Conditions
+              </p>
+
+              <p
+                className={`mt-0.5 text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Read our platform terms of service
+              </p>
+
+            </div>
+
+            <ChevronRight
+              size={18}
+              className="opacity-40"
+            />
+
+          </button>
+
+
           {/* PRIVACY POLICY */}
 
           <button
@@ -2135,8 +2274,15 @@ const SettingsPage = ({
 
 
       {/* =====================================================
-          PRIVACY MODAL
+          LEGAL MODALS
       ===================================================== */}
+
+      <TermsAndConditionsModal
+        isOpen={isTermsModalOpen}
+        onClose={() =>
+          setIsTermsModalOpen(false)
+        }
+      />
 
       <PrivacyPolicyModal
         isOpen={isPrivacyModalOpen}

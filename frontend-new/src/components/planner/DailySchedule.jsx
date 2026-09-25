@@ -5,7 +5,8 @@ import TaskItem from "./TaskItem";
 import RevisionDueItem from "./RevisionDueItem";
 
 function formatHeaderDate(dateKey) {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const _now = new Date();
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
   if (dateKey === todayStr) return "Today";
 
   const parts = dateKey.split("-");
@@ -33,7 +34,8 @@ export default function DailySchedule({
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Filter tasks for the selected date first or globally based on status filter
-  const todayStr = new Date().toISOString().split("T")[0];
+  const _n = new Date();
+  const todayStr = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}`;
 
   const dateTasks = tasks.filter((t) => {
     // Apply status filter

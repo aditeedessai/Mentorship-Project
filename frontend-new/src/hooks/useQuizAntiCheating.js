@@ -19,13 +19,22 @@ import { useState, useEffect, useRef, useCallback } from 'react'
  *
  * @param {{ enabled: boolean, onTerminate: (reason: string) => void }} options
  */
+// ============================================================================
+// QA / LOCAL TESTING MODE TOGGLE
+// Set QA_DISABLE_ANTI_CHEATING to true to temporarily disable all anti-cheating
+// restrictions (DevTools detection, F12/Inspect shortcuts, right-click menu,
+// tab/window focus loss, fullscreen gating, copy/paste toasts) for manual QA testing.
+// Set to false to restore production anti-cheating enforcement.
+// ============================================================================
+const QA_DISABLE_ANTI_CHEATING = false
+
 export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}) {
   // ── Constants ───────────────────────────────────────────────────
   const MAX_WARNINGS = 2
 
   // ── State ────────────────────────────────────────────────────────
   const [warnings, setWarnings] = useState([])
-  const [isFullscreenReady, setIsFullscreenReady] = useState(false)
+  const [isFullscreenReady, setIsFullscreenReady] = useState(QA_DISABLE_ANTI_CHEATING ? true : false)
   const [quizTerminated, setQuizTerminated] = useState(false)
 
   // Warning system state
@@ -58,6 +67,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
   // ── Warning helpers ──────────────────────────────────────────────
   const addWarning = useCallback((type, title, message) => {
+    if (QA_DISABLE_ANTI_CHEATING) return
     setWarnings(prev => {
       if (prev.some(w => w.type === type)) return prev
       return [...prev, { type, title, message }]
@@ -68,8 +78,39 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     setWarnings(prev => prev.filter(w => w.type !== type))
   }, [])
 
+  // ── Screen Wake Lock ────────────────────────────────────────────
+  // Keeps the screen from sleeping due to inactivity timeout while a
+  // quiz is active. Best-effort only: unsupported browsers, insecure
+  // (non-HTTPS/non-localhost) contexts, and low-battery situations all
+  // fail silently rather than breaking the quiz, and a wake lock can't
+  // override a deliberate action like closing a laptop lid or pressing
+  // a physical power button - it only stops the OS's own idle timer.
+  const wakeLockRef = useRef(null)
+
+  const requestWakeLock = useCallback(async () => {
+    if (QA_DISABLE_ANTI_CHEATING) return
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen')
+      }
+    } catch {
+      // Unsupported / denied / insecure context - not fatal, the quiz
+      // just won't be protected from idle sleep in that environment.
+    }
+  }, [])
+
+  const releaseWakeLock = useCallback(() => {
+    try {
+      wakeLockRef.current?.release()
+    } catch {
+      // ignore
+    }
+    wakeLockRef.current = null
+  }, [])
+
   // ── Centralized quiz termination ─────────────────────────────────
   const terminateQuiz = useCallback(() => {
+    if (QA_DISABLE_ANTI_CHEATING) return
     // Guard: only terminate once
     if (quizTerminatedRef.current || cleanedUpRef.current || isTerminatingRef.current) return
 
@@ -91,10 +132,12 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       clipboardDismissTimerRef.current = null
     }
 
+    releaseWakeLock()
+
     // Exit fullscreen
     try {
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
+        document.exitFullscreen().catch(() => { })
       }
     } catch {
       // ignore
@@ -104,7 +147,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     if (onTerminateRef.current) {
       onTerminateRef.current()
     }
-  }, [])
+  }, [releaseWakeLock])
 
   // ── Clear active violation (auto-resume) ──────────────────────────
   const clearViolation = useCallback(() => {
@@ -127,11 +170,24 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
   // ── Centralized violation handler ─────────────────────────────────
   const handleViolation = useCallback((reason, message, isBlocking = false) => {
+    if (QA_DISABLE_ANTI_CHEATING) return
     if (cleanedUpRef.current || quizTerminatedRef.current || isTerminatingRef.current) return
 
     // For DevTools: check violation-session guard
     // If DevTools violation is already active (same continuous session), don't increment
     if (reason === 'devtools' && devToolsViolationActiveRef.current) return
+
+    // A transient violation (tab switch / focus loss / fullscreen exit) is
+    // already open and unresolved - don't count a second, different reason
+    // as a brand-new strike on top of it. This matters most for system
+    // sleep/resume: suspending the machine can fire blur, then
+    // visibilitychange, then fullscreenchange several seconds apart (each
+    // well outside the 300ms de-dupe below), which used to register as 2-3
+    // separate violations for what is really one incident - easily enough
+    // to blow past MAX_WARNINGS and terminate/redirect the quiz just for
+    // waking the laptop up (DF020). Devtools already has its own dedicated
+    // guard above and is unaffected by this one.
+    if (reason !== 'devtools' && violationActiveRef.current) return
 
     // 300ms deduplication across all violation types
     const now = Date.now()
@@ -183,18 +239,23 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     setActiveViolation(null)
     setIsViolationActive(false)
 
+    releaseWakeLock()
+
     try {
       if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
+        document.exitFullscreen().catch(() => { })
       }
     } catch {
       // ignore
     }
-  }, [])
+  }, [releaseWakeLock])
 
   // ── Main effect: register all listeners ──────────────────────────
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || QA_DISABLE_ANTI_CHEATING) {
+      setIsFullscreenReady(true)
+      return
+    }
 
     // Reset state for this activation
     cleanedUpRef.current = false
@@ -217,6 +278,15 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
+        // Reset the failed-attempt counter on every successful (re-)entry.
+        // Without this it accumulated for the whole session, so attempts
+        // spent getting into fullscreen at quiz start counted against the
+        // budget for re-entering later - meaning a single flaky re-request
+        // after a device sleep/wake (browsers are often momentarily fussy
+        // about granting fullscreen right after waking) could tip the
+        // cumulative count to the termination threshold and silently kick
+        // the user to the dashboard with no warning shown (DF044).
+        fullscreenAttemptCountRef.current = 0
       } else {
         setIsFullscreenReady(false)
         // Only trigger violation if fullscreen was actually established previously
@@ -246,13 +316,20 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       }
     }
 
-    // Retry fullscreen on the first user gesture (click, pointer, or key)
+    // Re-attempt fullscreen on every user gesture (click, pointer, or key)
+    // while not currently in fullscreen. Deliberately NEVER removes these
+    // listeners once fullscreen is first established - a later ESC/OS-forced
+    // exit (e.g. the browser's own fullscreen-exit confirmation, or the
+    // system putting the machine to sleep) needs this same handler to catch
+    // the user's next click/keypress and re-request fullscreen. Previously
+    // this uninstalled itself after the first success, which is exactly why
+    // the "Entering Secure Mode - click anywhere to continue" gate stopped
+    // responding to clicks after the first fullscreen exit (DF016/DF018/DF019).
     const handleFirstInteraction = async () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
-        removeInteractionListeners()
         return
       }
 
@@ -261,7 +338,6 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
         await document.documentElement.requestFullscreen()
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
-        removeInteractionListeners()
       } catch {
         // If exhausted attempts, terminate
         if (fullscreenAttemptCountRef.current >= 3) {
@@ -285,6 +361,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     document.addEventListener('pointerdown', handleFirstInteraction)
     document.addEventListener('keydown', handleFirstInteractionKey)
     attemptFullscreen()
+    requestWakeLock()
 
     // ────────────────────────────────────────────────────────────────
     // 2. VISIBILITY MONITORING — tab switch
@@ -297,6 +374,12 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
           'You left the controlled quiz environment.',
           false // transient
         )
+      } else {
+        // The wake lock releases itself automatically whenever the
+        // document goes hidden (per spec), so it has to be re-requested
+        // every time visibility returns or it stays off for the rest
+        // of the quiz.
+        requestWakeLock()
       }
     }
 
@@ -496,9 +579,10 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
         clipboardDismissTimerRef.current = null
       }
 
+      releaseWakeLock()
       historyPushedRef.current = false
     }
-  }, [enabled, addWarning, removeWarning, handleViolation, clearViolation, terminateQuiz])
+  }, [enabled, addWarning, removeWarning, handleViolation, clearViolation, terminateQuiz, requestWakeLock, releaseWakeLock])
 
   return {
     isFullscreenReady,

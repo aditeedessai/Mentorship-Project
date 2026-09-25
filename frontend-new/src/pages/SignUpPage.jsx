@@ -3,13 +3,23 @@ import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../services/supabase";
 import { hashPasswordClient } from "../services/crypto";
+import { validatePasswordStrength } from "../utils/passwordValidation";
 import jojoWaving from "../assets/jojo-waving.png";
+import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
+import JojoLogo from "../components/JojoLogo";
+import { markPendingFirstTour } from "../components/tour/tourConstants";
 
 function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
+
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] =
+    useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] =
     useState(false);
 
   const [name, setName] = useState("");
@@ -36,6 +46,17 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
     if (dob && dob > today) {
       setError("Date of Birth cannot be in the future.");
+      return;
+    }
+
+    // Validate password strength BEFORE hashing
+    const validation = validatePasswordStrength(password);
+    if (!validation.isValid) {
+      setError(
+        "Password does not meet the requirements: " +
+          validation.errors.join(", ") +
+          "."
+      );
       return;
     }
 
@@ -68,15 +89,39 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
         });
 
       if (authError) {
-        setError(
-          authError.message ||
-            "Failed to create account."
-        );
+        if (
+          authError.status === 409 ||
+          authError.message?.includes("users_email_partial_key") ||
+          authError.message?.includes("already exists") ||
+          authError.code === "23505" ||
+          authError.code === "user_already_exists"
+        ) {
+          setError("An account with this email already exists.");
+        } else {
+          setError(
+            authError.message ||
+              "Failed to create account."
+          );
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Defense-in-depth: if GoTrue returned an empty identities array indicating an existing account
+      const isExistingAccount =
+        data?.user &&
+        Array.isArray(data.user.identities) &&
+        data.user.identities.length === 0;
+
+      if (isExistingAccount) {
+        setError("An account with this email already exists.");
         setLoading(false);
         return;
       }
 
       if (onSignUpSuccess && data?.user) {
+        console.log("[TOUR DEBUG] Signup successful. User ID:", data.user.id, "Email:", normalizedEmail);
+        markPendingFirstTour(data.user.id, normalizedEmail);
         onSignUpSuccess(data.user.email);
       }
     } catch (err) {
@@ -425,7 +470,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
       `}</style>
 
       <div
-        className={`relative flex min-h-screen items-center justify-center p-4 font-sans transition-colors duration-500 sm:p-6 ${
+        className={`relative flex min-h-screen items-center justify-center p-3 font-sans transition-colors duration-500 sm:p-6 ${
           isDarkMode
             ? "bg-[#0E0B15] text-[#F5F2FA]"
             : "bg-[#F6F3FC] text-[#292530]"
@@ -463,7 +508,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
             TOP CONTROLS
         ========================================== */}
 
-        <div className="absolute right-4 top-4 flex items-center gap-3 sm:right-6 sm:top-6">
+        <div className="absolute right-3 top-3 flex items-center gap-2.5 sm:right-6 sm:top-6 sm:gap-3">
 
           {onBack && (
             <button
@@ -508,7 +553,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
         ========================================== */}
 
         <div
-          className={`signup-card-animation mt-12 grid w-full max-w-5xl overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-500 sm:rounded-[32px] lg:mt-0 lg:grid-cols-2 ${
+          className={`signup-card-animation mx-auto mt-4 grid w-full max-w-[480px] overflow-hidden rounded-2xl border backdrop-blur-2xl transition-all duration-500 sm:mt-10 sm:max-w-[540px] sm:rounded-[32px] lg:mt-0 lg:max-w-5xl lg:grid-cols-2 ${
             isDarkMode
               ? "border-white/10 bg-[#17131F]/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
               : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
@@ -539,6 +584,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
             ====================================== */}
 
             <div className="signup-logo-animation relative z-10 flex items-center gap-3">
+              <JojoLogo className="h-9 w-auto" />
 
               <div className="text-4xl font-black tracking-[-0.08em] text-white">
                 Jot<span className="text-purple-200">.</span>
@@ -800,14 +846,15 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
               RIGHT SIDE — FORM
           ========================================== */}
 
-          <div className="p-6 sm:p-12 lg:p-14">
+          <div className="p-4 sm:p-8 md:p-10 lg:p-14">
 
             {/* MOBILE LOGO */}
 
-            <div className="signup-logo-animation mb-6 flex items-center justify-between lg:mb-8">
+            <div className="signup-logo-animation mb-2.5 flex items-center justify-between sm:mb-6 lg:mb-8">
 
-              <div className="text-3xl font-black tracking-[-0.08em] lg:hidden">
-                Jot<span className="text-[#8064C7]">.</span>
+              <div className="flex items-center gap-2 text-2xl font-black tracking-[-0.08em] sm:text-3xl lg:hidden">
+                <JojoLogo className="h-7 w-auto" />
+                <span>Jot<span className="text-[#8064C7]">.</span></span>
               </div>
 
             </div>
@@ -816,94 +863,45 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
                 MOBILE JOJO
             ====================================== */}
 
-            <div className="mb-6 flex justify-center lg:hidden">
-
-              <div className="relative flex h-[155px] w-[280px] items-center justify-center">
-
-                {/* MOBILE OUTER CIRCLE */}
-
-                <div className="absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px] rounded-full border border-[#8064C7]/15" />
-
-                {/* MOBILE INNER CIRCLE */}
-
-                <div className="absolute left-1/2 top-1/2 h-[105px] w-[105px] -ml-[52.5px] -mt-[52.5px] rounded-full border border-dashed border-[#8064C7]/15" />
-
-                {/* MOBILE OUTER BUBBLE */}
-
-                <div
-                  className="absolute left-1/2 top-1/2 h-[145px] w-[145px] -ml-[72.5px] -mt-[72.5px]"
-                  style={{
-                    animation:
-                      "signupOrbitClockwise 7s linear infinite",
-                  }}
-                >
-                  <span className="absolute left-1/2 top-[-5px] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#8064C7] shadow-[0_0_12px_rgba(128,100,199,0.7)]" />
+            <div className="mb-3 flex justify-center sm:mb-6 lg:hidden">
+              <div className="relative flex max-w-[300px] items-center justify-center gap-3 sm:gap-4">
+                <div className="relative flex h-[60px] w-[60px] shrink-0 items-center justify-center sm:h-[84px] sm:w-[84px]">
+                  <div
+                    className="absolute inset-0 rounded-full border border-[#8064C7]/20 dark:border-white/10"
+                    style={{
+                      animation: "orbitRotate 12s linear infinite",
+                    }}
+                  />
+                  <img
+                    src={jojoWaving}
+                    alt="Jojo waving"
+                    className="signup-jojo-float relative z-10 h-[50px] w-[50px] object-contain drop-shadow-[0_8px_16px_rgba(128,100,199,0.2)] sm:h-[72px] sm:w-[72px]"
+                  />
                 </div>
 
-                {/* MOBILE INNER BUBBLE */}
-
-                <div
-                  className="absolute left-1/2 top-1/2 h-[105px] w-[105px] -ml-[52.5px] -mt-[52.5px]"
-                  style={{
-                    animation:
-                      "signupOrbitCounter 5s linear infinite",
-                  }}
-                >
-                  <span className="absolute right-[-4px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[#A58CDD]" />
+                <div className="signup-speech-animation rounded-2xl border border-[#8064C7]/15 bg-white/90 px-3 py-1.5 sm:px-3.5 sm:py-2 text-left shadow-md dark:border-white/10 dark:bg-[#1E192B]">
+                  <p className="text-[11px] font-black leading-tight text-[#4F3A7D] dark:text-[#C4B5FD]">
+                    Hey! I'm Jojo 👋
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-semibold leading-3 text-[#75678E] dark:text-white/60">
+                    Let's get started!
+                  </p>
                 </div>
-
-                {/* MOBILE JOJO */}
-
-                <div className="signup-jojo-entrance relative z-10">
-
-                  <div className="signup-jojo-float">
-
-                    <img
-                      src={jojoWaving}
-                      alt="Jojo waving"
-                      className="h-[115px] w-[115px] object-contain"
-                    />
-
-                  </div>
-
-                </div>
-
-                {/* MOBILE SPEECH */}
-
-                <div className="signup-speech-animation absolute right-[-5px] top-[-5px] z-20 w-[145px]">
-
-                  <div className="relative rounded-2xl border border-[#8064C7]/15 bg-white px-3 py-2.5 text-left shadow-lg">
-
-                    <p className="text-[11px] font-black leading-tight text-[#4F3A7D]">
-                      Hey! I'm Jojo 👋
-                    </p>
-
-                    <p className="mt-0.5 text-[10px] font-semibold leading-4 text-[#75678E]">
-                      Let's get started!
-                    </p>
-
-                    <div className="absolute -bottom-1.5 left-6 h-3 w-3 rotate-45 border-b border-r border-[#8064C7]/15 bg-white" />
-
-                  </div>
-
-                </div>
-
               </div>
-
             </div>
 
             {/* ======================================
                 FORM HEADER
             ====================================== */}
 
-            <div className="signup-field-animation mb-6">
+            <div className="signup-field-animation mb-3 sm:mb-6">
 
-              <h2 className="text-3xl font-black tracking-tight">
+              <h2 className="text-xl font-black tracking-tight sm:text-3xl">
                 Create your account
               </h2>
 
               <p
-                className={`mt-2 text-sm ${
+                className={`mt-1 sm:mt-2 text-xs sm:text-sm ${
                   isDarkMode
                     ? "text-white/55"
                     : "text-[#706A78]"
@@ -921,7 +919,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
             <form
               onSubmit={handleSubmit}
-              className="space-y-3.5"
+              className="space-y-3 sm:space-y-3.5"
             >
 
               {/* FULL NAME */}
@@ -1079,6 +1077,41 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
                 </div>
 
+                {/* Password Requirements Checklist */}
+                {password.length > 0 && (() => {
+                  const v = validatePasswordStrength(password);
+                  return (
+                    <div
+                      className={`mt-2 space-y-1 rounded-lg px-3 py-2 text-[11px] font-medium ${
+                        isDarkMode
+                          ? "bg-white/5 text-white/60"
+                          : "bg-gray-50 text-gray-500"
+                      }`}
+                    >
+                      <div className={v.requirements.minLength ? "text-green-400" : ""}>
+                        {v.requirements.minLength ? "✓" : "○"} At least 8 characters
+                      </div>
+                      <div className={v.requirements.uppercase ? "text-green-400" : ""}>
+                        {v.requirements.uppercase ? "✓" : "○"} Uppercase letter
+                      </div>
+                      <div className={v.requirements.lowercase ? "text-green-400" : ""}>
+                        {v.requirements.lowercase ? "✓" : "○"} Lowercase letter
+                      </div>
+                      <div className={v.requirements.number ? "text-green-400" : ""}>
+                        {v.requirements.number ? "✓" : "○"} Number
+                      </div>
+                      <div className={v.requirements.specialChar ? "text-green-400" : ""}>
+                        {v.requirements.specialChar ? "✓" : "○"} Special character (!@#$%...)
+                      </div>
+                      {!v.requirements.notCommon && (
+                        <div className="text-red-400">
+                          ✗ Password is too common
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
               </div>
 
               {/* CONFIRM PASSWORD */}
@@ -1155,26 +1188,46 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
                 </div>
               )}
 
-              {/* TERMS */}
+              {/* TERMS & PRIVACY */}
 
-              <div className="signup-field-animation signup-field-6 flex items-start gap-2 pt-1">
+              <div className="signup-field-animation signup-field-6 flex items-start gap-2.5 pt-1">
 
                 <input
+                  id="agree-terms-checkbox"
                   type="checkbox"
                   required
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#8064C7]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-[#8064C7] cursor-pointer"
                 />
 
-                <p
-                  className={`text-xs ${
+                <label
+                  htmlFor="agree-terms-checkbox"
+                  className={`text-xs leading-relaxed ${
                     isDarkMode
                       ? "text-white/60"
                       : "text-gray-500"
                   }`}
                 >
-                  I agree to the Terms of Service and
-                  Privacy Policy.
-                </p>
+                  I agree to the{" "}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(true)}
+                    className="font-bold text-[#8064C7] dark:text-[#A78BFA] transition-all hover:underline cursor-pointer"
+                  >
+                    Terms & Conditions
+                  </button>{" "}
+
+                  and{" "}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivacyModalOpen(true)}
+                    className="font-bold text-[#8064C7] dark:text-[#A78BFA] transition-all hover:underline cursor-pointer"
+                  >
+                    Privacy Policy
+                  </button>
+                  .
+                </label>
 
               </div>
 
@@ -1183,7 +1236,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="signup-button-animation w-full rounded-xl bg-[#8064C7] py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#8B6DD4] hover:shadow-[0_18px_40px_rgba(128,100,199,0.45)] disabled:opacity-50"
+                className="signup-button-animation w-full rounded-xl bg-[#8064C7] py-2.5 sm:py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-1 hover:bg-[#8B6DD4] hover:shadow-[0_18px_40px_rgba(128,100,199,0.45)] disabled:opacity-50"
               >
                 {loading
                   ? "Creating Account..."
@@ -1196,7 +1249,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
                 LOGIN LINK
             ====================================== */}
 
-            <div className="signup-field-animation signup-field-6 mt-6 text-center">
+            <div className="signup-field-animation signup-field-6 mt-4 sm:mt-6 text-center">
 
               <p
                 className={`text-sm ${
@@ -1223,6 +1276,20 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
 
         </div>
       </div>
+
+      {/* ======================================
+          LEGAL MODALS
+      ====================================== */}
+
+      <TermsAndConditionsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
+
+      <PrivacyPolicyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+      />
     </>
   );
 }

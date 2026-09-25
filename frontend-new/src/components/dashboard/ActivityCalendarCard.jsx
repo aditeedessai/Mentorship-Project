@@ -79,14 +79,14 @@ function ActivityCalendarCard() {
 
   return (
     <div
-      className={`flex flex-1 flex-col rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 ${isDarkMode
+      className={`flex flex-1 flex-col rounded-2xl sm:rounded-3xl border p-3.5 sm:p-6 backdrop-blur-2xl transition-all duration-500 ${isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
           : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
         }`}
     >
-      <h2 className="mb-4 text-xl font-bold tracking-tight">Activity</h2>
+      <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl font-bold tracking-tight">Activity</h2>
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 sm:mb-4 flex items-center justify-between">
         <button
           type="button"
           onClick={goToPrevMonth}

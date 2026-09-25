@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from backend.api.deps import AuthenticatedUser, get_current_user
 from backend.api.rate_limiter import rate_limit_by_user
 from backend.api.schemas.activity import StudiedDaysResponse
-from backend.database import evaluation_repository
+from backend.database import activity_log_repository
 
 router = APIRouter(prefix="/activity", tags=["Activity"])
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/activity", tags=["Activity"])
     response_model=StudiedDaysResponse,
     status_code=status.HTTP_200_OK,
     summary="List studied days for a month",
-    description="Retrieves the distinct days within the given month/year the authenticated user answered at least one question, across every study set and question type."
+    description="Retrieves the distinct days within the given month/year the authenticated user answered at least one question, across every study set and question type - persists even after the underlying study set is later deleted."
 )
 def get_studied_days(
     year: int = Query(..., ge=2000, le=2100, description="Calendar year, e.g. 2026"),
@@ -21,7 +21,7 @@ def get_studied_days(
     current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
 ) -> StudiedDaysResponse:
     try:
-        studied_days = evaluation_repository.get_studied_dates(
+        studied_days = activity_log_repository.get_studied_dates(
             user_id=current_user.user_id,
             year=year,
             month=month

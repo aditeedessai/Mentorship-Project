@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JojoLogo from '../components/JojoLogo';
 import {
   Sparkles,
   BookOpen,
@@ -314,7 +315,7 @@ export default function LandingPage({ onNavigate }) {
 
             {/* 1. Left: Floating Syllabus Document Hologram */}
             <div
-              className={`absolute left-2 sm:left-10 top-1/2 -translate-y-1/2 w-52 h-72 rounded-3xl bg-cyan-950/40 border border-cyan-500/40 p-4 shadow-[0_0_40px_rgba(56,189,248,0.25)] transition-all duration-700 backdrop-blur-md ${
+              className={`hidden md:block absolute left-2 sm:left-10 top-1/2 -translate-y-1/2 w-52 h-72 rounded-3xl bg-cyan-950/40 border border-cyan-500/40 p-4 shadow-[0_0_40px_rgba(56,189,248,0.25)] transition-all duration-700 backdrop-blur-md ${
                 introPhase >= 1 ? 'scale-105 border-cyan-400 bg-cyan-950/60' : 'opacity-80'
               }`}
             >
@@ -342,7 +343,7 @@ export default function LandingPage({ onNavigate }) {
             </div>
 
             {/* 2. Middle: Dual Laser Particle Conduits */}
-            <svg className="w-full h-full absolute inset-0 pointer-events-none" viewBox="0 0 900 400">
+            <svg className="hidden md:block w-full h-full absolute inset-0 pointer-events-none" viewBox="0 0 900 400">
               <defs>
                 <linearGradient id="streamGradSmooth" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.2" />
@@ -389,7 +390,7 @@ export default function LandingPage({ onNavigate }) {
 
             {/* 4. Right: Compiled HUD Deck Hologram */}
             <div
-              className={`absolute right-2 sm:right-10 top-1/2 -translate-y-1/2 w-52 h-72 rounded-3xl bg-slate-900/85 border border-indigo-500/40 p-4 shadow-[0_0_40px_rgba(99,102,241,0.35)] transition-all duration-700 backdrop-blur-md ${
+              className={`hidden md:block absolute right-2 sm:right-10 top-1/2 -translate-y-1/2 w-52 h-72 rounded-3xl bg-slate-900/85 border border-indigo-500/40 p-4 shadow-[0_0_40px_rgba(99,102,241,0.35)] transition-all duration-700 backdrop-blur-md ${
                 introPhase >= 2 ? 'scale-105 border-cyan-400 opacity-100 bg-slate-900' : 'opacity-60'
               }`}
             >
@@ -462,15 +463,7 @@ export default function LandingPage({ onNavigate }) {
       >
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-lg ${
-                isDarkMode
-                  ? 'bg-gradient-to-br from-[#38BDF8] to-[#4F46E5] text-white shadow-cyan-500/20'
-                  : 'bg-[#4F46E5] text-white shadow-[#4F46E5]/25'
-              }`}
-            >
-              <Sparkles size={22} className="stroke-[2.2]" />
-            </div>
+            <JojoLogo className="h-9 w-auto" />
             <span className={`font-black text-xl tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
               AI STUDY ENGINE
             </span>
@@ -1003,15 +996,7 @@ export default function LandingPage({ onNavigate }) {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/10">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-md ${
-                    isDarkMode
-                      ? 'bg-gradient-to-br from-[#38BDF8] to-[#4F46E5] text-white shadow-cyan-500/20'
-                      : 'bg-[#4F46E5] text-white shadow-[#4F46E5]/25'
-                  }`}
-                >
-                  <Sparkles size={16} className="stroke-[2.2]" />
-                </div>
+                <JojoLogo className="h-8 w-auto" />
                 <span className={`font-black text-base tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                   AI STUDY ENGINE
                 </span>

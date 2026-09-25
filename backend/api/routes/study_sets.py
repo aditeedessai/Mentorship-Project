@@ -20,10 +20,17 @@ from backend.api.schemas.study_set import (
     SummaryResponse,
 )
 from backend.services import study_service
+from backend.services.study_service import DuplicateStudySetError
 from backend.services.evaluation_service import get_study_set_progress
 from backend.quiz_generation.summary_generator import generate_summary
 from backend.quiz_generation.flashcard_generator import generate_flashcards
 from backend.quiz_generation.mnemonic_generator import generate_mnemonic
+from backend.quiz_generation.gemini_client import (
+    GeminiRateLimitError,
+    GeminiServiceUnavailableError,
+    GeminiConfigurationError,
+    GeminiError,
+)
 from backend.database import summary_repository, flashcard_repository
 
 router = APIRouter(prefix="/study-sets", tags=["Study Sets"])
@@ -49,6 +56,15 @@ def generate_study_set_summary(
                 detail=f"Study set with ID '{study_set_id}' not found"
             )
 
+        # Check if an existing generated summary is already saved
+        existing_summary = summary_repository.get_summary(str(study_set_id), user_id=current_user.user_id)
+        if existing_summary:
+            return SummaryResponse(
+                title=existing_summary.get("title", "Study Set Summary"),
+                overview_paragraphs=existing_summary.get("overview_paragraphs", []),
+                key_topics=existing_summary.get("key_takeaways", []),
+            )
+
         summary_data = generate_summary(study_set_id=str(study_set_id), user_id=current_user.user_id)
 
         try:
@@ -65,6 +81,26 @@ def generate_study_set_summary(
         return SummaryResponse(**summary_data)
     except HTTPException:
         raise
+    except GeminiRateLimitError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=e.message
+        )
+    except GeminiServiceUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
+    except GeminiConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service configuration error. Please contact system administrator."
+        )
+    except GeminiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -73,7 +109,7 @@ def generate_study_set_summary(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate summary: {str(e)}"
+            detail="Failed to generate summary. Please try again."
         )
 
 
@@ -133,6 +169,11 @@ def generate_study_set_flashcards(
                 detail=f"Study set with ID '{study_set_id}' not found"
             )
 
+        # Check if existing flashcards are already saved
+        existing_cards = flashcard_repository.get_flashcards(str(study_set_id), user_id=current_user.user_id)
+        if existing_cards:
+            return FlashcardsResponse(flashcards=existing_cards)
+
         flashcard_data = generate_flashcards(study_set_id=str(study_set_id))
 
         try:
@@ -147,6 +188,26 @@ def generate_study_set_flashcards(
         return FlashcardsResponse(**flashcard_data)
     except HTTPException:
         raise
+    except GeminiRateLimitError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=e.message
+        )
+    except GeminiServiceUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
+    except GeminiConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service configuration error. Please contact system administrator."
+        )
+    except GeminiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -155,7 +216,7 @@ def generate_study_set_flashcards(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate flashcards: {str(e)}"
+            detail="Failed to generate flashcards. Please try again."
         )
 
 
@@ -224,6 +285,26 @@ def generate_study_set_mnemonic(
         return MnemonicResponse(**mnemonic_data)
     except HTTPException:
         raise
+    except GeminiRateLimitError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=e.message
+        )
+    except GeminiServiceUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
+    except GeminiConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service configuration error. Please contact system administrator."
+        )
+    except GeminiError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -232,7 +313,7 @@ def generate_study_set_mnemonic(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate mnemonic: {str(e)}"
+            detail="Failed to generate mnemonic. Please try again."
         )
 
 @router.post(
@@ -249,6 +330,11 @@ def create_study_set(
     try:
         data = study_service.create_study_set(payload.name, user_id=current_user.user_id)
         return StudySetResponse(**data)
+    except DuplicateStudySetError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

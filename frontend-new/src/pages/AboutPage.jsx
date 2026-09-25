@@ -22,6 +22,7 @@ import {
 
 import { useTheme } from "../context/ThemeContext";
 
+import JojoLogo from "../components/JojoLogo";
 import jojoWaving from "../assets/jojo-waving.png";
 import shanePic from "../assets/team/shane.png";
 import riyaPic from "../assets/team/riya.png";
@@ -854,13 +855,7 @@ export default function AboutPage({ onNavigate }) {
           </button>
 
           <div className="hidden items-center gap-3 sm:flex">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl">
-              <img
-                src={jojoWaving}
-                alt="Jojo the JOT pencil"
-                className="h-full w-full object-contain"
-              />
-            </div>
+            <JojoLogo className="h-9 w-auto" />
 
             <div>
               <div
@@ -992,7 +987,7 @@ export default function AboutPage({ onNavigate }) {
               ================================================= */}
 
               <div
-                className={`pointer-events-none absolute left-1/2 top-1/2 z-10 h-[350px] w-[350px] -ml-[175px] -mt-[175px] rounded-full border ${
+                className={`about-orbit-outer pointer-events-none absolute left-1/2 top-1/2 z-10 h-[350px] w-[350px] -ml-[175px] -mt-[175px] rounded-full border ${
                   isDarkMode
                     ? "border-purple-300/15"
                     : "border-purple-300/40"
@@ -1004,7 +999,7 @@ export default function AboutPage({ onNavigate }) {
               ================================================= */}
 
               <div
-                className={`pointer-events-none absolute left-1/2 top-1/2 z-10 h-[285px] w-[285px] -ml-[142.5px] -mt-[142.5px] rounded-full border border-dashed ${
+                className={`about-orbit-inner pointer-events-none absolute left-1/2 top-1/2 z-10 h-[285px] w-[285px] -ml-[142.5px] -mt-[142.5px] rounded-full border border-dashed ${
                   isDarkMode
                     ? "border-purple-300/15"
                     : "border-purple-300/35"

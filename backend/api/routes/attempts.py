@@ -193,7 +193,15 @@ def get_attempt(
 def submit_section_answers(
     attempt_id: str,
     payload: SubmitAnswersRequest,
-    current_user: AuthenticatedUser = Depends(rate_limit_by_user(20, 600, scope="answer_evaluation"))
+    # 100/10min, not 20/10min: the frontend calls this endpoint as a
+    # per-answer autosave (every MCQ click, every QnA debounce tick) in
+    # addition to the final section submit, so a single multi-question
+    # attempt with any reselection routinely exceeds 20 calls well before
+    # the student finishes. Hitting the old cap meant the final submit
+    # itself got 429'd and silently swallowed, leaving the student stuck
+    # on the timeout/finish screen with only whichever earlier answers
+    # had saved before the limit was hit (DF043 investigation).
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(100, 600, scope="answer_evaluation"))
 ) -> EvaluationListResponse:
     # Verify attempt ownership BEFORE evaluating or saving answers
     att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
@@ -280,6 +288,8 @@ def finish_attempt(
         status=AttemptStatus.COMPLETED.value,
         user_id=current_user.user_id
     )
+
+    revision_service.record_attempt_result(att | {"attempt_id": attempt_id, "user_id": current_user.user_id})
 
     updated_att = get_attempt_from_db(attempt_id, user_id=current_user.user_id)
     if not updated_att:
@@ -399,7 +409,10 @@ def get_attempt_evaluations(
 )
 def evaluate_practice_answers(
     payload: EvaluatePracticeRequest,
-    current_user: AuthenticatedUser = Depends(rate_limit_by_user(20, 600, scope="answer_evaluation"))
+    # Shares the "answer_evaluation" bucket with submit_section_answers
+    # above - kept at the same 100/10min ceiling so a practice retake
+    # doesn't get blocked earlier than a normal attempt would.
+    current_user: AuthenticatedUser = Depends(rate_limit_by_user(100, 600, scope="answer_evaluation"))
 ) -> EvaluationListResponse:
     # 1. Verify study set exists and belongs to current_user.user_id
     study_set = study_set_repository.get_study_set(payload.study_set_id, user_id=current_user.user_id)
@@ -505,6 +518,7 @@ def evaluate_practice_answers(
             batch_items.append({
                 "student": student_ans,
                 "reference": question.get("reference_answer", ""),
+                "question": question.get("question", ""),
             })
 
     if batch_items:
