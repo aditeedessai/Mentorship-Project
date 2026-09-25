@@ -614,7 +614,7 @@ export default function ConfigureSession({
       <div className="flex-1 pb-8">
 
         {/* Top Back Navigation Bar */}
-        <header className="mb-8 lg:mb-12 flex items-center justify-between">
+        <header className="mb-4 sm:mb-8 lg:mb-12 flex items-center justify-between">
           <button
             type="button"
             onClick={() => {
@@ -624,7 +624,7 @@ export default function ConfigureSession({
                 onNavigate?.('study-sets')
               }
             }}
-            className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-all backdrop-blur-xl ${
+            className={`group inline-flex items-center gap-2 rounded-full border px-3.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold transition-all backdrop-blur-xl ${
               isDarkMode
                 ? 'border-white/10 bg-white/5 text-[#A78BFA] hover:bg-white/10'
                 : 'border-white/80 bg-white/70 text-[#8064C7] hover:bg-white shadow-sm'
@@ -635,10 +635,10 @@ export default function ConfigureSession({
           </button>
         </header>
 
-        <div>
+        <div data-tour="quiz-area">
           {/* TITLE + MODULE BADGE */}
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-black leading-none tracking-tight sm:text-3xl">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <h1 className="text-xl sm:text-3xl font-black leading-none tracking-tight">
               Configure Session
             </h1>
 
@@ -653,7 +653,7 @@ export default function ConfigureSession({
 
           {/* DESCRIPTION */}
           <p
-            className={`mt-3 max-w-[600px] text-sm leading-relaxed ${
+            className={`mt-2 sm:mt-3 max-w-[600px] text-xs sm:text-sm leading-relaxed ${
               isDarkMode
                 ? 'text-white/60'
                 : 'text-[#706A78]'

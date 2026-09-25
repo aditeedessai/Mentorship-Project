@@ -545,7 +545,7 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
   // ─── Reusable class strings ──────────────────────────
 
   const selectClasses = (hasError) =>
-    `w-full appearance-none rounded-xl border px-4 py-3 pr-10 text-sm outline-none transition-all cursor-pointer ${
+    `w-full appearance-none rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 pr-10 text-sm outline-none transition-all cursor-pointer ${
       isDarkMode
         ? `border-white/10 bg-[#161220] text-[#F5F2FA] [color-scheme:dark] focus:border-[#8064C7] focus:bg-[#1C1728] ${
             hasError ? "border-red-500/50" : ""
@@ -563,13 +563,13 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
     ? "bg-[#161220] text-white/40"
     : "bg-white text-gray-400";
 
-  const inputClasses = `w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
+  const inputClasses = `w-full rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm outline-none transition-all ${
     isDarkMode
       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7] focus:bg-white/10"
       : "border-gray-200 bg-white/80 text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7] focus:bg-white"
   }`;
 
-  const labelClasses = `mb-2 block text-xs font-bold uppercase tracking-wider ${
+  const labelClasses = `mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider ${
     isDarkMode ? "text-white/70" : "text-[#292530]"
   }`;
 
@@ -632,7 +632,7 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
 
         {/* ── Glass Card ── */}
         <div
-          className={`profile-card-entrance grid w-full max-w-5xl overflow-hidden rounded-[24px] sm:rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 mt-12 sm:mt-0 ${
+          className={`profile-card-entrance grid w-full max-w-5xl overflow-hidden rounded-2xl sm:rounded-[32px] border backdrop-blur-2xl transition-all duration-500 shadow-2xl lg:grid-cols-2 mt-4 sm:mt-0 ${
             isDarkMode
               ? "border-white/10 bg-[#17131F]/80 shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
               : "border-white/80 bg-white/60 shadow-[0_18px_50px_rgba(70,55,110,0.12)]"
@@ -729,23 +729,23 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
           </div>
 
           {/* ════════ RIGHT PANEL ════════ */}
-          <div className="profile-right-entrance p-6 sm:p-10 lg:p-12 overflow-y-auto max-h-[90vh]">
+          <div className="profile-right-entrance p-4 sm:p-10 lg:p-12 overflow-y-auto max-h-[90vh]">
             {/* Mobile brand */}
-            <div className="mb-6 flex items-center gap-2 lg:hidden profile-brand-entrance">
+            <div className="mb-4 sm:mb-6 flex items-center gap-2 lg:hidden profile-brand-entrance">
               <JojoLogo className="h-7 w-auto" />
-              <div className="text-3xl font-black tracking-[-0.08em]">
+              <div className="text-2xl sm:text-3xl font-black tracking-[-0.08em]">
                 Jot<span className="text-[#8064C7]">.</span>
               </div>
             </div>
 
             {/* Heading */}
-            <div className="mb-6 profile-text-entrance">
-              <h2 className="text-3xl font-black tracking-tight">
+            <div className="mb-4 sm:mb-6 profile-text-entrance">
+              <h2 className="text-xl sm:text-3xl font-black tracking-tight">
                 {onBack ? "Update Student Profile" : "Tell us more..."}
               </h2>
 
               <p
-                className={`mt-2 text-sm ${
+                className={`mt-1 sm:mt-2 text-xs sm:text-sm ${
                   isDarkMode ? "text-white/55" : "text-[#706A78]"
                 }`}
               >
@@ -999,7 +999,7 @@ function StudentProfilePage({ onProfileComplete, onBack, user }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="profile-submit w-full rounded-xl bg-[#8064C7] py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] shadow-[0_15px_35px_rgba(128,100,199,0.35)] disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="profile-submit w-full rounded-xl bg-[#8064C7] py-2.5 sm:py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] shadow-[0_15px_35px_rgba(128,100,199,0.35)] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>

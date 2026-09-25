@@ -1092,23 +1092,24 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       ===================================================== */}
 
       <div
-        className={`relative mb-8 overflow-visible rounded-3xl border p-5 backdrop-blur-2xl transition-all duration-500 sm:p-8 upload-header-animation ${
+        data-tour="upload-area"
+        className={`relative mb-4 sm:mb-8 overflow-visible rounded-2xl sm:rounded-3xl border p-4 backdrop-blur-2xl transition-all duration-500 sm:p-8 upload-header-animation ${
           isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
         }`}
       >
-        <div className="relative z-10 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+        <div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:gap-6 sm:flex-row sm:items-center">
 
           {/* LEFT CONTENT */}
 
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-2xl font-black tracking-tight sm:text-3xl">
+            <h1 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-3xl">
               Create Study Set
             </h1>
 
             <p
-              className={`mt-2 text-xs font-medium sm:text-sm ${
+              className={`mt-1.5 sm:mt-2 text-xs font-medium sm:text-sm ${
                 isDarkMode
                   ? "text-white/50"
                   : "text-[#706A78]"
@@ -1123,7 +1124,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               JOJO HEADER MASCOT + ROTATING ELEMENTS
           ================================================= */}
 
-          <div className="relative flex h-[170px] w-full max-w-[280px] sm:w-[330px] sm:max-w-none shrink-0 items-center justify-center self-center sm:self-auto">
+          <div className="relative flex h-[140px] sm:h-[170px] w-full max-w-[240px] sm:w-[330px] sm:max-w-none shrink-0 items-center justify-center self-center sm:self-auto scale-[0.85] sm:scale-100 origin-center">
 
             {/* Outer soft orbit glow */}
 
@@ -1286,12 +1287,12 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= MAIN UPLOAD AREA ================= */}
 
-      <div className="grid items-stretch gap-6 lg:grid-cols-3">
+      <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-3">
 
         {/* ================= UPLOAD CARD ================= */}
 
         <div
-          className={`flex h-full flex-col rounded-3xl border p-4 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 sm:p-6 upload-main-card-animation ${
+          className={`flex h-full flex-col rounded-2xl sm:rounded-3xl border p-3.5 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 upload-main-card-animation ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
@@ -1304,7 +1305,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[300px] flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all duration-300 upload-zone-animation sm:p-8 ${
+            className={`flex min-h-[240px] sm:min-h-[300px] flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 border-dashed p-4 text-center transition-all duration-300 upload-zone-animation sm:p-8 ${
               isDragging
                 ? "border-[#8064C7] bg-[#8064C7]/15"
                 : isDarkMode
@@ -1314,16 +1315,17 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
           >
             {selectedFiles.length === 0 ? (
               <>
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] upload-icon-animation">
-                  <Upload size={30} />
+                <div className="mb-3 sm:mb-4 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA] upload-icon-animation">
+                  <Upload size={24} className="sm:hidden" />
+                  <Upload size={30} className="hidden sm:block" />
                 </div>
 
-                <h2 className="text-xl font-black tracking-tight">
+                <h2 className="text-lg sm:text-xl font-black tracking-tight">
                   Drop your files or snap a photo
                 </h2>
 
                 <p
-                  className={`mt-2 max-w-md text-sm ${
+                  className={`mt-2 max-w-md text-xs sm:text-sm ${
                     isDarkMode
                       ? "text-white/60"
                       : "text-gray-500"
@@ -1333,8 +1335,8 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   your phone camera.
                 </p>
 
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <label className="animated-shine cursor-pointer rounded-xl bg-[#8064C7] px-6 py-3 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
+                <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
+                  <label className="animated-shine cursor-pointer rounded-xl bg-[#8064C7] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
                     <span className="browse-icon-animation inline-block">
                       Browse Files
                     </span>
@@ -1351,7 +1353,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   {/* Direct Mobile Camera Button */}
 
                   <label
-                    className={`animated-shine flex cursor-pointer items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
+                    className={`animated-shine flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
                       isDarkMode
                         ? "border-white/10 bg-white/5 text-[#A78BFA] hover:border-[#8064C7]/50 hover:bg-white/10"
                         : "border-[#8064C7]/30 bg-white text-[#8064C7] shadow-sm hover:border-[#8064C7] hover:bg-[#8064C7]/5"
@@ -1375,7 +1377,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 </div>
 
                 <p
-                  className={`mt-4 text-xs ${
+                  className={`mt-3 sm:mt-4 text-xs ${
                     isDarkMode
                       ? "text-white/40"
                       : "text-gray-400"
@@ -1488,19 +1490,19 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         {/* ================= STUDY SET NAME & ACTIONS ================= */}
 
         <div
-          className={`flex h-full flex-col justify-between rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 upload-name-card-animation ${
+          className={`flex h-full flex-col justify-between rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 upload-name-card-animation ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
           }`}
         >
           <div>
-            <h2 className="text-xl font-black tracking-tight">
+            <h2 className="text-lg sm:text-xl font-black tracking-tight">
               Study Set Name
             </h2>
 
             <p
-              className={`mt-1 text-sm ${
+              className={`mt-1 text-xs sm:text-sm ${
                 isDarkMode
                   ? "text-white/60"
                   : "text-gray-500"
@@ -1523,7 +1525,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   handleCreateAndUpload();
                 }
               }}
-              className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all ${
+              className={`mt-4 sm:mt-5 w-full rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm outline-none transition-all ${
                 isDarkMode
                   ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
                   : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"
@@ -1531,12 +1533,12 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             />
           </div>
 
-          <div className="mt-8 flex flex-col gap-3">
+          <div className="mt-5 sm:mt-8 flex flex-col gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={handleCreateAndUpload}
               disabled={uploading}
-              className="create-button-animation flex w-full items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-6 py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
+              className="create-button-animation flex w-full items-center justify-center gap-2 rounded-xl bg-[#8064C7] px-4 py-2.5 sm:px-6 sm:py-3.5 text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Upload size={17} />
 
@@ -1551,7 +1553,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 onNavigate?.("study-sets");
               }}
               disabled={uploading}
-              className={`cancel-button-animation w-full rounded-xl border px-5 py-2.5 text-center text-sm font-semibold transition ${
+              className={`cancel-button-animation w-full rounded-xl border px-4 py-2 sm:px-5 sm:py-2.5 text-center text-sm font-semibold transition ${
                 isDarkMode
                   ? "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
                   : "border-gray-200 bg-white/70 text-gray-600 hover:bg-white"
@@ -1566,7 +1568,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       {/* ================= SUPPORTED FORMATS ================= */}
 
       <div
-        className={`mt-6 rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-500 upload-formats-animation ${
+        className={`mt-4 sm:mt-6 rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 upload-formats-animation ${
           isDarkMode
             ? "border-white/10 bg-[#17131F]/80 text-white shadow-[0_20px_60px_rgba(0,0,0,0.3)]"
             : "border-white/80 bg-white/60 text-[#292530] shadow-[0_18px_50px_rgba(70,55,110,0.1)]"

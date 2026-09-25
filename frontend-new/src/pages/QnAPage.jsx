@@ -714,7 +714,7 @@ export default function QnAPage({ onNavigate } = {}) {
         />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <div className="px-4 sm:px-8 pt-4 flex-shrink-0">
+          <div className="px-3 sm:px-8 pt-3 sm:pt-4 flex-shrink-0">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-[#8064C7]" />
@@ -735,8 +735,8 @@ export default function QnAPage({ onNavigate } = {}) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-5 min-h-0">
-            <div className={`rounded-3xl border p-5 sm:p-7 flex flex-col h-full backdrop-blur-2xl ${
+          <div className="flex-1 overflow-y-auto px-3 sm:px-8 py-3 sm:py-5 min-h-0">
+            <div className={`rounded-2xl sm:rounded-3xl border p-4 sm:p-7 flex flex-col h-full backdrop-blur-2xl ${
               isDarkMode ? "border-white/10 bg-[#17131F]/80 text-white" : "border-white/80 bg-white/70 text-[#292530]"
             }`}>
               <div className="mb-4">
@@ -748,14 +748,14 @@ export default function QnAPage({ onNavigate } = {}) {
                 </span>
               </div>
 
-              <h2 className="text-lg sm:text-xl font-extrabold leading-snug mb-5 tracking-tight overflow-wrap-anywhere">
+              <h2 className="text-base sm:text-xl font-extrabold leading-snug mb-4 sm:mb-5 tracking-tight overflow-wrap-anywhere">
                 {currentQ.question}
               </h2>
 
               {/* AI Hint */}
               {currentQ?.hint && (
                 <div
-                  className={`mb-5 flex gap-3 rounded-2xl border p-3.5 sm:p-4 ${
+                  className={`mb-4 sm:mb-5 flex gap-2.5 sm:gap-3 rounded-xl sm:rounded-2xl border p-3 sm:p-4 ${
                     isDarkMode
                       ? "border-[#8064C7]/30 bg-[#8064C7]/15 text-purple-200"
                       : "border-[#8064C7]/20 bg-[#8064C7]/10 text-[#8064C7]"
@@ -776,7 +776,7 @@ export default function QnAPage({ onNavigate } = {}) {
                   placeholder="Type your answer here..."
                   disabled={isViolationActive || isSubmitting || quizEndedRef.current}
                   readOnly={isSubmitting || quizEndedRef.current}
-                  className={`w-full h-full min-h-[160px] sm:min-h-[180px] p-4 rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
+                  className={`w-full h-full min-h-[160px] sm:min-h-[180px] p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border text-sm leading-relaxed outline-none transition-all resize-none ${
                     isDarkMode
                       ? "border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-[#8064C7]"
                       : "border-gray-200 bg-white text-[#292530] placeholder:text-gray-400 focus:border-[#8064C7]"

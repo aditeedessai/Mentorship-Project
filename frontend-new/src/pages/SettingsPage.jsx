@@ -34,6 +34,8 @@ import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 import TermsAndConditionsModal from "../components/TermsAndConditionsModal";
 
 import jojoThinking from "../assets/jojo-thinking.png";
+import jojoLogo from "../assets/jojo-logo.png";
+import { TOUR_STEP_SESSION_KEY } from "../components/tour/tourConstants";
 
 
 const SettingsPage = ({
@@ -42,6 +44,7 @@ const SettingsPage = ({
   notice,
   onDismissNotice,
   onDeleteAllStudySets,
+  onStartTour,
 }) => {
   const { isDarkMode, toggleDarkMode } = useTheme();
 
@@ -230,6 +233,20 @@ const SettingsPage = ({
       );
     }
   }, []);
+
+
+  /* =====================================================
+     PRODUCT TOUR
+  ===================================================== */
+
+  const handleStartTour = () => {
+    sessionStorage.setItem(TOUR_STEP_SESSION_KEY, "0");
+    if (onStartTour) {
+      onStartTour();
+    } else if (onNavigate) {
+      onNavigate("dashboard");
+    }
+  };
 
 
   /* =====================================================
@@ -1592,6 +1609,97 @@ const SettingsPage = ({
 
             </span>
 
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          PRODUCT TOUR
+      ===================================================== */}
+
+      <section
+        className={`settings-section rounded-3xl border p-6 backdrop-blur-2xl transition-all duration-300 ${
+          isDarkMode
+            ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+            : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
+        }`}
+      >
+
+        <div className="mb-6 flex items-center gap-3">
+
+          <div className="settings-icon-float flex h-10 w-10 items-center justify-center rounded-2xl bg-[#8064C7]/15 text-[#8064C7] dark:text-[#A78BFA]">
+            <Sparkles size={20} />
+          </div>
+
+          <div>
+
+            <h2 className="font-black tracking-tight">
+              Product Tour
+            </h2>
+
+            <p
+              className={`text-xs ${
+                isDarkMode
+                  ? "text-white/50"
+                  : "text-gray-500"
+              }`}
+            >
+              Revisit the guided walkthrough of Jot with Jojo
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div
+          className={`flex flex-col gap-4 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+            isDarkMode
+              ? "border-white/5 bg-white/5"
+              : "border-gray-200/80 bg-white"
+          }`}
+        >
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#8064C7]/15 p-1.5">
+              <img
+                src={jojoLogo}
+                alt="Jojo"
+                className="h-full w-auto object-contain"
+              />
+            </div>
+
+            <div>
+
+              <p className="text-xs font-bold">
+                Guided Onboarding Tour
+              </p>
+
+              <p
+                className={`text-[11px] ${
+                  isDarkMode
+                    ? "text-white/50"
+                    : "text-gray-500"
+                }`}
+              >
+                Let Jojo guide you through Dashboard, Study Sets, Quizzes, and Planner.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            onClick={handleStartTour}
+            className="settings-shimmer cursor-pointer rounded-xl bg-[#8064C7] px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#8B6DD4] shrink-0"
+          >
+            Take a Tour
           </button>
 
         </div>

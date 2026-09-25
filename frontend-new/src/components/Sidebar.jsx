@@ -477,6 +477,7 @@ function Sidebar({
               return (
                 <button
                   key={item.name}
+                  data-tour={`nav-${item.page}`}
                   onClick={() => handleNavClick(item.page)}
                   className={`sidebar-nav-item group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${
                     isActive

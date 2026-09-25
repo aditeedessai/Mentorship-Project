@@ -136,7 +136,7 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
       <style>{plannerAnimationStyles}</style>
 
       <div
-        className={`mb-8 flex flex-col items-start justify-between gap-6 rounded-3xl border p-5 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
+        className={`mb-4 sm:mb-8 flex flex-col items-start justify-between gap-4 sm:gap-6 rounded-2xl sm:rounded-3xl border p-4 sm:p-8 backdrop-blur-2xl transition-all duration-500 sm:flex-row sm:items-center ${
           isDarkMode
             ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
             : "border-[#8064C7]/20 bg-gradient-to-r from-[#E5DCF8] to-[#F1EAFA] text-[#231B33] shadow-[0_4px_25px_rgba(128,100,199,0.06)]"
@@ -144,12 +144,12 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
       >
         {/* LEFT CONTENT */}
         <div>
-          <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="flex items-center gap-2 text-xl sm:text-3xl font-bold tracking-tight">
             Study Planner
           </h1>
 
           <p
-            className={`mt-2 text-xs sm:text-sm font-medium ${
+            className={`mt-1.5 sm:mt-2 text-xs sm:text-sm font-medium ${
               isDarkMode ? "text-white/60" : "text-[#706A78]"
             }`}
           >
@@ -157,11 +157,11 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
           </p>
 
           {/* ACTION BUTTONS */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={onAddTask}
-              className="group flex items-center gap-2 rounded-xl bg-[#8064C7] px-5 sm:px-6 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#7357B9] cursor-pointer"
+              className="group flex items-center gap-2 rounded-xl bg-[#8064C7] px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(128,100,199,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#7357B9] cursor-pointer"
             >
               <Plus
                 size={17}
@@ -173,7 +173,7 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
             <button
               type="button"
               onClick={onAddExam}
-              className={`group flex items-center gap-2 rounded-xl border px-5 sm:px-6 py-3 text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5 cursor-pointer ${
+              className={`group flex items-center gap-2 rounded-xl border px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5 cursor-pointer ${
                 isDarkMode
                   ? "border-[#8064C7]/40 bg-[#8064C7]/20 text-[#A78BFA] hover:bg-[#8064C7]/30"
                   : "border-[#8064C7]/30 bg-white text-[#8064C7] hover:bg-[#8064C7]/10 shadow-xs"
@@ -189,7 +189,7 @@ export default function PlannerHeader({ onAddTask, onAddExam }) {
         </div>
 
         {/* JOJO + ORBIT */}
-        <div className="relative flex h-40 w-40 sm:h-44 sm:w-44 md:h-52 md:w-52 shrink-0 items-center justify-center planner-mascot-orbit self-center sm:self-auto">
+        <div className="relative flex h-32 w-32 sm:h-44 sm:w-44 md:h-52 md:w-52 shrink-0 items-center justify-center planner-mascot-orbit self-center sm:self-auto scale-90 sm:scale-100 origin-center">
 
           {/* Soft glow behind Jojo */}
           <div

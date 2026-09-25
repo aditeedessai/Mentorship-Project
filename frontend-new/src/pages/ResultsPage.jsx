@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import jojoEvaluating from '../assets/jojo-evaluating.png';
+import { formatScore } from '../utils/scoreFormat';
 
 const normalizeTypeName = (typeStr) => {
   const s = (typeStr || '').toLowerCase().trim();
@@ -688,30 +689,30 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
       </div>
 
       {/* 2. Hero Performance Summary Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-[#8064C7] p-6 text-white shadow-xl sm:p-8">
-        <div className="relative z-10 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-[#8064C7] p-4 sm:p-8 text-white shadow-xl">
+        <div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:gap-6 lg:flex-row lg:items-center">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-1 font-mono text-xs font-black uppercase tracking-wider text-white">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-0.5 sm:px-3.5 sm:py-1 font-mono text-[11px] sm:text-xs font-black uppercase tracking-wider text-white">
                 <Sparkles size={14} />
                 {questionTypeName} RESULTS
               </span>
 
               {isPracticeRetake && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/30 px-3.5 py-1 font-mono text-xs font-black uppercase tracking-wider text-amber-100 shadow-xs">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-400/30 px-3 py-0.5 sm:px-3.5 sm:py-1 font-mono text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-100 shadow-xs">
                   <RotateCcw size={13} />
                   Practice Retake
                 </span>
               )}
 
               {overallRemark && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/30 px-3.5 py-1 text-xs font-bold text-white">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/30 px-3 py-0.5 sm:px-3.5 sm:py-1 text-[11px] sm:text-xs font-bold text-white">
                   Remark: {overallRemark}
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
+            <h1 className="text-xl font-black tracking-tight sm:text-3xl lg:text-4xl">
               {questionTypeName} Quiz Evaluation
             </h1>
 
@@ -720,9 +721,9 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             </p>
           </div>
 
-          <div className="flex w-full flex-wrap items-center justify-around gap-3 rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md sm:justify-center sm:gap-5 sm:p-5 lg:w-auto">
+          <div className="flex w-full flex-wrap items-center justify-around gap-2.5 sm:gap-5 rounded-xl sm:rounded-2xl border border-white/20 bg-white/10 p-3 sm:p-5 backdrop-blur-md sm:justify-center lg:w-auto">
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black text-white sm:text-3xl">
+              <div className="text-xl font-black text-white sm:text-3xl">
                 {percentage}%
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200 sm:text-xs">
@@ -733,7 +734,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black text-emerald-300 sm:text-3xl">
+              <div className="text-xl font-black text-emerald-300 sm:text-3xl">
                 {correctCount}
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 sm:text-xs">
@@ -744,7 +745,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black text-rose-300 sm:text-3xl">
+              <div className="text-xl font-black text-rose-300 sm:text-3xl">
                 {wrongCount}
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-200 sm:text-xs">
@@ -757,7 +758,7 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                 <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
                 <div className="px-2 text-center sm:px-3">
-                  <div className="text-2xl font-black text-amber-300 sm:text-3xl">
+                  <div className="text-xl font-black text-amber-300 sm:text-3xl">
                     {skippedCount}
                   </div>
                   <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200 sm:text-xs">
@@ -770,10 +771,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
             <div className="hidden h-8 w-px bg-white/20 sm:block" />
 
             <div className="px-2 text-center sm:px-3">
-              <div className="text-2xl font-black sm:text-3xl">
-                {totalScore}{' '}
+              <div className="text-xl font-black sm:text-3xl">
+                {formatScore(totalScore)}{' '}
                 <span className="text-xs font-normal text-purple-200">
-                  / {maxScore}
+                  / {formatScore(maxScore)}
                 </span>
               </div>
               <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200 sm:text-xs">
@@ -913,10 +914,10 @@ export default function ResultsPage({ onNavigate, studySetId: propStudySetId, at
                   )}
 
                   {q.isSkipped
-                    ? `Skipped (0/${q.maxMarks} Marks)`
+                    ? `Skipped (${formatScore(0)}/${formatScore(q.maxMarks)} Marks)`
                     : q.isCorrect === true
-                    ? `Correct (+${q.awardedMarks}/${q.maxMarks} Marks)`
-                    : `Incorrect (${q.awardedMarks}/${q.maxMarks} Marks)`}
+                    ? `Correct (+${formatScore(q.awardedMarks)}/${formatScore(q.maxMarks)} Marks)`
+                    : `Incorrect (${formatScore(q.awardedMarks)}/${formatScore(q.maxMarks)} Marks)`}
                 </span>
               </div>
 

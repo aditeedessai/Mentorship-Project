@@ -78,7 +78,7 @@ export default function QuestionTypeCard({
       aria-pressed={isSelected && !disabled}
       aria-disabled={disabled}
       aria-label={`${title} question type${statusLabel ? ` (${statusLabel})` : ''}`}
-      className={`relative w-full sm:w-auto flex-1 min-w-[200px] max-w-none sm:max-w-[280px] min-h-[220px] sm:h-[235px] rounded-2xl border-2 text-left p-4 sm:p-5 flex flex-col transition-all duration-300 backdrop-blur-xl ${variantClasses}`}
+      className={`relative w-full sm:w-auto flex-1 min-w-[200px] max-w-none sm:max-w-[280px] min-h-[190px] sm:min-h-[220px] sm:h-[235px] rounded-2xl border-2 text-left p-3.5 sm:p-5 flex flex-col transition-all duration-300 backdrop-blur-xl ${variantClasses}`}
     >
       {/* Status indicator badge (top-right) */}
       {needsAttention ? (

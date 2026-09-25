@@ -17,13 +17,13 @@ function MotivationalTaglineCard() {
 
   return (
     <div
-      className={`flex w-full flex-col items-center justify-center rounded-3xl border p-5 sm:p-6 text-center backdrop-blur-2xl transition-all duration-500 ${
+      className={`flex w-full flex-col items-center justify-center rounded-2xl sm:rounded-3xl border p-3.5 sm:p-6 text-center backdrop-blur-2xl transition-all duration-500 ${
         isDarkMode
           ? "border-white/8 bg-[#14101D]/75 text-[#A78BFA] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
           : "border-black/5 bg-[#F8F8FC]/95 text-[#8064C7] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
       }`}
     >
-      <p className="text-base font-bold tracking-tight">{tagline}</p>
+      <p className="text-xs sm:text-base font-bold tracking-tight">{tagline}</p>
     </div>
   );
 }
