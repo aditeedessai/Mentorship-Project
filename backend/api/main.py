@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 
@@ -125,11 +126,19 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # ── CORS Configuration ───────────────────────────────────────────────
 # Allow the React/Vite frontend to communicate with the FastAPI backend.
+# Extra origins (e.g. the deployed Vercel frontend) come from CORS_ORIGINS,
+# a comma-separated list in backend/.env.
+_extra_cors_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        *_extra_cors_origins,
     ],
     allow_credentials=True,
     allow_methods=["*"],
