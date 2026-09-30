@@ -157,7 +157,7 @@ function StudySetMnemonicsCard({
                 }`}
               >
                 <RotateCw size={15} />
-                <span>Create Another</span>
+                <span>Create another memory trick</span>
               </button>
             </div>
 
