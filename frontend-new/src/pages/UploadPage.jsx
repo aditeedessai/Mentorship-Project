@@ -741,13 +741,7 @@ const uploadAnimationStyles = `
 `;
 
 const getFileIcon = (fileName) => {
-  if (!fileName || typeof fileName !== "string") {
-    return <FileText size={22} className="text-[#8064C7]" />;
-  }
-
-  const ext = fileName.includes(".")
-    ? "." + fileName.toLowerCase().split(".").pop()
-    : "";
+  const ext = "." + fileName.toLowerCase().split(".").pop();
 
   if (ext === ".pdf") {
     return <FileText size={22} className="text-[#8064C7]" />;
@@ -794,43 +788,21 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     const oversizedFileNames = [];
 
     incoming.forEach((file) => {
-      if (!file) return;
-
-      let fileName = file.name || "";
-
-      // If Android filename lacks an extension, infer extension from file.type if valid
-      if (!fileName || !fileName.includes(".")) {
-        const mime = (file.type || "").toLowerCase();
-        let fallbackExt = "";
-
-        if (mime === "application/pdf") fallbackExt = ".pdf";
-        else if (
-          mime ===
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-          mime === "application/msword"
-        )
-          fallbackExt = ".docx";
-        else if (
-          mime ===
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-          mime === "application/vnd.ms-powerpoint"
-        )
-          fallbackExt = ".pptx";
-        else if (mime === "image/png") fallbackExt = ".png";
-        else if (mime === "image/jpeg" || mime === "image/jpg")
-          fallbackExt = ".jpg";
-        else if (mime === "image/webp") fallbackExt = ".webp";
-
-        if (fallbackExt) {
-          const baseName =
-            fileName || (mime.startsWith("image/") ? "photo" : "document");
-          fileName = `${baseName}${fallbackExt}`;
-        }
-      }
-
+      const fileName = file.name || "";
       const hasDot = fileName.includes(".");
       const ext = hasDot ? "." + fileName.toLowerCase().split(".").pop() : "";
-      const isAllowed = ALLOWED_EXTENSIONS.includes(ext);
+      let isAllowed = ext ? ALLOWED_EXTENSIONS.includes(ext) : false;
+
+      // Fallback check using MIME type if extension check is missing or unsupported filename format
+      if (!isAllowed && file.type) {
+        const mime = file.type.toLowerCase();
+        if (
+          ALLOWED_MIME_TYPES.includes(mime) ||
+          mime.startsWith("image/")
+        ) {
+          isAllowed = true;
+        }
+      }
 
       // DF006 Fix: Check if file format is supported
       if (!isAllowed) {
@@ -844,13 +816,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         return;
       }
 
-      // Normalize file object if filename was missing or derived
-      const normalizedFile =
-        file.name === fileName
-          ? file
-          : new File([file], fileName, { type: file.type });
-
-      validFiles.push(normalizedFile);
+      validFiles.push(file);
     });
 
     const existingFileKeys = new Set(
@@ -916,11 +882,9 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   };
 
   const handleFileChange = (event) => {
-    const files = Array.from(event.target.files || []);
-    event.target.value = "";
-
-    if (files.length > 0) {
-      processIncomingFiles(files);
+    if (event.target.files && event.target.files.length > 0) {
+      processIncomingFiles(event.target.files);
+      event.target.value = "";
     }
   };
 
@@ -1362,27 +1326,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
           }`}
         >
-          {/* Persistent Hidden File Inputs for Mobile & Desktop Uploads */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-            style={{ display: "none" }}
-          />
-
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileChange}
-            className="hidden"
-            style={{ display: "none" }}
-          />
-
           <div
             onDragOver={(event) => {
               event.preventDefault();
@@ -1419,6 +1362,27 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   Drag and drop documents, scanned notes, or use
                   your phone camera.
                 </p>
+
+                {/* Hidden File Inputs for Mobile & Desktop Uploads */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,image/*,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  style={{ display: "none" }}
+                />
+
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*,.png,.jpg,.jpeg,.webp"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  style={{ display: "none" }}
+                />
 
                 <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
                   <button
@@ -1463,6 +1427,27 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               </>
             ) : (
               <div className="my-auto w-full max-w-lg">
+                {/* Hidden File Inputs for Mobile & Desktop Uploads */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,image/*,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  style={{ display: "none" }}
+                />
+
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*,.png,.jpg,.jpeg,.webp"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  style={{ display: "none" }}
+                />
+
                 <div
                   className={`rounded-2xl border p-5 shadow-sm backdrop-blur-xl ${
                     isDarkMode
