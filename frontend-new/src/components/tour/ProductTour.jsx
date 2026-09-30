@@ -427,10 +427,14 @@ export default function ProductTour({
             ? ["next", "close"]
             : ["previous", "next", "close"],
           onNextClick: () => {
+            isTransitioningRef.current = true;
             transitionToStep(stepIndex + 1);
           },
           onPrevClick: () => {
-            transitionToStep(stepIndex - 1);
+            if (stepIndex > 0) {
+              isTransitioningRef.current = true;
+              transitionToStep(stepIndex - 1);
+            }
           },
           onCloseClick: () => {
             handleFinishOrSkip(true);
@@ -439,8 +443,14 @@ export default function ProductTour({
             // Guarantee next button click handler is attached
             if (popover?.nextButton) {
               popover.nextButton.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                if (e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (typeof e.stopImmediatePropagation === "function") {
+                    e.stopImmediatePropagation();
+                  }
+                }
+                isTransitioningRef.current = true;
                 transitionToStep(stepIndex + 1);
               };
             }
@@ -448,9 +458,17 @@ export default function ProductTour({
             // Guarantee prev button click handler is attached
             if (popover?.previousButton) {
               popover.previousButton.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                transitionToStep(stepIndex - 1);
+                if (e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (typeof e.stopImmediatePropagation === "function") {
+                    e.stopImmediatePropagation();
+                  }
+                }
+                if (stepIndex > 0) {
+                  isTransitioningRef.current = true;
+                  transitionToStep(stepIndex - 1);
+                }
               };
             }
 
