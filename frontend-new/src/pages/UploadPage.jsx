@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Sparkles,
   X,
@@ -21,18 +21,6 @@ const ALLOWED_EXTENSIONS = [
   ".jpg",
   ".jpeg",
   ".webp",
-];
-
-const ALLOWED_MIME_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/vnd.ms-powerpoint",
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
 ];
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB limit in bytes
@@ -766,9 +754,6 @@ const getFileIcon = (fileName) => {
 function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
   const { isDarkMode } = useTheme();
 
-  const fileInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
-
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [studySetName, setStudySetName] = useState("");
@@ -788,31 +773,18 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     const oversizedFileNames = [];
 
     incoming.forEach((file) => {
-      const fileName = file.name || "";
-      const hasDot = fileName.includes(".");
-      const ext = hasDot ? "." + fileName.toLowerCase().split(".").pop() : "";
-      let isAllowed = ext ? ALLOWED_EXTENSIONS.includes(ext) : false;
-
-      // Fallback check using MIME type if extension check is missing or unsupported filename format
-      if (!isAllowed && file.type) {
-        const mime = file.type.toLowerCase();
-        if (
-          ALLOWED_MIME_TYPES.includes(mime) ||
-          mime.startsWith("image/")
-        ) {
-          isAllowed = true;
-        }
-      }
+      const ext = "." + file.name.toLowerCase().split(".").pop();
+      const isAllowedExt = ALLOWED_EXTENSIONS.includes(ext);
 
       // DF006 Fix: Check if file format is supported
-      if (!isAllowed) {
-        invalidFileNames.push(fileName || "Unnamed file");
+      if (!isAllowedExt) {
+        invalidFileNames.push(file.name);
         return;
       }
 
       // DF010 Fix: Check if file size exceeds 20 MB limit
       if (file.size > MAX_FILE_SIZE) {
-        oversizedFileNames.push(fileName || "Unnamed file");
+        oversizedFileNames.push(file.name);
         return;
       }
 
@@ -1363,43 +1335,24 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                   your phone camera.
                 </p>
 
-                {/* Hidden File Inputs for Mobile & Desktop Uploads */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,image/*,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  style={{ display: "none" }}
-                />
-
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*,.png,.jpg,.jpeg,.webp"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  style={{ display: "none" }}
-                />
-
                 <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="animated-shine cursor-pointer rounded-xl bg-[#8064C7] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]"
-                  >
+                  <label className="animated-shine cursor-pointer rounded-xl bg-[#8064C7] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-[0_15px_35px_rgba(128,100,199,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8B6DD4]">
                     <span className="browse-icon-animation inline-block">
                       Browse Files
                     </span>
-                  </button>
+
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
 
                   {/* Direct Mobile Camera Button */}
 
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
+                  <label
                     className={`animated-shine flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-bold transition-all duration-300 hover:-translate-y-0.5 ${
                       isDarkMode
                         ? "border-white/10 bg-white/5 text-[#A78BFA] hover:border-[#8064C7]/50 hover:bg-white/10"
@@ -1412,7 +1365,15 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     />
 
                     Take Photo
-                  </button>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
 
                 <p
@@ -1427,27 +1388,6 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
               </>
             ) : (
               <div className="my-auto w-full max-w-lg">
-                {/* Hidden File Inputs for Mobile & Desktop Uploads */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg,image/webp,image/*,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  style={{ display: "none" }}
-                />
-
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*,.png,.jpg,.jpeg,.webp"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  style={{ display: "none" }}
-                />
-
                 <div
                   className={`rounded-2xl border p-5 shadow-sm backdrop-blur-xl ${
                     isDarkMode
@@ -1461,27 +1401,35 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                     </p>
 
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="cursor-pointer text-xs font-bold text-[#8064C7] transition hover:underline dark:text-[#A78BFA]"
-                      >
+                      <label className="cursor-pointer text-xs font-bold text-[#8064C7] transition hover:underline dark:text-[#A78BFA]">
                         + Add files
-                      </button>
+
+                        <input
+                          type="file"
+                          accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
 
                       <span className="text-xs text-gray-400">
                         |
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="flex cursor-pointer items-center gap-1 text-xs font-bold text-[#8064C7] transition hover:underline dark:text-[#A78BFA]"
-                      >
+                      <label className="flex cursor-pointer items-center gap-1 text-xs font-bold text-[#8064C7] transition hover:underline dark:text-[#A78BFA]">
                         <Camera size={14} />
 
                         photo
-                      </button>
+
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
                   </div>
 
