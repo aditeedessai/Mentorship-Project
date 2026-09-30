@@ -651,7 +651,7 @@ function DashboardPage({ user, onNavigate }) {
                 isDarkMode ? "text-white/50" : "text-[#706A78]"
               }`}
             >
-              VERCEL PREVIEW TEST
+              Learn something new. Master something more.
             </p>
 
             <button
