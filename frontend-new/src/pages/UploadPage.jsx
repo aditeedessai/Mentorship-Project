@@ -1439,15 +1439,15 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                 </p>
               </>
             ) : (
-              <div className="my-auto w-full max-w-lg">
+              <div className="my-auto w-full max-w-full sm:max-w-lg">
                 <div
-                  className={`rounded-2xl border p-5 shadow-sm backdrop-blur-xl ${
+                  className={`rounded-2xl border p-3.5 sm:p-5 shadow-sm backdrop-blur-xl ${
                     isDarkMode
                       ? "border-white/10 bg-[#211D2B]/90"
                       : "border-white/80 bg-white/85"
                   }`}
                 >
-                  <div className="mb-4 flex items-center justify-between border-b border-inherit pb-3">
+                  <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-b border-inherit pb-3">
                     <p className="text-sm font-bold">
                       Selected Files ({selectedFiles.length})
                     </p>
@@ -1503,7 +1503,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                         </div>
 
                         <div className="min-w-0 flex-1 text-left">
-                          <p className="truncate text-sm font-bold">
+                          <p className="truncate text-sm font-bold [overflow-wrap:anywhere]">
                             {file.name}
                           </p>
 
@@ -1525,7 +1525,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
                           type="button"
                           onClick={() => removeFile(index)}
                           disabled={uploading}
-                          className="remove-button-animation rounded-lg p-1.5 opacity-60 transition hover:text-red-400 hover:opacity-100 disabled:opacity-50"
+                          className="remove-button-animation shrink-0 rounded-lg p-1.5 opacity-60 transition hover:text-red-400 hover:opacity-100 disabled:opacity-50"
                           title="Remove file"
                         >
                           <X size={16} />
