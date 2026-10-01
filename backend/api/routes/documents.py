@@ -21,6 +21,16 @@ INVALID_FILE_MESSAGE = (
     "The uploaded file is invalid. Please upload a valid file and try again."
 )
 
+MIME_TO_EXT_MAP = {
+    "application/pdf": ".pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/webp": ".webp",
+}
+
 
 @router.post(
     "/study-sets/{study_set_id}/documents",
@@ -55,11 +65,29 @@ def upload_documents(
             detail=f"Study set with ID '{study_set_id}' not found",
         )
 
-    # 2. Validate file extensions against supported set
+    # 2. Validate file extensions / MIME types against supported set
     for file in files:
         file_ext = Path(file.filename or "").suffix.lower()
+        content_type = (file.content_type or "").lower().strip()
 
-        if file_ext not in SUPPORTED_EXTENSIONS:
+        # Reject HEIC / HEIF explicitly
+        if file_ext in {".heic", ".heif"} or content_type in {"image/heic", "image/heif"}:
+            study_set_repository.delete_study_set(
+                str(study_set_id),
+                user_id=current_user.user_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=INVALID_FILE_MESSAGE,
+            )
+
+        if file_ext in SUPPORTED_EXTENSIONS:
+            pass
+        elif content_type in MIME_TO_EXT_MAP:
+            target_ext = MIME_TO_EXT_MAP[content_type]
+            stem = Path(file.filename or "uploaded_document").stem
+            file.filename = f"{stem}{target_ext}"
+        else:
             # Delete the newly created study set because the upload
             # operation has already failed validation.
             study_set_repository.delete_study_set(
