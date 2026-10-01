@@ -37,10 +37,7 @@ const ALLOWED_MIME_TYPES = Object.keys(MIME_TO_EXT_MAP);
 const DISALLOWED_EXTENSIONS = [".heic", ".heif"];
 const DISALLOWED_MIME_TYPES = ["image/heic", "image/heif"];
 
-const ACCEPT_ATTRIBUTE = [
-  ...ALLOWED_EXTENSIONS,
-  ...ALLOWED_MIME_TYPES,
-].join(",");
+const ACCEPT_ATTRIBUTE = ALLOWED_MIME_TYPES.join(",");
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB limit in bytes
 
@@ -789,6 +786,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
     const validFiles = [];
     const invalidFileNames = [];
+    const heicFileNames = [];
     const oversizedFileNames = [];
 
     incoming.forEach((file) => {
@@ -803,7 +801,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         DISALLOWED_EXTENSIONS.includes(rawExt) ||
         DISALLOWED_MIME_TYPES.includes(fileMime)
       ) {
-        invalidFileNames.push(file.name);
+        heicFileNames.push(file.name);
         return;
       }
 
@@ -812,9 +810,11 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
       const mappedExtFromMime = MIME_TO_EXT_MAP[fileMime];
 
       if (isAllowedExt) {
+        // Priority 1: Accept file directly if filename has a supported extension,
+        // even if file.type is empty ("") or "application/octet-stream".
         fileToAdd = file;
       } else if (mappedExtFromMime) {
-        // Filename lacks a supported extension, but MIME type is explicitly supported
+        // Priority 2: Filename lacks a supported extension, but MIME type is explicitly supported
         // Normalize filename so backend/extractor receives a valid extension
         const baseName = file.name.includes(".")
           ? file.name.substring(0, file.name.lastIndexOf("."))
@@ -858,6 +858,14 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
     // Handle error messages for invalid formats or oversized files
     const errorMessages = [];
+
+    if (heicFileNames.length > 0) {
+      errorMessages.push(
+        `HEIC/HEIF image format is unsupported on Android: ${heicFileNames.join(
+          ", "
+        )}. Please select a JPG, PNG, or PDF file instead.`
+      );
+    }
 
     if (invalidFileNames.length > 0) {
       errorMessages.push(
