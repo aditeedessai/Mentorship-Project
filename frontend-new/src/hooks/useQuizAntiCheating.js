@@ -272,6 +272,13 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // ────────────────────────────────────────────────────────────────
     // 1. FULLSCREEN ENFORCEMENT
     // ────────────────────────────────────────────────────────────────
+    const isFullscreenSupported = Boolean(
+      typeof document !== 'undefined' &&
+      document.fullscreenEnabled &&
+      document.documentElement &&
+      typeof document.documentElement.requestFullscreen === 'function'
+    )
+
     const handleFullscreenChange = () => {
       if (cleanedUpRef.current || quizTerminatedRef.current) return
 
@@ -302,7 +309,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
 
     // Attempt fullscreen immediately on mount
     const attemptFullscreen = async () => {
-      if (cleanedUpRef.current || quizTerminatedRef.current) return
+      if (cleanedUpRef.current || quizTerminatedRef.current || !isFullscreenSupported) return
       fullscreenAttemptCountRef.current += 1
       try {
         if (!document.fullscreenElement) {
@@ -326,7 +333,7 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
     // the "Entering Secure Mode - click anywhere to continue" gate stopped
     // responding to clicks after the first fullscreen exit (DF016/DF018/DF019).
     const handleFirstInteraction = async () => {
-      if (cleanedUpRef.current || quizTerminatedRef.current) return
+      if (cleanedUpRef.current || quizTerminatedRef.current || !isFullscreenSupported) return
       if (document.fullscreenElement) {
         setIsFullscreenReady(true)
         wasFullscreenEstablishedRef.current = true
@@ -357,10 +364,14 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       document.removeEventListener('keydown', handleFirstInteractionKey)
     }
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    document.addEventListener('pointerdown', handleFirstInteraction)
-    document.addEventListener('keydown', handleFirstInteractionKey)
-    attemptFullscreen()
+    if (!isFullscreenSupported) {
+      setIsFullscreenReady(true)
+    } else {
+      document.addEventListener('fullscreenchange', handleFullscreenChange)
+      document.addEventListener('pointerdown', handleFirstInteraction)
+      document.addEventListener('keydown', handleFirstInteractionKey)
+      attemptFullscreen()
+    }
     requestWakeLock()
 
     // ────────────────────────────────────────────────────────────────
