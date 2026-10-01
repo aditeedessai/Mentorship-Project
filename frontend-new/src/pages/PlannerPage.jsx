@@ -8,6 +8,7 @@ import WeeklyPlan from "../components/planner/WeeklyPlan";
 import AddTaskModal from "../components/planner/AddTaskModal";
 import AddExamModal from "../components/planner/AddExamModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { fromApiTaskType } from "../data/plannerData";
 
 import {
   fetchExams,
@@ -32,9 +33,7 @@ function formatBackendTask(t) {
     ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
     : "Medium";
 
-  const type = t.task_type
-    ? t.task_type.charAt(0).toUpperCase() + t.task_type.slice(1)
-    : "Study";
+  const type = fromApiTaskType(t.task_type);
 
   const studySetName = t.study_set_name || "General Study";
 
@@ -256,18 +255,11 @@ export default function PlannerPage({ onNavigate, studySets = [] }) {
         setSelectedDate(formattedTask.date);
       }
     } catch (err) {
-      console.warn(
-        "API createTask failed, adding to local state fallback:",
-        err
-      );
-
-      const fallbackTask = {
-        id: `task-${Date.now()}`,
-        ...newTaskData,
-        completed: false,
-      };
-
-      setTasks((prevTasks) => [fallbackTask, ...prevTasks]);
+      // Re-throw so AddTaskModal stays open and shows the error. Adding the
+      // task to local state here made it look saved when it wasn't, and it
+      // vanished on the next reload.
+      console.error("API createTask failed:", err);
+      throw err;
     }
   };
 
