@@ -276,14 +276,30 @@ function AppContent() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUser({
+        const newUserData = {
           id: session.user.id,
           name:
             session.user.user_metadata?.full_name ||
             session.user.email.split("@")[0],
           email: session.user.email,
           createdAt: session.user.created_at,
+        };
+
+        setUser((prevUser) => {
+          if (
+            prevUser &&
+            prevUser.id === newUserData.id &&
+            prevUser.name === newUserData.name &&
+            prevUser.email === newUserData.email
+          ) {
+            return prevUser;
+          }
+          if (prevUser && prevUser.id !== newUserData.id) {
+            setHasProfile(null);
+          }
+          return newUserData;
         });
+
         setAuthPage("app");
       }
     });
@@ -292,14 +308,30 @@ function AppContent() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser({
+        const newUserData = {
           id: session.user.id,
           name:
             session.user.user_metadata?.full_name ||
             session.user.email.split("@")[0],
           email: session.user.email,
           createdAt: session.user.created_at,
+        };
+
+        setUser((prevUser) => {
+          if (
+            prevUser &&
+            prevUser.id === newUserData.id &&
+            prevUser.name === newUserData.name &&
+            prevUser.email === newUserData.email
+          ) {
+            return prevUser;
+          }
+          if (prevUser && prevUser.id !== newUserData.id) {
+            setHasProfile(null);
+          }
+          return newUserData;
         });
+
         setAuthPage("app");
       } else {
         // A null session here isn't necessarily a real sign-out: the
@@ -346,7 +378,9 @@ function AppContent() {
       return;
     }
 
-    setProfileLoading(true);
+    if (hasProfile === null) {
+      setProfileLoading(true);
+    }
     setProfileCheckError(null);
     try {
       const { data, error: fetchErr } = await supabase
@@ -374,15 +408,16 @@ function AppContent() {
     }
   };
 
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setHasProfile(null);
       setProfileCheckError(null);
       return;
     }
 
     checkProfile();
-  }, [user]);
+  }, [userId]);
 
   // ================= AUTOMATIC FIRST-LOGIN TOUR TRIGGER =================
   // Starts ONLY for genuinely new accounts that completed signup and are landing
