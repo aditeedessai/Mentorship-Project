@@ -506,7 +506,30 @@ export default function useQuizAntiCheating({ enabled = true, onTerminate } = {}
       const widthDiff = window.outerWidth - window.innerWidth
       const heightDiff = window.outerHeight - window.innerHeight
 
-      const isDetected = widthDiff > DEVTOOLS_THRESHOLD || heightDiff > DEVTOOLS_THRESHOLD
+      // Check if user is currently focused on an editable input/textarea (where mobile soft keyboards pop up)
+      const activeEl = document.activeElement
+      const isEditableActive = Boolean(
+        activeEl && (
+          activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.isContentEditable ||
+          activeEl.closest?.('[contenteditable="true"]') ||
+          activeEl.closest?.('[data-ac-editable="true"]')
+        )
+      )
+
+      // Detect touch/mobile environment where virtual software keyboards operate
+      const isTouchDevice = typeof window !== 'undefined' && (
+        'ontouchstart' in window ||
+        (navigator?.maxTouchPoints > 0) ||
+        (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+      )
+
+      // On mobile/touch devices or when an editable input is active, heightDiff is affected by the virtual keyboard.
+      // Ignore heightDiff in those cases to prevent false positives from soft keyboard viewport resizing.
+      const ignoreHeightDiff = isEditableActive || isTouchDevice
+
+      const isDetected = widthDiff > DEVTOOLS_THRESHOLD || (!ignoreHeightDiff && heightDiff > DEVTOOLS_THRESHOLD)
 
       if (isDetected) {
         devToolsDetectedRef.current = true
