@@ -1339,12 +1339,12 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
       {/* ================= MAIN UPLOAD AREA ================= */}
 
-      <div className="grid items-stretch gap-4 sm:gap-6 lg:grid-cols-3">
+      <div className="grid w-full max-w-full min-w-0 items-stretch gap-4 sm:gap-6 lg:grid-cols-3">
 
         {/* ================= UPLOAD CARD ================= */}
 
         <div
-          className={`flex h-full flex-col rounded-2xl sm:rounded-3xl border p-3.5 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 upload-main-card-animation ${
+          className={`flex h-full w-full min-w-0 max-w-full flex-col rounded-2xl sm:rounded-3xl border p-3.5 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-2 upload-main-card-animation ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
@@ -1357,7 +1357,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex min-h-[240px] sm:min-h-[300px] flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 border-dashed p-4 text-center transition-all duration-300 upload-zone-animation sm:p-8 ${
+            className={`flex min-h-[240px] sm:min-h-[300px] w-full min-w-0 max-w-full flex-1 flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 border-dashed p-4 text-center transition-all duration-300 upload-zone-animation sm:p-8 ${
               isDragging
                 ? "border-[#8064C7] bg-[#8064C7]/15"
                 : isDarkMode
@@ -1542,7 +1542,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
         {/* ================= STUDY SET NAME & ACTIONS ================= */}
 
         <div
-          className={`flex h-full flex-col justify-between rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 upload-name-card-animation ${
+          className={`flex h-full w-full min-w-0 max-w-full flex-col justify-between rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-2xl transition-all duration-500 lg:col-span-1 upload-name-card-animation ${
             isDarkMode
               ? "border-white/8 bg-[#14101D]/75 text-[#F3F0F8] shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
               : "border-black/5 bg-[#F8F8FC]/95 text-[#231B33] shadow-[0_4px_25px_rgba(0,0,0,0.03)]"
