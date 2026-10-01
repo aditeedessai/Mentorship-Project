@@ -268,8 +268,8 @@ export default function AboutPage({ onNavigate }) {
       id: "sandra",
       name: "Sandra",
       initials: "SD",
-      role: "Platform Engineer",
-      focus: "Architecture & CI/CD",
+      role: "AI and Quiz Engineer",
+      focus: "Quiz Generation",
       image: sandraPic,
       imagePos: "object-center",
       github: "https://github.com/sandferns20",
@@ -315,11 +315,10 @@ export default function AboutPage({ onNavigate }) {
 
   return (
     <div
-      className={`about-page min-h-screen overflow-x-hidden transition-colors duration-500 ${
-        isDarkMode
-          ? "bg-[#0B0910] text-[#F3F0F8]"
-          : "bg-[#F7F5FA] text-[#231B33]"
-      }`}
+      className={`about-page min-h-screen overflow-x-hidden transition-colors duration-500 ${isDarkMode
+        ? "bg-[#0B0910] text-[#F3F0F8]"
+        : "bg-[#F7F5FA] text-[#231B33]"
+        }`}
     >
       {/* ===================================================
           ANIMATION STYLES
@@ -794,21 +793,18 @@ export default function AboutPage({ onNavigate }) {
 
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div
-          className={`absolute -right-40 -top-40 h-[600px] w-[600px] rounded-full blur-[150px] ${
-            isDarkMode ? "bg-[#8064C7]/15" : "bg-[#8064C7]/10"
-          }`}
+          className={`absolute -right-40 -top-40 h-[600px] w-[600px] rounded-full blur-[150px] ${isDarkMode ? "bg-[#8064C7]/15" : "bg-[#8064C7]/10"
+            }`}
         />
 
         <div
-          className={`absolute -left-40 top-[40%] h-[500px] w-[500px] rounded-full blur-[150px] ${
-            isDarkMode ? "bg-[#6D45B8]/10" : "bg-[#A78BFA]/10"
-          }`}
+          className={`absolute -left-40 top-[40%] h-[500px] w-[500px] rounded-full blur-[150px] ${isDarkMode ? "bg-[#6D45B8]/10" : "bg-[#A78BFA]/10"
+            }`}
         />
 
         <div
-          className={`absolute bottom-[-250px] right-[15%] h-[450px] w-[450px] rounded-full blur-[150px] ${
-            isDarkMode ? "bg-[#8B5CF6]/8" : "bg-[#C084FC]/8"
-          }`}
+          className={`absolute bottom-[-250px] right-[15%] h-[450px] w-[450px] rounded-full blur-[150px] ${isDarkMode ? "bg-[#8B5CF6]/8" : "bg-[#C084FC]/8"
+            }`}
         />
 
         <div className="about-orb-one absolute left-[8%] top-[28%] h-3 w-3 rounded-full bg-[#8064C7]/30" />
@@ -834,21 +830,19 @@ export default function AboutPage({ onNavigate }) {
       =================================================== */}
 
       <header
-        className={`sticky top-0 z-50 border-b backdrop-blur-xl ${
-          isDarkMode
-            ? "border-white/10 bg-[#0B0910]/85"
-            : "border-[#E8E3EF] bg-white/85"
-        }`}
+        className={`sticky top-0 z-50 border-b backdrop-blur-xl ${isDarkMode
+          ? "border-white/10 bg-[#0B0910]/85"
+          : "border-[#E8E3EF] bg-white/85"
+          }`}
       >
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
           <button
             type="button"
             onClick={() => onNavigate && onNavigate("landing")}
-            className={`about-back-button flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition ${
-              isDarkMode
-                ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
-                : "border-[#E5DFEE] bg-white text-slate-600 hover:bg-slate-50"
-            }`}
+            className={`about-back-button flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition ${isDarkMode
+              ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+              : "border-[#E5DFEE] bg-white text-slate-600 hover:bg-slate-50"
+              }`}
           >
             <ArrowLeft size={16} />
             Back to Home
@@ -859,17 +853,15 @@ export default function AboutPage({ onNavigate }) {
 
             <div>
               <div
-                className={`font-black tracking-tight ${
-                  isDarkMode ? "text-white" : "text-[#231B33]"
-                }`}
+                className={`font-black tracking-tight ${isDarkMode ? "text-white" : "text-[#231B33]"
+                  }`}
               >
                 JOT
               </div>
 
               <div
-                className={`text-[9px] font-bold tracking-wider ${
-                  isDarkMode ? "text-purple-300" : "text-purple-600"
-                }`}
+                className={`text-[9px] font-bold tracking-wider ${isDarkMode ? "text-purple-300" : "text-purple-600"
+                  }`}
               >
                 JOT IT • ORGANISE IT • TOP IT
               </div>
@@ -879,11 +871,10 @@ export default function AboutPage({ onNavigate }) {
           <button
             type="button"
             onClick={toggleDarkMode}
-            className={`about-theme-button flex h-11 w-11 items-center justify-center rounded-xl border text-lg transition-all duration-300 ${
-              isDarkMode
-                ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
-                : "border-[#E5DFEE] bg-white text-[#231B33] hover:bg-purple-50"
-            }`}
+            className={`about-theme-button flex h-11 w-11 items-center justify-center rounded-xl border text-lg transition-all duration-300 ${isDarkMode
+              ? "border-white/10 bg-white/5 text-white hover:bg-white/10"
+              : "border-[#E5DFEE] bg-white text-[#231B33] hover:bg-purple-50"
+              }`}
             aria-label="Toggle theme"
           >
             {isDarkMode ? <Sun size={19} /> : <Moon size={19} />}
@@ -906,11 +897,10 @@ export default function AboutPage({ onNavigate }) {
 
             <div className="about-hero-left space-y-7">
               <div
-                className={`about-hero-badge inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black ${
-                  isDarkMode
-                    ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
-                    : "border-purple-200 bg-purple-50 text-purple-700"
-                }`}
+                className={`about-hero-badge inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black ${isDarkMode
+                  ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
+                  : "border-purple-200 bg-purple-50 text-purple-700"
+                  }`}
               >
                 <Sparkles size={14} />
                 A LITTLE ABOUT JOT
@@ -938,31 +928,28 @@ export default function AboutPage({ onNavigate }) {
 
               <div className="flex flex-wrap gap-3">
                 <div
-                  className={`about-pill rounded-xl border px-4 py-2 text-xs font-bold ${
-                    isDarkMode
-                      ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
-                      : "border-purple-200 bg-purple-50 text-purple-700"
-                  }`}
+                  className={`about-pill rounded-xl border px-4 py-2 text-xs font-bold ${isDarkMode
+                    ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                    : "border-purple-200 bg-purple-50 text-purple-700"
+                    }`}
                 >
                   ✨ Jot It.
                 </div>
 
                 <div
-                  className={`about-pill rounded-xl border px-4 py-2 text-xs font-bold ${
-                    isDarkMode
-                      ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
-                      : "border-purple-200 bg-purple-50 text-purple-700"
-                  }`}
+                  className={`about-pill rounded-xl border px-4 py-2 text-xs font-bold ${isDarkMode
+                    ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                    : "border-purple-200 bg-purple-50 text-purple-700"
+                    }`}
                 >
                   📚 Organise It.
                 </div>
 
                 <div
-                  className={`about-pill rounded-xl border px-4 py-2 text-xs font-bold ${
-                    isDarkMode
-                      ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
-                      : "border-purple-200 bg-purple-50 text-purple-700"
-                  }`}
+                  className={`about-pill rounded-xl border px-4 py-2 text-xs font-bold ${isDarkMode
+                    ? "border-purple-400/20 bg-purple-500/10 text-purple-200"
+                    : "border-purple-200 bg-purple-50 text-purple-700"
+                    }`}
                 >
                   🚀 Top It.
                 </div>
@@ -977,9 +964,8 @@ export default function AboutPage({ onNavigate }) {
 
               {/* Soft Jojo glow */}
               <div
-                className={`about-jojo-glow absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[80px] ${
-                  isDarkMode ? "bg-purple-500/20" : "bg-purple-400/20"
-                }`}
+                className={`about-jojo-glow absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[80px] ${isDarkMode ? "bg-purple-500/20" : "bg-purple-400/20"
+                  }`}
               />
 
               {/* =================================================
@@ -987,11 +973,10 @@ export default function AboutPage({ onNavigate }) {
               ================================================= */}
 
               <div
-                className={`about-orbit-outer pointer-events-none absolute left-1/2 top-1/2 z-10 h-[350px] w-[350px] -ml-[175px] -mt-[175px] rounded-full border ${
-                  isDarkMode
-                    ? "border-purple-300/15"
-                    : "border-purple-300/40"
-                }`}
+                className={`about-orbit-outer pointer-events-none absolute left-1/2 top-1/2 z-10 h-[350px] w-[350px] -ml-[175px] -mt-[175px] rounded-full border ${isDarkMode
+                  ? "border-purple-300/15"
+                  : "border-purple-300/40"
+                  }`}
               />
 
               {/* =================================================
@@ -999,11 +984,10 @@ export default function AboutPage({ onNavigate }) {
               ================================================= */}
 
               <div
-                className={`about-orbit-inner pointer-events-none absolute left-1/2 top-1/2 z-10 h-[285px] w-[285px] -ml-[142.5px] -mt-[142.5px] rounded-full border border-dashed ${
-                  isDarkMode
-                    ? "border-purple-300/15"
-                    : "border-purple-300/35"
-                }`}
+                className={`about-orbit-inner pointer-events-none absolute left-1/2 top-1/2 z-10 h-[285px] w-[285px] -ml-[142.5px] -mt-[142.5px] rounded-full border border-dashed ${isDarkMode
+                  ? "border-purple-300/15"
+                  : "border-purple-300/35"
+                  }`}
               />
 
               {/* =================================================
@@ -1116,11 +1100,10 @@ export default function AboutPage({ onNavigate }) {
         ================================================= */}
 
         <section
-          className={`about-reveal rounded-[36px] border p-8 sm:p-12 ${
-            isDarkMode
-              ? "border-white/10 bg-white/[0.035]"
-              : "border-[#E7E0F0] bg-white shadow-sm"
-          }`}
+          className={`about-reveal rounded-[36px] border p-8 sm:p-12 ${isDarkMode
+            ? "border-white/10 bg-white/[0.035]"
+            : "border-[#E7E0F0] bg-white shadow-sm"
+            }`}
         >
           <div className="mb-6 flex items-center gap-3">
             <div className="about-card-icon flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
@@ -1168,9 +1151,8 @@ export default function AboutPage({ onNavigate }) {
           </div>
 
           <div
-            className={`mt-9 grid gap-4 border-t pt-7 sm:grid-cols-3 ${
-              isDarkMode ? "border-white/10" : "border-slate-200"
-            }`}
+            className={`mt-9 grid gap-4 border-t pt-7 sm:grid-cols-3 ${isDarkMode ? "border-white/10" : "border-slate-200"
+              }`}
           >
             {[
               "Less Scrolling",
@@ -1179,9 +1161,8 @@ export default function AboutPage({ onNavigate }) {
             ].map((item, index) => (
               <div
                 key={item}
-                className={`about-reveal about-stagger-${
-                  index + 1
-                } flex items-center gap-2 text-xs font-bold ${textSecondary}`}
+                className={`about-reveal about-stagger-${index + 1
+                  } flex items-center gap-2 text-xs font-bold ${textSecondary}`}
               >
                 <CheckCircle2
                   size={16}
@@ -1226,9 +1207,8 @@ export default function AboutPage({ onNavigate }) {
               return (
                 <div
                   key={tier.tier}
-                  className={`about-reveal about-card-hover about-stagger-${
-                    index + 1
-                  } rounded-3xl border p-7 ${card}`}
+                  className={`about-reveal about-card-hover about-stagger-${index + 1
+                    } rounded-3xl border p-7 ${card}`}
                 >
                   <div className="mb-5 flex items-center justify-between">
                     <span className="text-xs font-black text-purple-400">
@@ -1236,11 +1216,10 @@ export default function AboutPage({ onNavigate }) {
                     </span>
 
                     <span
-                      className={`rounded-lg px-3 py-1 text-xs font-bold ${
-                        isDarkMode
-                          ? "bg-white/10 text-slate-300"
-                          : "bg-purple-50 text-purple-700"
-                      }`}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold ${isDarkMode
+                        ? "bg-white/10 text-slate-300"
+                        : "bg-purple-50 text-purple-700"
+                        }`}
                     >
                       {tier.badge}
                     </span>
@@ -1294,27 +1273,24 @@ export default function AboutPage({ onNavigate }) {
               return (
                 <div
                   key={step.num}
-                  className={`about-reveal about-card-hover about-stagger-${
-                    (index % 6) + 1
-                  } rounded-3xl border p-6 ${card}`}
+                  className={`about-reveal about-card-hover about-stagger-${(index % 6) + 1
+                    } rounded-3xl border p-6 ${card}`}
                 >
                   <div className="mb-5 flex items-center justify-between">
                     <div
-                      className={`about-card-icon flex h-12 w-12 items-center justify-center rounded-2xl ${
-                        isDarkMode
-                          ? "bg-purple-500/10 text-purple-300"
-                          : "bg-purple-50 text-purple-600"
-                      }`}
+                      className={`about-card-icon flex h-12 w-12 items-center justify-center rounded-2xl ${isDarkMode
+                        ? "bg-purple-500/10 text-purple-300"
+                        : "bg-purple-50 text-purple-600"
+                        }`}
                     >
                       <Icon size={22} />
                     </div>
 
                     <span
-                      className={`about-number-pulse text-2xl font-black ${
-                        isDarkMode
-                          ? "text-white/10"
-                          : "text-slate-200"
-                      }`}
+                      className={`about-number-pulse text-2xl font-black ${isDarkMode
+                        ? "text-white/10"
+                        : "text-slate-200"
+                        }`}
                     >
                       {step.num}
                     </span>
@@ -1359,9 +1335,8 @@ export default function AboutPage({ onNavigate }) {
               return (
                 <div
                   key={value.title}
-                  className={`about-reveal about-card-hover about-stagger-${
-                    index + 1
-                  } rounded-3xl border p-7 ${card}`}
+                  className={`about-reveal about-card-hover about-stagger-${index + 1
+                    } rounded-3xl border p-7 ${card}`}
                 >
                   <div className="about-card-icon mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
                     <Icon size={22} />
@@ -1385,36 +1360,32 @@ export default function AboutPage({ onNavigate }) {
         ================================================= */}
 
         <section
-          className={`about-reveal relative overflow-hidden rounded-[36px] border p-8 text-center sm:p-12 ${
-            isDarkMode
-              ? "border-purple-400/20 bg-gradient-to-br from-[#24163A] via-[#181329] to-[#100D17]"
-              : "border-purple-100 bg-gradient-to-br from-purple-50 via-white to-indigo-50"
-          }`}
+          className={`about-reveal relative overflow-hidden rounded-[36px] border p-8 text-center sm:p-12 ${isDarkMode
+            ? "border-purple-400/20 bg-gradient-to-br from-[#24163A] via-[#181329] to-[#100D17]"
+            : "border-purple-100 bg-gradient-to-br from-purple-50 via-white to-indigo-50"
+            }`}
         >
           <div
-            className={`about-orb-one absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl ${
-              isDarkMode
-                ? "bg-purple-500/15"
-                : "bg-purple-300/20"
-            }`}
+            className={`about-orb-one absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl ${isDarkMode
+              ? "bg-purple-500/15"
+              : "bg-purple-300/20"
+              }`}
           />
 
           <div
-            className={`about-orb-two absolute -bottom-20 -left-20 h-64 w-64 rounded-full blur-3xl ${
-              isDarkMode
-                ? "bg-purple-500/10"
-                : "bg-purple-200/20"
-            }`}
+            className={`about-orb-two absolute -bottom-20 -left-20 h-64 w-64 rounded-full blur-3xl ${isDarkMode
+              ? "bg-purple-500/10"
+              : "bg-purple-200/20"
+              }`}
           />
 
           <div className="relative">
             <div className="about-cta-float mb-5 flex justify-center">
               <div
-                className={`flex h-28 w-28 items-center justify-center rounded-full ${
-                  isDarkMode
-                    ? "bg-white/5"
-                    : "bg-white shadow-sm"
-                }`}
+                className={`flex h-28 w-28 items-center justify-center rounded-full ${isDarkMode
+                  ? "bg-white/5"
+                  : "bg-white shadow-sm"
+                  }`}
               >
                 <img
                   src={jojoWaving}
@@ -1454,11 +1425,10 @@ export default function AboutPage({ onNavigate }) {
         <section className="space-y-12">
           <div className="about-reveal text-center">
             <div
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-black uppercase tracking-wider ${
-                isDarkMode
-                  ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
-                  : "border-purple-200 bg-purple-50 text-purple-700"
-              }`}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-black uppercase tracking-wider ${isDarkMode
+                ? "border-purple-400/20 bg-purple-500/10 text-purple-300"
+                : "border-purple-200 bg-purple-50 text-purple-700"
+                }`}
             >
               <Sparkles size={13} />
               THE PEOPLE BEHIND JOT
@@ -1481,37 +1451,32 @@ export default function AboutPage({ onNavigate }) {
             {teamMembers.map((member, index) => (
               <div
                 key={member.id}
-                className={`about-reveal about-team-card about-stagger-${
-                  (index % 6) + 1
-                } group relative flex flex-col justify-between overflow-hidden rounded-[30px] border ${
-                  isDarkMode
+                className={`about-reveal about-team-card about-stagger-${(index % 6) + 1
+                  } group relative flex flex-col justify-between overflow-hidden rounded-[30px] border ${isDarkMode
                     ? "border-white/10 bg-[#120F1D]/90 hover:border-purple-500/50 hover:shadow-[0_20px_40px_rgba(128,100,199,0.15)]"
                     : "border-[#E7E2EE] bg-white hover:border-purple-400/60 hover:shadow-[0_20px_40px_rgba(128,100,199,0.12)]"
-                }`}
+                  }`}
               >
                 <div
-                  className={`relative h-20 w-full transition-colors ${
-                    isDarkMode
-                      ? "bg-gradient-to-b from-purple-900/30 via-purple-950/10 to-transparent"
-                      : "bg-gradient-to-b from-purple-100/70 via-purple-50/20 to-transparent"
-                  }`}
+                  className={`relative h-20 w-full transition-colors ${isDarkMode
+                    ? "bg-gradient-to-b from-purple-900/30 via-purple-950/10 to-transparent"
+                    : "bg-gradient-to-b from-purple-100/70 via-purple-50/20 to-transparent"
+                    }`}
                 >
                   <div
-                    className={`absolute -top-12 left-1/2 h-24 w-32 -translate-x-1/2 rounded-full blur-2xl transition-opacity duration-500 group-hover:opacity-100 ${
-                      isDarkMode
-                        ? "bg-purple-500/25 opacity-40"
-                        : "bg-purple-300/40 opacity-50"
-                    }`}
+                    className={`absolute -top-12 left-1/2 h-24 w-32 -translate-x-1/2 rounded-full blur-2xl transition-opacity duration-500 group-hover:opacity-100 ${isDarkMode
+                      ? "bg-purple-500/25 opacity-40"
+                      : "bg-purple-300/40 opacity-50"
+                      }`}
                   />
                 </div>
 
                 <div className="-mt-12 flex flex-col items-center px-4">
                   <div
-                    className={`about-team-avatar about-avatar-glow flex h-24 w-24 items-center justify-center overflow-hidden rounded-full ring-4 shadow-lg ${
-                      isDarkMode
-                        ? "bg-[#181325] ring-[#120F1D] group-hover:ring-purple-400/50"
-                        : "bg-white ring-white group-hover:ring-purple-200"
-                    }`}
+                    className={`about-team-avatar about-avatar-glow flex h-24 w-24 items-center justify-center overflow-hidden rounded-full ring-4 shadow-lg ${isDarkMode
+                      ? "bg-[#181325] ring-[#120F1D] group-hover:ring-purple-400/50"
+                      : "bg-white ring-white group-hover:ring-purple-200"
+                      }`}
                   >
                     {member.image ? (
                       <img
@@ -1519,9 +1484,8 @@ export default function AboutPage({ onNavigate }) {
                         alt={member.name}
                         loading="eager"
                         decoding="sync"
-                        className={`h-full w-full object-cover ${
-                          member.imagePos || "object-center"
-                        } brightness-[0.96] contrast-[1.08] transition-transform duration-500 ease-out group-hover:scale-115`}
+                        className={`h-full w-full object-cover ${member.imagePos || "object-center"
+                          } brightness-[0.96] contrast-[1.08] transition-transform duration-500 ease-out group-hover:scale-115`}
                         style={{
                           imageRendering: "-webkit-optimize-contrast",
                           transform: "translateZ(0)",
@@ -1529,11 +1493,10 @@ export default function AboutPage({ onNavigate }) {
                       />
                     ) : (
                       <div
-                        className={`flex h-full w-full items-center justify-center font-black ${
-                          isDarkMode
-                            ? "bg-gradient-to-br from-purple-900/50 to-purple-950/70 text-purple-300"
-                            : "bg-gradient-to-br from-purple-100 to-purple-200 text-purple-800"
-                        }`}
+                        className={`flex h-full w-full items-center justify-center font-black ${isDarkMode
+                          ? "bg-gradient-to-br from-purple-900/50 to-purple-950/70 text-purple-300"
+                          : "bg-gradient-to-br from-purple-100 to-purple-200 text-purple-800"
+                          }`}
                       >
                         <span className="text-2xl font-black tracking-wider">
                           {member.initials}
@@ -1555,11 +1518,10 @@ export default function AboutPage({ onNavigate }) {
                   </p>
 
                   <div
-                    className={`about-pill mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[10px] font-bold ${
-                      isDarkMode
-                        ? "border-purple-500/20 bg-purple-500/10 text-purple-300 group-hover:border-purple-500/40"
-                        : "border-purple-200/80 bg-purple-50 text-purple-700 group-hover:border-purple-300"
-                    }`}
+                    className={`about-pill mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[10px] font-bold ${isDarkMode
+                      ? "border-purple-500/20 bg-purple-500/10 text-purple-300 group-hover:border-purple-500/40"
+                      : "border-purple-200/80 bg-purple-50 text-purple-700 group-hover:border-purple-300"
+                      }`}
                   >
                     <Zap
                       size={10}
@@ -1573,22 +1535,20 @@ export default function AboutPage({ onNavigate }) {
                 </div>
 
                 <div
-                  className={`mt-5 flex items-center justify-center gap-3 border-t px-4 py-3.5 ${
-                    isDarkMode
-                      ? "border-white/5"
-                      : "border-slate-100"
-                  }`}
+                  className={`mt-5 flex items-center justify-center gap-3 border-t px-4 py-3.5 ${isDarkMode
+                    ? "border-white/5"
+                    : "border-slate-100"
+                    }`}
                 >
                   <a
                     href={member.github}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="GitHub"
-                    className={`about-social flex h-8 w-8 items-center justify-center rounded-full border ${
-                      isDarkMode
-                        ? "border-white/10 bg-white/5 text-slate-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white"
-                        : "border-slate-200 bg-slate-50/80 text-slate-600 shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
-                    }`}
+                    className={`about-social flex h-8 w-8 items-center justify-center rounded-full border ${isDarkMode
+                      ? "border-white/10 bg-white/5 text-slate-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white"
+                      : "border-slate-200 bg-slate-50/80 text-slate-600 shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                      }`}
                   >
                     <GithubIcon size={14} />
                   </a>
@@ -1598,11 +1558,10 @@ export default function AboutPage({ onNavigate }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     title="LinkedIn"
-                    className={`about-social flex h-8 w-8 items-center justify-center rounded-full border ${
-                      isDarkMode
-                        ? "border-white/10 bg-white/5 text-slate-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white"
-                        : "border-slate-200 bg-slate-50/80 text-slate-600 shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
-                    }`}
+                    className={`about-social flex h-8 w-8 items-center justify-center rounded-full border ${isDarkMode
+                      ? "border-white/10 bg-white/5 text-slate-300 hover:border-purple-400/50 hover:bg-purple-500/10 hover:text-white"
+                      : "border-slate-200 bg-slate-50/80 text-slate-600 shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700"
+                      }`}
                   >
                     <LinkedinIcon size={14} />
                   </a>

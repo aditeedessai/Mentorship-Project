@@ -209,30 +209,7 @@ const tourStyleSheet = `
   }
 
   .jot-tour-popover .driver-popover-prev-btn {
-    all: unset !important;
-    box-sizing: border-box !important;
-    cursor: pointer !important;
-    border-radius: 12px !important;
-    padding: 6.5px 14px !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
-    background: #F8F8FC !important;
-    color: #4B4655 !important;
-    transition: all 0.2s ease !important;
-  }
-  .jot-tour-popover .driver-popover-prev-btn:hover {
-    background: #EEEEF4 !important;
-    color: #231B33 !important;
-  }
-  .dark .jot-tour-popover .driver-popover-prev-btn {
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: #D1C9DE !important;
-  }
-  .dark .jot-tour-popover .driver-popover-prev-btn:hover {
-    background: rgba(255, 255, 255, 0.12) !important;
-    color: #FFFFFF !important;
+    display: none !important;
   }
 
   .jot-tour-popover .driver-popover-next-btn {
@@ -395,11 +372,9 @@ export default function ProductTour({
       if (isCancelled) return;
 
       const isLast = stepIndex === TOUR_STEPS.length - 1;
-      const isFirst = stepIndex === 0;
       const mascotImg = isLast ? jojoCelebration : jojoLogo;
 
       const nextButtonText = isLast ? "Finish 🚀" : "Next";
-      const prevButtonText = isFirst ? "" : "Back";
 
       const stepConfig = {
         element: currentStep.selector,
@@ -422,15 +397,10 @@ export default function ProductTour({
           `,
           nextBtnText: nextButtonText,
           doneBtnText: nextButtonText,
-          prevBtnText: prevButtonText,
-          showButtons: isFirst
-            ? ["next", "close"]
-            : ["previous", "next", "close"],
+          showButtons: ["next", "close"],
           onNextClick: () => {
+            isTransitioningRef.current = true;
             transitionToStep(stepIndex + 1);
-          },
-          onPrevClick: () => {
-            transitionToStep(stepIndex - 1);
           },
           onCloseClick: () => {
             handleFinishOrSkip(true);
@@ -439,18 +409,10 @@ export default function ProductTour({
             // Guarantee next button click handler is attached
             if (popover?.nextButton) {
               popover.nextButton.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e?.preventDefault();
+                e?.stopPropagation();
+                isTransitioningRef.current = true;
                 transitionToStep(stepIndex + 1);
-              };
-            }
-
-            // Guarantee prev button click handler is attached
-            if (popover?.previousButton) {
-              popover.previousButton.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                transitionToStep(stepIndex - 1);
               };
             }
 
@@ -485,6 +447,7 @@ export default function ProductTour({
         animate: true,
         smoothScroll: true,
         allowClose: true,
+        showButtons: ["next", "close"],
         stagePadding: 8,
         stageRadius: 16,
         popoverOffset: 12,

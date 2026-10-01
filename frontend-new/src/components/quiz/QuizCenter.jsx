@@ -107,8 +107,10 @@ export default function QuizCenter({
                   </span>
 
                   {/* Text */}
-                  <span className={`text-xs sm:text-sm font-semibold leading-relaxed overflow-wrap-anywhere ${
-                    isSelected ? 'text-[#8064C7] dark:text-white font-bold' : isDarkMode ? 'text-white/90' : 'text-gray-700'
+                  <span className={`text-xs sm:text-sm leading-relaxed overflow-wrap-anywhere ${
+                    isSelected
+                      ? (isDarkMode ? 'text-[#F3F0F8] font-bold' : 'text-[#231B33] font-bold')
+                      : (isDarkMode ? 'text-white/90 font-semibold' : 'text-gray-700 font-semibold')
                   }`}>
                     {option.text}
                   </span>
