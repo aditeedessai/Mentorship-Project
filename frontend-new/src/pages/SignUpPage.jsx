@@ -508,7 +508,7 @@ function SignUpPage({ onSignUpSuccess, onLogin, onBack }) {
             TOP CONTROLS
         ========================================== */}
 
-        <div className="absolute right-3 top-3 flex items-center gap-2.5 sm:right-6 sm:top-6 sm:gap-3">
+        <div className="fixed right-3 top-3 z-50 flex items-center gap-2.5 sm:right-6 sm:top-6 sm:gap-3">
 
           {onBack && (
             <button

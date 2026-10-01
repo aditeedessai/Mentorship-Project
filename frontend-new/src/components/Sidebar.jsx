@@ -377,7 +377,7 @@ function Sidebar({
       =================================================== */}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-72 max-w-[85vw] lg:w-64 flex-col border-r transition-transform duration-300 backdrop-blur-2xl lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 flex h-dvh w-72 max-w-[85vw] lg:w-64 flex-col border-r transition-transform duration-300 backdrop-blur-2xl lg:translate-x-0 ${
           isOpen
             ? "translate-x-0 shadow-2xl"
             : "-translate-x-full"
@@ -468,7 +468,7 @@ function Sidebar({
             NAVIGATION
         ================================================= */}
 
-        <nav className="flex-1 overflow-y-auto px-4 py-6">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
           <div className="space-y-2">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
