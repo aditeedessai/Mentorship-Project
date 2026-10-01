@@ -23,6 +23,25 @@ const ALLOWED_EXTENSIONS = [
   ".webp",
 ];
 
+const MIME_TO_EXT_MAP = {
+  "application/pdf": ".pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/webp": ".webp",
+};
+
+const ALLOWED_MIME_TYPES = Object.keys(MIME_TO_EXT_MAP);
+const DISALLOWED_EXTENSIONS = [".heic", ".heif"];
+const DISALLOWED_MIME_TYPES = ["image/heic", "image/heif"];
+
+const ACCEPT_ATTRIBUTE = [
+  ...ALLOWED_EXTENSIONS,
+  ...ALLOWED_MIME_TYPES,
+].join(",");
+
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB limit in bytes
 
 /* =========================================================
@@ -773,22 +792,55 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
     const oversizedFileNames = [];
 
     incoming.forEach((file) => {
-      const ext = "." + file.name.toLowerCase().split(".").pop();
-      const isAllowedExt = ALLOWED_EXTENSIONS.includes(ext);
+      const fileNameLower = (file.name || "").toLowerCase();
+      const rawExt = fileNameLower.includes(".")
+        ? "." + fileNameLower.split(".").pop()
+        : "";
+      const fileMime = (file.type || "").toLowerCase().trim();
 
-      // DF006 Fix: Check if file format is supported
-      if (!isAllowedExt) {
+      // Explicitly reject HEIC / HEIF
+      if (
+        DISALLOWED_EXTENSIONS.includes(rawExt) ||
+        DISALLOWED_MIME_TYPES.includes(fileMime)
+      ) {
         invalidFileNames.push(file.name);
         return;
       }
 
-      // DF010 Fix: Check if file size exceeds 20 MB limit
-      if (file.size > MAX_FILE_SIZE) {
-        oversizedFileNames.push(file.name);
+      let fileToAdd = file;
+      const isAllowedExt = ALLOWED_EXTENSIONS.includes(rawExt);
+      const mappedExtFromMime = MIME_TO_EXT_MAP[fileMime];
+
+      if (isAllowedExt) {
+        fileToAdd = file;
+      } else if (mappedExtFromMime) {
+        // Filename lacks a supported extension, but MIME type is explicitly supported
+        // Normalize filename so backend/extractor receives a valid extension
+        const baseName = file.name.includes(".")
+          ? file.name.substring(0, file.name.lastIndexOf("."))
+          : file.name || "uploaded_file";
+        const normalizedName = `${baseName}${mappedExtFromMime}`;
+
+        try {
+          fileToAdd = new File([file], normalizedName, {
+            type: file.type || fileMime,
+            lastModified: file.lastModified || Date.now(),
+          });
+        } catch {
+          fileToAdd = file;
+        }
+      } else {
+        invalidFileNames.push(file.name);
         return;
       }
 
-      validFiles.push(file);
+      // Check if file size exceeds 20 MB limit
+      if (fileToAdd.size > MAX_FILE_SIZE) {
+        oversizedFileNames.push(fileToAdd.name);
+        return;
+      }
+
+      validFiles.push(fileToAdd);
     });
 
     const existingFileKeys = new Set(
@@ -1343,7 +1395,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
                     <input
                       type="file"
-                      accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                      accept={ACCEPT_ATTRIBUTE}
                       multiple
                       onChange={handleFileChange}
                       className="hidden"
@@ -1406,7 +1458,7 @@ function UploadPage({ studySetId, onNavigate, onStudySetCreated }) {
 
                         <input
                           type="file"
-                          accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
+                          accept={ACCEPT_ATTRIBUTE}
                           multiple
                           onChange={handleFileChange}
                           className="hidden"

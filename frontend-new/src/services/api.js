@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { toApiTaskType } from "../data/plannerData";
 
 // ── Backend URL ──────────────────────────────────────────────────────
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001";
@@ -718,11 +719,7 @@ export async function createTask(
       due_date: dueDate || date || undefined,
       due_time: dueTime || time || undefined,
       study_set_id: studySetId || undefined,
-      task_type: (
-        taskType ||
-        type ||
-        "study"
-      ).toLowerCase(),
+      task_type: toApiTaskType(taskType || type || "Study"),
     };
   } else {
     payload = {
@@ -733,9 +730,7 @@ export async function createTask(
       due_date: dueDateArg || undefined,
       due_time: dueTimeArg || undefined,
       study_set_id: studySetIdArg || undefined,
-      task_type: taskTypeArg
-        ? taskTypeArg.toLowerCase()
-        : "study",
+      task_type: toApiTaskType(taskTypeArg || "Study"),
     };
   }
 
@@ -766,8 +761,7 @@ export async function updateTask(
   }
 
   if (payload.taskType) {
-    payload.task_type =
-      payload.taskType.toLowerCase();
+    payload.task_type = toApiTaskType(payload.taskType);
 
     delete payload.taskType;
   }

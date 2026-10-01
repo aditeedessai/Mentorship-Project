@@ -3,6 +3,14 @@ from typing import Literal
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Must match the tasks.task_type CHECK constraint in supabase/migrations.
+# practice / revision / mock_test are the planner UI's types; review / quiz /
+# other are kept so existing rows and older clients stay valid.
+TaskType = Literal[
+    "study", "practice", "revision", "mock_test", "assignment",
+    "review", "quiz", "other",
+]
+
 
 class CreateTaskRequest(BaseModel):
     name: str = Field(
@@ -28,9 +36,9 @@ class CreateTaskRequest(BaseModel):
         None,
         description="Optional associated study set UUID"
     )
-    task_type: Literal["study", "review", "quiz", "assignment", "other"] = Field(
+    task_type: TaskType = Field(
         "study",
-        description="Type of task: study, review, quiz, assignment, or other"
+        description="Type of task: study, practice, revision, mock_test, assignment, review, quiz, or other"
     )
 
     @field_validator("due_date")
@@ -64,9 +72,9 @@ class UpdateTaskRequest(BaseModel):
         None,
         description="Optional associated study set UUID"
     )
-    task_type: Literal["study", "review", "quiz", "assignment", "other"] | None = Field(
+    task_type: TaskType | None = Field(
         None,
-        description="Type of task: study, review, quiz, assignment, or other"
+        description="Type of task: study, practice, revision, mock_test, assignment, review, quiz, or other"
     )
     completed: bool | None = Field(
         None,

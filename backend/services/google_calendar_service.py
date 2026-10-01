@@ -669,7 +669,7 @@ def _build_task_event_body(
 
     description_parts = [
         f"Priority: {priority}",
-        f"Type: {task_type}",
+        f"Type: {str(task_type).replace('_', ' ')}",
     ]
 
     if study_set_name:

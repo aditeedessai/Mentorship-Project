@@ -115,15 +115,18 @@ def generate_study_set_summary(
 
 @router.get(
     "/{study_set_id}/summary",
-    response_model=StoredSummaryResponse,
+    response_model=StoredSummaryResponse | None,
     status_code=status.HTTP_200_OK,
     summary="Get the saved summary for a study set",
-    description="Retrieves the previously generated and saved summary for a study set, if one exists."
+    description=(
+        "Retrieves the previously generated and saved summary for a study set. "
+        "Returns null when no summary has been generated yet."
+    )
 )
 def get_study_set_summary(
     study_set_id: UUID,
     current_user: AuthenticatedUser = Depends(rate_limit_by_user(120, 60, scope="general_authenticated"))
-) -> StoredSummaryResponse:
+) -> StoredSummaryResponse | None:
     try:
         # Verify ownership
         study_set = study_service.get_study_set(str(study_set_id), user_id=current_user.user_id)
@@ -134,11 +137,10 @@ def get_study_set_summary(
             )
 
         summary = summary_repository.get_summary(str(study_set_id), user_id=current_user.user_id)
+        # Not generated yet is a normal state, not an error - 200 with null
+        # keeps the study set page from logging a 404 on every visit.
         if not summary:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No summary found for study set '{study_set_id}'"
-            )
+            return None
         return StoredSummaryResponse(**summary)
     except HTTPException:
         raise
@@ -225,7 +227,10 @@ def generate_study_set_flashcards(
     response_model=FlashcardsResponse,
     status_code=status.HTTP_200_OK,
     summary="Get the saved flashcards for a study set",
-    description="Retrieves the previously generated and saved flashcards for a study set, if any exist."
+    description=(
+        "Retrieves the previously generated and saved flashcards for a study set. "
+        "Returns an empty list when none have been generated yet."
+    )
 )
 def get_study_set_flashcards(
     study_set_id: UUID,
@@ -241,12 +246,8 @@ def get_study_set_flashcards(
             )
 
         cards = flashcard_repository.get_flashcards(str(study_set_id), user_id=current_user.user_id)
-        if not cards:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No flashcards found for study set '{study_set_id}'"
-            )
-        return FlashcardsResponse(flashcards=cards)
+        # Not generated yet -> empty list (200), same reasoning as the summary.
+        return FlashcardsResponse(flashcards=cards or [])
     except HTTPException:
         raise
     except Exception as e:

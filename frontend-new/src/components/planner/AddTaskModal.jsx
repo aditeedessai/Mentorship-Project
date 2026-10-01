@@ -32,6 +32,7 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
   const [priority, setPriority] = useState("Medium");
 
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,8 +54,9 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     const trimmedTitle = title.trim();
 
     if (!trimmedTitle) {
@@ -73,15 +75,23 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
       return;
     }
 
-    onAddTask({
-      title: trimmedTitle,
-      studySet,
-      subject: studySet,
-      date,
-      time,
-      type,
-      priority,
-    });
+    setSaving(true);
+    try {
+      await onAddTask({
+        title: trimmedTitle,
+        studySet,
+        subject: studySet,
+        date,
+        time,
+        type,
+        priority,
+      });
+    } catch {
+      setError("Couldn't save the task. Please check your connection and try again.");
+      return;
+    } finally {
+      setSaving(false);
+    }
 
     // Reset form
     setTitle("");
@@ -264,9 +274,10 @@ export default function AddTaskModal({ isOpen, onClose, onAddTask, defaultDate, 
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-[#8064C7] hover:bg-[#8B6DD4] px-6 py-2.5 text-xs font-bold text-white shadow-md transition"
+              disabled={saving}
+              className="rounded-xl bg-[#8064C7] hover:bg-[#8B6DD4] px-6 py-2.5 text-xs font-bold text-white shadow-md transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Add Task
+              {saving ? "Saving..." : "Add Task"}
             </button>
           </div>
         </form>
